@@ -195,9 +195,9 @@ impl TryFrom<Vec<usize>> for Decomposition {
 impl error::Error for TryFromFinSetError {}
 
 #[allow(dead_code)]
-fn monotone_epi_mono_fact(v: Vec<usize>) -> (Vec<usize>,Vec<usize>) {
+fn monotone_epi_mono_fact(v: Vec<usize>) -> (Vec<usize>, Vec<usize>) {
     if v.is_empty() {
-        return (vec![],vec![]);
+        return (vec![], vec![]);
     }
     let mut surj_part = v.clone();
     let mut inj_part = Vec::with_capacity(v.len());
@@ -209,18 +209,18 @@ fn monotone_epi_mono_fact(v: Vec<usize>) -> (Vec<usize>,Vec<usize>) {
     surj_part[cur_index] = current_image_number;
     inj_part.push(*first);
     for cur_item in v_iter {
-        cur_index+=1;
-        if cur_item==current_image_number_in_tgt {
+        cur_index += 1;
+        if cur_item == current_image_number_in_tgt {
             surj_part[cur_index] = current_image_number;
         } else {
-            current_image_number+=1;
+            current_image_number += 1;
             current_image_number_in_tgt = cur_item;
             surj_part[cur_index] = current_image_number;
             inj_part.push(*cur_item);
         }
     }
     inj_part.shrink_to_fit();
-    (surj_part,inj_part)
+    (surj_part, inj_part)
 }
 
 mod test {
@@ -390,28 +390,26 @@ mod test {
 
     #[test]
     fn monotone_epi_mono_fact() {
-        use crate::finset::{monotone_epi_mono_fact};
-        let mut cur_test: Vec<usize> = vec![0,1,1,1,2,3,4,7,8,9,11];
-        let mut exp_surj = vec![0,1,1,1,2,3,4,5,6,7,8];
-        let mut exp_inj = vec![0,1,2,3,4,7,8,9,11];
-        let (tested_surj,tested_inj) = monotone_epi_mono_fact(cur_test);
-        assert_eq!(exp_surj,tested_surj);
-        assert_eq!(exp_inj,tested_inj);
+        use crate::finset::monotone_epi_mono_fact;
+        let mut cur_test: Vec<usize> = vec![0, 1, 1, 1, 2, 3, 4, 7, 8, 9, 11];
+        let mut exp_surj = vec![0, 1, 1, 1, 2, 3, 4, 5, 6, 7, 8];
+        let mut exp_inj = vec![0, 1, 2, 3, 4, 7, 8, 9, 11];
+        let (tested_surj, tested_inj) = monotone_epi_mono_fact(cur_test);
+        assert_eq!(exp_surj, tested_surj);
+        assert_eq!(exp_inj, tested_inj);
 
         cur_test = vec![];
         exp_surj = vec![];
         exp_inj = vec![];
-        let (tested_surj,tested_inj) = monotone_epi_mono_fact(cur_test);
-        assert_eq!(exp_surj,tested_surj);
-        assert_eq!(exp_inj,tested_inj);
+        let (tested_surj, tested_inj) = monotone_epi_mono_fact(cur_test);
+        assert_eq!(exp_surj, tested_surj);
+        assert_eq!(exp_inj, tested_inj);
 
         cur_test = vec![3];
         exp_surj = vec![0];
         exp_inj = vec![3];
-        let (tested_surj,tested_inj) = monotone_epi_mono_fact(cur_test);
-        assert_eq!(exp_surj,tested_surj);
-        assert_eq!(exp_inj,tested_inj);
-
-
+        let (tested_surj, tested_inj) = monotone_epi_mono_fact(cur_test);
+        assert_eq!(exp_surj, tested_surj);
+        assert_eq!(exp_inj, tested_inj);
     }
 }
