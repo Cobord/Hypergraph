@@ -8,10 +8,57 @@ use crate::utils::position_max;
 struct OrderPresSurj {
     preimage_card_minus_1: Vec<usize>,
 }
+
+impl OrderPresSurj {
+    fn to_ordinary(&self) -> Vec<usize> {
+        let domain_size: usize =
+            self.preimage_card_minus_1.iter().sum::<usize>() + self.preimage_card_minus_1.len();
+        let mut answer = Vec::with_capacity(domain_size);
+        for (cur_target, v) in self.preimage_card_minus_1.iter().enumerate() {
+            for _ in 0..(v + 1) {
+                answer.push(cur_target);
+            }
+        }
+        answer
+    }
+    #[allow(dead_code)]
+    fn apply(&self, test_pt: usize) -> usize {
+        self.to_ordinary()[test_pt]
+    }
+}
+
 #[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct OrderPresInj {
     counts_iden_unit_alternating: Vec<usize>,
+}
+
+impl OrderPresInj {
+    fn to_ordinary(&self) -> Vec<usize> {
+        let domain_size: usize = self
+            .counts_iden_unit_alternating
+            .iter()
+            .enumerate()
+            .map(|(n, v)| (n % 2) * v)
+            .sum::<usize>();
+        let mut answer = Vec::with_capacity(domain_size);
+        let mut cur_target = 0;
+        for (n, v) in self.counts_iden_unit_alternating.iter().enumerate() {
+            if n % 2 == 0 {
+                for _ in 0..*v {
+                    answer.push(cur_target);
+                    cur_target += 1;
+                }
+            } else {
+                cur_target += v;
+            }
+        }
+        answer
+    }
+    #[allow(dead_code)]
+    fn apply(&self, test_pt: usize) -> usize {
+        self.to_ordinary()[test_pt]
+    }
 }
 
 #[allow(dead_code)]
@@ -164,10 +211,27 @@ impl TryFrom<Vec<usize>> for OrderPresInj {
 impl error::Error for TryFromInjError {}
 
 #[allow(dead_code)]
+fn permutation_sort<T: Ord>(x: &mut [T]) -> Permutation {
+    let mut answer: Vec<usize> = (0..x.len()).collect();
+    answer.sort_by(|a, b| x[*a].cmp(&x[*b]));
+    x.sort();
+    Permutation::try_from(answer).unwrap()
+}
+
+#[allow(dead_code)]
 struct Decomposition {
     permutation_part: Permutation,
     order_preserving_surjection: OrderPresSurj,
     order_preserving_injection: OrderPresInj,
+}
+
+impl Decomposition {
+    #[allow(dead_code)]
+    fn apply(&self, test_pt: usize) -> usize {
+        let dest_after_perm = self.permutation_part.apply(test_pt);
+        let dest_after_surj = self.order_preserving_surjection.apply(dest_after_perm);
+        self.order_preserving_injection.apply(dest_after_surj)
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -186,9 +250,30 @@ impl TryFrom<Vec<usize>> for Decomposition {
     #[allow(clippy::if_same_then_else)]
     fn try_from(v: Vec<usize>) -> Result<Decomposition, TryFromFinSetError> {
         if is_monotonic_inc(v.iter(), None) {
-            todo!()
+            let permutation_part = Permutation::identity(v.len());
+            let (epic_part, monic_part) = monotone_epi_mono_fact(v);
+            let order_preserving_surjection =
+                OrderPresSurj::try_from(epic_part).map_err(|_| TryFromFinSetError)?;
+            let order_preserving_injection =
+                OrderPresInj::try_from(monic_part).map_err(|_| TryFromFinSetError)?;
+            Ok(Decomposition {
+                permutation_part,
+                order_preserving_surjection,
+                order_preserving_injection,
+            })
         } else {
-            todo!()
+            let mut v_clone = v;
+            let permutation_part = permutation_sort(&mut v_clone).inv();
+            let (epic_part, monic_part) = monotone_epi_mono_fact(v_clone);
+            let order_preserving_surjection =
+                OrderPresSurj::try_from(epic_part).map_err(|_| TryFromFinSetError)?;
+            let order_preserving_injection =
+                OrderPresInj::try_from(monic_part).map_err(|_| TryFromFinSetError)?;
+            Ok(Decomposition {
+                permutation_part,
+                order_preserving_surjection,
+                order_preserving_injection,
+            })
         }
     }
 }
@@ -313,7 +398,12 @@ mod test {
         cur_result = Ok(OrderPresSurj {
             preimage_card_minus_1: vec![0],
         });
-        assert_eq!(cur_result, OrderPresSurj::try_from(cur_test));
+        assert_eq!(cur_result, OrderPresSurj::try_from(cur_test.clone()));
+        let cur_result_unwrapped = cur_result.unwrap();
+        for (n, v) in cur_test.iter().enumerate() {
+            let dest_test_pt = cur_result_unwrapped.apply(n);
+            assert_eq!(dest_test_pt, *v);
+        }
 
         cur_test = vec![1];
         cur_result = Err(TryFromSurjError);
@@ -327,7 +417,12 @@ mod test {
         cur_result = Ok(OrderPresSurj {
             preimage_card_minus_1: vec![0, 0, 0],
         });
-        assert_eq!(cur_result, OrderPresSurj::try_from(cur_test));
+        assert_eq!(cur_result, OrderPresSurj::try_from(cur_test.clone()));
+        let cur_result_unwrapped = cur_result.unwrap();
+        for (n, v) in cur_test.iter().enumerate() {
+            let dest_test_pt = cur_result_unwrapped.apply(n);
+            assert_eq!(dest_test_pt, *v);
+        }
 
         cur_test = vec![0, 2, 1];
         cur_result = Err(TryFromSurjError);
@@ -337,7 +432,12 @@ mod test {
         cur_result = Ok(OrderPresSurj {
             preimage_card_minus_1: vec![0, 1, 0, 2, 0],
         });
-        assert_eq!(cur_result, OrderPresSurj::try_from(cur_test));
+        assert_eq!(cur_result, OrderPresSurj::try_from(cur_test.clone()));
+        let cur_result_unwrapped = cur_result.unwrap();
+        for (n, v) in cur_test.iter().enumerate() {
+            let dest_test_pt = cur_result_unwrapped.apply(n);
+            assert_eq!(dest_test_pt, *v);
+        }
     }
 
     #[test]
@@ -347,31 +447,56 @@ mod test {
         let mut cur_result = Ok(OrderPresInj {
             counts_iden_unit_alternating: vec![],
         });
-        assert_eq!(cur_result, OrderPresInj::try_from(cur_test));
+        assert_eq!(cur_result, OrderPresInj::try_from(cur_test.clone()));
+        let cur_result_unwrapped = cur_result.unwrap();
+        for (n, v) in cur_test.iter().enumerate() {
+            let dest_test_pt = cur_result_unwrapped.apply(n);
+            assert_eq!(dest_test_pt, *v);
+        }
 
         cur_test = vec![0];
         cur_result = Ok(OrderPresInj {
             counts_iden_unit_alternating: vec![1],
         });
-        assert_eq!(cur_result, OrderPresInj::try_from(cur_test));
+        assert_eq!(cur_result, OrderPresInj::try_from(cur_test.clone()));
+        let cur_result_unwrapped = cur_result.unwrap();
+        for (n, v) in cur_test.iter().enumerate() {
+            let dest_test_pt = cur_result_unwrapped.apply(n);
+            assert_eq!(dest_test_pt, *v);
+        }
 
         cur_test = vec![1];
         cur_result = Ok(OrderPresInj {
             counts_iden_unit_alternating: vec![0, 1, 1],
         });
-        assert_eq!(cur_result, OrderPresInj::try_from(cur_test));
+        assert_eq!(cur_result, OrderPresInj::try_from(cur_test.clone()));
+        let cur_result_unwrapped = cur_result.unwrap();
+        for (n, v) in cur_test.iter().enumerate() {
+            let dest_test_pt = cur_result_unwrapped.apply(n);
+            assert_eq!(dest_test_pt, *v);
+        }
 
         cur_test = vec![2];
         cur_result = Ok(OrderPresInj {
             counts_iden_unit_alternating: vec![0, 2, 1],
         });
-        assert_eq!(cur_result, OrderPresInj::try_from(cur_test));
+        assert_eq!(cur_result, OrderPresInj::try_from(cur_test.clone()));
+        let cur_result_unwrapped = cur_result.unwrap();
+        for (n, v) in cur_test.iter().enumerate() {
+            let dest_test_pt = cur_result_unwrapped.apply(n);
+            assert_eq!(dest_test_pt, *v);
+        }
 
         cur_test = vec![0, 1, 2];
         cur_result = Ok(OrderPresInj {
             counts_iden_unit_alternating: vec![3],
         });
-        assert_eq!(cur_result, OrderPresInj::try_from(cur_test));
+        assert_eq!(cur_result, OrderPresInj::try_from(cur_test.clone()));
+        let cur_result_unwrapped = cur_result.unwrap();
+        for (n, v) in cur_test.iter().enumerate() {
+            let dest_test_pt = cur_result_unwrapped.apply(n);
+            assert_eq!(dest_test_pt, *v);
+        }
 
         cur_test = vec![0, 2, 1];
         cur_result = Err(TryFromInjError);
@@ -385,7 +510,12 @@ mod test {
         cur_result = Ok(OrderPresInj {
             counts_iden_unit_alternating: vec![3, 1, 2, 2, 2, 1, 1],
         });
-        assert_eq!(cur_result, OrderPresInj::try_from(cur_test));
+        assert_eq!(cur_result, OrderPresInj::try_from(cur_test.clone()));
+        let cur_result_unwrapped = cur_result.unwrap();
+        for (n, v) in cur_test.iter().enumerate() {
+            let dest_test_pt = cur_result_unwrapped.apply(n);
+            assert_eq!(dest_test_pt, *v);
+        }
     }
 
     #[test]
@@ -411,5 +541,77 @@ mod test {
         let (tested_surj, tested_inj) = monotone_epi_mono_fact(cur_test);
         assert_eq!(exp_surj, tested_surj);
         assert_eq!(exp_inj, tested_inj);
+    }
+
+    #[test]
+    fn permutation_test() {
+        use crate::finset::permutation_sort;
+        use permutations::Permutation;
+        let mut cur_test: Vec<usize> = vec![0, 1, 1, 1, 2, 3, 4, 7, 8, 9, 11];
+        let mut exp_sorted = vec![0, 1, 1, 1, 2, 3, 4, 7, 8, 9, 11];
+        let mut exp_perm = Permutation::identity(cur_test.len());
+        let mut cur_perm = permutation_sort(&mut cur_test);
+        assert_eq!(cur_test, exp_sorted);
+        assert_eq!(cur_perm, exp_perm);
+        assert_eq!(
+            cur_perm.permute(&[0, 1, 1, 1, 2, 3, 4, 7, 8, 9, 11]),
+            cur_test
+        );
+
+        cur_test = vec![1, 0];
+        exp_sorted = vec![0, 1];
+        exp_perm = Permutation::rotation_left(2, 1);
+        cur_perm = permutation_sort(&mut cur_test);
+        assert_eq!(cur_test, exp_sorted);
+        assert_eq!(cur_perm, exp_perm);
+        assert_eq!(cur_perm.permute(&[1, 0]), cur_test);
+
+        cur_test = vec![2, 1, 0];
+        exp_sorted = vec![0, 1, 2];
+        exp_perm = Permutation::transposition(3, 0, 2);
+        cur_perm = permutation_sort(&mut cur_test);
+        assert_eq!(cur_test, exp_sorted);
+        assert_eq!(cur_perm, exp_perm);
+        assert_eq!(cur_perm.permute(&[2, 1, 0]), cur_test);
+
+        cur_test = vec![2, 0, 1];
+        exp_sorted = vec![0, 1, 2];
+        exp_perm = Permutation::rotation_left(3, 1);
+        cur_perm = permutation_sort(&mut cur_test);
+        assert_eq!(cur_test, exp_sorted);
+        assert_eq!(cur_perm, exp_perm);
+        assert_eq!(cur_perm.permute(&[2, 0, 1]), cur_test);
+
+        cur_test = vec![2, 0, 0, 1, 1];
+        exp_sorted = vec![0, 0, 1, 1, 2];
+        exp_perm = Permutation::rotation_left(5, 1);
+        cur_perm = permutation_sort(&mut cur_test);
+        assert_eq!(cur_test, exp_sorted);
+        assert_eq!(cur_perm, exp_perm);
+        assert_eq!(cur_perm.permute(&[2, 0, 0, 1, 1]), cur_test);
+    }
+
+    #[test]
+    fn decomposition() {
+        use crate::finset::{Decomposition, OrderPresInj, OrderPresSurj};
+        let cur_test: Vec<usize> = vec![0, 1, 1, 1, 2, 3, 4, 7, 8, 9, 11, 20, 18, 19];
+        let exp_surj = OrderPresSurj {
+            preimage_card_minus_1: vec![0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        };
+        let exp_inj = OrderPresInj {
+            counts_iden_unit_alternating: vec![5, 2, 3, 1, 1, 6, 3],
+        };
+        let cur_res = Decomposition::try_from(cur_test.clone());
+        if let Ok(cur_decomp) = cur_res {
+            assert_eq!(exp_surj, cur_decomp.order_preserving_surjection);
+            assert_eq!(exp_inj, cur_decomp.order_preserving_injection);
+            for test_pt in 0..cur_test.len() {
+                let actual_dest = cur_test[test_pt];
+                let apparent_dest = cur_decomp.apply(test_pt);
+                assert_eq!(apparent_dest, actual_dest);
+            }
+        } else {
+            assert!(false, "All maps of finite sets decompose");
+        }
     }
 }
