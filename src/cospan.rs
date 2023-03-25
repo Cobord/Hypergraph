@@ -1,9 +1,10 @@
-use std::collections::HashMap;
-
-use crate::utils::{bimap, represents_id};
 use either::Either::{self, Left, Right};
 use petgraph::{prelude::Graph, stable_graph::DefaultIx, stable_graph::NodeIndex};
+use std::collections::HashMap;
 use union_find::{UnionBySize, UnionFind};
+
+use crate::finset::FinSetMap;
+use crate::utils::{bimap, represents_id};
 
 type LeftIndex = usize;
 type RightIndex = usize;
@@ -277,7 +278,7 @@ where
     if left_leg_id {
         let pushout_target = right_leg_max_target;
         let left_to_pushout = right_leg.to_vec();
-        let right_to_pushout = (0..right_leg_max_target).collect::<Vec<usize>>();
+        let right_to_pushout = (0..right_leg_max_target).collect::<FinSetMap>();
         let representative = (0..right_leg_max_target).map(Right);
         return Ok((
             pushout_target,
@@ -289,7 +290,7 @@ where
     if right_leg_id {
         let pushout_target = left_leg_max_target;
         let right_to_pushout = left_leg.to_vec();
-        let left_to_pushout = (0..left_leg_max_target).collect::<Vec<usize>>();
+        let left_to_pushout = (0..left_leg_max_target).collect::<FinSetMap>();
         let representative = (0..left_leg_max_target).map(Left);
         return Ok((
             pushout_target,

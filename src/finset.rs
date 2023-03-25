@@ -4,7 +4,7 @@ use permutations::Permutation;
 
 use crate::utils::position_max;
 
-type FinSetMap = Vec<usize>;
+pub type FinSetMap = Vec<usize>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OrderPresSurj {
@@ -56,7 +56,7 @@ impl OrderPresInj {
         }
         answer
     }
-    
+
     fn apply(&self, test_pt: usize) -> usize {
         self.to_ordinary()[test_pt]
     }
@@ -222,7 +222,6 @@ pub struct Decomposition {
 }
 
 impl Decomposition {
-    
     #[allow(dead_code)]
     fn apply(&self, test_pt: usize) -> usize {
         let dest_after_perm = self.permutation_part.apply(test_pt);
@@ -308,7 +307,7 @@ mod test {
     #[test]
     fn monotonicity() {
         use crate::finset::is_monotonic_inc;
-        let mut cur_test : Vec<i8> = vec![];
+        let mut cur_test: Vec<i8> = vec![];
         assert!(is_monotonic_inc(cur_test.iter(), None));
         cur_test = vec![1];
         assert!(is_monotonic_inc(cur_test.iter(), None));
@@ -328,7 +327,7 @@ mod test {
 
     #[test]
     fn surjectivity() {
-        use crate::finset::{FinSetMap,is_surjective};
+        use crate::finset::{is_surjective, FinSetMap};
         let mut cur_test: FinSetMap = vec![];
         assert!(is_surjective(&cur_test));
         cur_test = vec![0];
@@ -355,7 +354,7 @@ mod test {
 
     #[test]
     fn injectivity() {
-        use crate::finset::{FinSetMap,is_injective};
+        use crate::finset::{is_injective, FinSetMap};
         let mut cur_test: FinSetMap = vec![];
         assert!(is_injective(&cur_test));
         cur_test = vec![0];
@@ -515,10 +514,10 @@ mod test {
 
     #[test]
     fn monotone_epi_mono_fact() {
-        use crate::finset::{FinSetMap, monotone_epi_mono_fact};
+        use crate::finset::{monotone_epi_mono_fact, FinSetMap};
         let mut cur_test: FinSetMap = vec![0, 1, 1, 1, 2, 3, 4, 7, 8, 9, 11];
-        let mut exp_surj : FinSetMap = vec![0, 1, 1, 1, 2, 3, 4, 5, 6, 7, 8];
-        let mut exp_inj : FinSetMap = vec![0, 1, 2, 3, 4, 7, 8, 9, 11];
+        let mut exp_surj: FinSetMap = vec![0, 1, 1, 1, 2, 3, 4, 5, 6, 7, 8];
+        let mut exp_inj: FinSetMap = vec![0, 1, 2, 3, 4, 7, 8, 9, 11];
         let (tested_surj, tested_inj) = monotone_epi_mono_fact(cur_test);
         assert_eq!(exp_surj, tested_surj);
         assert_eq!(exp_inj, tested_inj);
@@ -540,7 +539,7 @@ mod test {
 
     #[test]
     fn permutation_test() {
-        use crate::finset::{FinSetMap, permutation_sort};
+        use crate::finset::{permutation_sort, FinSetMap};
         use permutations::Permutation;
         let mut cur_test: FinSetMap = vec![0, 1, 1, 1, 2, 3, 4, 7, 8, 9, 11];
         let mut exp_sorted = vec![0, 1, 1, 1, 2, 3, 4, 7, 8, 9, 11];
@@ -588,7 +587,7 @@ mod test {
 
     #[test]
     fn decomposition() {
-        use crate::finset::{FinSetMap, Decomposition, OrderPresInj, OrderPresSurj};
+        use crate::finset::{Decomposition, FinSetMap, OrderPresInj, OrderPresSurj};
         let cur_test: FinSetMap = vec![0, 1, 1, 1, 2, 3, 4, 7, 8, 9, 11, 20, 18, 19];
         let exp_surj = OrderPresSurj {
             preimage_card_minus_1: vec![0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],

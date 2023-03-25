@@ -21,7 +21,6 @@ where
     LeftPortName: Eq,
     RightPortName: Eq,
 {
-
     pub fn new(
         left: Vec<MiddleIndex>,
         right: Vec<MiddleIndex>,

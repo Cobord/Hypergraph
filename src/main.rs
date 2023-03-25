@@ -10,7 +10,7 @@ mod named_cospan;
 use named_cospan::NamedCospan;
 mod finset;
 #[allow(unused_imports)]
-use finset::{OrderPresInj,OrderPresSurj,Decomposition};
+use finset::{Decomposition, OrderPresInj, OrderPresSurj};
 mod frobenius;
 mod wiring_diagram;
 
