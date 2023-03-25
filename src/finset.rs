@@ -3,14 +3,16 @@ use std::{collections::HashSet, error, fmt};
 use permutations::Permutation;
 
 use crate::utils::position_max;
-#[allow(dead_code)]
+
+type FinSetMap = Vec<usize>;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct OrderPresSurj {
+pub struct OrderPresSurj {
     preimage_card_minus_1: Vec<usize>,
 }
 
 impl OrderPresSurj {
-    fn to_ordinary(&self) -> Vec<usize> {
+    fn to_ordinary(&self) -> FinSetMap {
         let domain_size: usize =
             self.preimage_card_minus_1.iter().sum::<usize>() + self.preimage_card_minus_1.len();
         let mut answer = Vec::with_capacity(domain_size);
@@ -21,20 +23,19 @@ impl OrderPresSurj {
         }
         answer
     }
-    #[allow(dead_code)]
+
     fn apply(&self, test_pt: usize) -> usize {
         self.to_ordinary()[test_pt]
     }
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct OrderPresInj {
+pub struct OrderPresInj {
     counts_iden_unit_alternating: Vec<usize>,
 }
 
 impl OrderPresInj {
-    fn to_ordinary(&self) -> Vec<usize> {
+    fn to_ordinary(&self) -> FinSetMap {
         let domain_size: usize = self
             .counts_iden_unit_alternating
             .iter()
@@ -55,13 +56,12 @@ impl OrderPresInj {
         }
         answer
     }
-    #[allow(dead_code)]
+    
     fn apply(&self, test_pt: usize) -> usize {
         self.to_ordinary()[test_pt]
     }
 }
 
-#[allow(dead_code)]
 fn is_monotonic_inc<T: Ord, I>(mut my_iter: I, prev_elt: Option<T>) -> bool
 where
     I: Iterator<Item = T>,
@@ -79,7 +79,6 @@ where
     }
 }
 
-#[allow(dead_code)]
 fn is_surjective(v: &[usize]) -> bool {
     let pos_max = position_max(v);
     if let Some(max_val) = pos_max.map(|z| v[z]) {
@@ -97,7 +96,6 @@ fn is_surjective(v: &[usize]) -> bool {
     }
 }
 
-#[allow(dead_code)]
 fn is_injective(v: &[usize]) -> bool {
     let pos_max = position_max(v);
     if let Some(max_val) = pos_max.map(|z| v[z]) {
@@ -119,7 +117,7 @@ fn is_injective(v: &[usize]) -> bool {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-struct TryFromSurjError;
+pub struct TryFromSurjError;
 impl fmt::Display for TryFromSurjError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -129,9 +127,9 @@ impl fmt::Display for TryFromSurjError {
     }
 }
 
-impl TryFrom<Vec<usize>> for OrderPresSurj {
+impl TryFrom<FinSetMap> for OrderPresSurj {
     type Error = TryFromSurjError;
-    fn try_from(v: Vec<usize>) -> Result<OrderPresSurj, TryFromSurjError> {
+    fn try_from(v: FinSetMap) -> Result<OrderPresSurj, TryFromSurjError> {
         if is_monotonic_inc(v.iter(), None) && is_surjective(&v) {
             if v.is_empty() {
                 return Ok(OrderPresSurj {
@@ -164,7 +162,7 @@ impl TryFrom<Vec<usize>> for OrderPresSurj {
 impl error::Error for TryFromSurjError {}
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-struct TryFromInjError;
+pub struct TryFromInjError;
 impl fmt::Display for TryFromInjError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -174,9 +172,9 @@ impl fmt::Display for TryFromInjError {
     }
 }
 
-impl TryFrom<Vec<usize>> for OrderPresInj {
+impl TryFrom<FinSetMap> for OrderPresInj {
     type Error = TryFromInjError;
-    fn try_from(v: Vec<usize>) -> Result<OrderPresInj, TryFromInjError> {
+    fn try_from(v: FinSetMap) -> Result<OrderPresInj, TryFromInjError> {
         if is_monotonic_inc(v.iter(), None) && is_injective(&v) {
             if v.is_empty() {
                 return Ok(OrderPresInj {
@@ -210,22 +208,21 @@ impl TryFrom<Vec<usize>> for OrderPresInj {
 }
 impl error::Error for TryFromInjError {}
 
-#[allow(dead_code)]
 fn permutation_sort<T: Ord>(x: &mut [T]) -> Permutation {
-    let mut answer: Vec<usize> = (0..x.len()).collect();
+    let mut answer: FinSetMap = (0..x.len()).collect();
     answer.sort_by(|a, b| x[*a].cmp(&x[*b]));
     x.sort();
     Permutation::try_from(answer).unwrap()
 }
 
-#[allow(dead_code)]
-struct Decomposition {
+pub struct Decomposition {
     permutation_part: Permutation,
     order_preserving_surjection: OrderPresSurj,
     order_preserving_injection: OrderPresInj,
 }
 
 impl Decomposition {
+    
     #[allow(dead_code)]
     fn apply(&self, test_pt: usize) -> usize {
         let dest_after_perm = self.permutation_part.apply(test_pt);
@@ -235,7 +232,7 @@ impl Decomposition {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-struct TryFromFinSetError;
+pub struct TryFromFinSetError;
 impl fmt::Display for TryFromFinSetError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -245,10 +242,9 @@ impl fmt::Display for TryFromFinSetError {
     }
 }
 
-impl TryFrom<Vec<usize>> for Decomposition {
+impl TryFrom<FinSetMap> for Decomposition {
     type Error = TryFromFinSetError;
-    #[allow(clippy::if_same_then_else)]
-    fn try_from(v: Vec<usize>) -> Result<Decomposition, TryFromFinSetError> {
+    fn try_from(v: FinSetMap) -> Result<Decomposition, TryFromFinSetError> {
         if is_monotonic_inc(v.iter(), None) {
             let permutation_part = Permutation::identity(v.len());
             let (epic_part, monic_part) = monotone_epi_mono_fact(v);
@@ -279,8 +275,7 @@ impl TryFrom<Vec<usize>> for Decomposition {
 }
 impl error::Error for TryFromFinSetError {}
 
-#[allow(dead_code)]
-fn monotone_epi_mono_fact(v: Vec<usize>) -> (Vec<usize>, Vec<usize>) {
+fn monotone_epi_mono_fact(v: FinSetMap) -> (FinSetMap, FinSetMap) {
     if v.is_empty() {
         return (vec![], vec![]);
     }
@@ -313,13 +308,13 @@ mod test {
     #[test]
     fn monotonicity() {
         use crate::finset::is_monotonic_inc;
-        let mut cur_test = vec![];
+        let mut cur_test : Vec<i8> = vec![];
         assert!(is_monotonic_inc(cur_test.iter(), None));
         cur_test = vec![1];
         assert!(is_monotonic_inc(cur_test.iter(), None));
         cur_test = vec![-1];
         assert!(is_monotonic_inc(cur_test.iter(), None));
-        cur_test = vec![-12490];
+        cur_test = vec![-124];
         assert!(is_monotonic_inc(cur_test.iter(), None));
         cur_test = vec![1, 2];
         assert!(is_monotonic_inc(cur_test.iter(), None));
@@ -333,8 +328,8 @@ mod test {
 
     #[test]
     fn surjectivity() {
-        use crate::finset::is_surjective;
-        let mut cur_test: Vec<usize> = vec![];
+        use crate::finset::{FinSetMap,is_surjective};
+        let mut cur_test: FinSetMap = vec![];
         assert!(is_surjective(&cur_test));
         cur_test = vec![0];
         assert!(is_surjective(&cur_test));
@@ -360,8 +355,8 @@ mod test {
 
     #[test]
     fn injectivity() {
-        use crate::finset::is_injective;
-        let mut cur_test: Vec<usize> = vec![];
+        use crate::finset::{FinSetMap,is_injective};
+        let mut cur_test: FinSetMap = vec![];
         assert!(is_injective(&cur_test));
         cur_test = vec![0];
         assert!(is_injective(&cur_test));
@@ -387,8 +382,8 @@ mod test {
 
     #[test]
     fn ord_surj_conversion() {
-        use crate::finset::{OrderPresSurj, TryFromSurjError};
-        let mut cur_test: Vec<usize> = vec![];
+        use crate::finset::{FinSetMap, OrderPresSurj, TryFromSurjError};
+        let mut cur_test: FinSetMap = vec![];
         let mut cur_result = Ok(OrderPresSurj {
             preimage_card_minus_1: vec![],
         });
@@ -442,8 +437,8 @@ mod test {
 
     #[test]
     fn ord_inj_conversion() {
-        use crate::finset::{OrderPresInj, TryFromInjError};
-        let mut cur_test: Vec<usize> = vec![];
+        use crate::finset::{FinSetMap, OrderPresInj, TryFromInjError};
+        let mut cur_test: FinSetMap = vec![];
         let mut cur_result = Ok(OrderPresInj {
             counts_iden_unit_alternating: vec![],
         });
@@ -520,10 +515,10 @@ mod test {
 
     #[test]
     fn monotone_epi_mono_fact() {
-        use crate::finset::monotone_epi_mono_fact;
-        let mut cur_test: Vec<usize> = vec![0, 1, 1, 1, 2, 3, 4, 7, 8, 9, 11];
-        let mut exp_surj = vec![0, 1, 1, 1, 2, 3, 4, 5, 6, 7, 8];
-        let mut exp_inj = vec![0, 1, 2, 3, 4, 7, 8, 9, 11];
+        use crate::finset::{FinSetMap, monotone_epi_mono_fact};
+        let mut cur_test: FinSetMap = vec![0, 1, 1, 1, 2, 3, 4, 7, 8, 9, 11];
+        let mut exp_surj : FinSetMap = vec![0, 1, 1, 1, 2, 3, 4, 5, 6, 7, 8];
+        let mut exp_inj : FinSetMap = vec![0, 1, 2, 3, 4, 7, 8, 9, 11];
         let (tested_surj, tested_inj) = monotone_epi_mono_fact(cur_test);
         assert_eq!(exp_surj, tested_surj);
         assert_eq!(exp_inj, tested_inj);
@@ -545,9 +540,9 @@ mod test {
 
     #[test]
     fn permutation_test() {
-        use crate::finset::permutation_sort;
+        use crate::finset::{FinSetMap, permutation_sort};
         use permutations::Permutation;
-        let mut cur_test: Vec<usize> = vec![0, 1, 1, 1, 2, 3, 4, 7, 8, 9, 11];
+        let mut cur_test: FinSetMap = vec![0, 1, 1, 1, 2, 3, 4, 7, 8, 9, 11];
         let mut exp_sorted = vec![0, 1, 1, 1, 2, 3, 4, 7, 8, 9, 11];
         let mut exp_perm = Permutation::identity(cur_test.len());
         let mut cur_perm = permutation_sort(&mut cur_test);
@@ -593,8 +588,8 @@ mod test {
 
     #[test]
     fn decomposition() {
-        use crate::finset::{Decomposition, OrderPresInj, OrderPresSurj};
-        let cur_test: Vec<usize> = vec![0, 1, 1, 1, 2, 3, 4, 7, 8, 9, 11, 20, 18, 19];
+        use crate::finset::{FinSetMap, Decomposition, OrderPresInj, OrderPresSurj};
+        let cur_test: FinSetMap = vec![0, 1, 1, 1, 2, 3, 4, 7, 8, 9, 11, 20, 18, 19];
         let exp_surj = OrderPresSurj {
             preimage_card_minus_1: vec![0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         };
