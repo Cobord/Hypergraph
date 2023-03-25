@@ -62,7 +62,6 @@ where
     }
 }
 
-#[allow(dead_code)]
 struct FrobeniusBlock<Lambda: Eq + Copy, BlackBoxLabel> {
     op: FrobeniusOperation<Lambda, BlackBoxLabel>,
     source_side_placement: usize,

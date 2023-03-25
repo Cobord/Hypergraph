@@ -62,7 +62,6 @@ where
         answer
     }
 
-    #[allow(dead_code)]
     pub fn identity(types: &[Lambda]) -> Self {
         let num_types = types.len();
         Self {
@@ -125,7 +124,6 @@ where
         }
     }
 
-    #[allow(dead_code)]
     pub fn delete_boundary_node(&mut self, which_node: Either<LeftIndex, RightIndex>) {
         match which_node {
             Left(z) => {
@@ -139,7 +137,6 @@ where
         }
     }
 
-    #[allow(dead_code)]
     pub fn add_middle(&mut self, new_middle: Lambda) -> MiddleIndex {
         self.middle.push(new_middle);
         self.is_left_id = false;
@@ -147,7 +144,6 @@ where
         self.middle.len() - 1
     }
 
-    #[allow(dead_code)]
     pub fn monoidal(&mut self, mut other: Self) {
         let middle_shift = self.middle.len();
         other.left.iter_mut().for_each(|v| *v += middle_shift);
@@ -159,7 +155,6 @@ where
         self.is_right_id &= other.is_right_id;
     }
 
-    #[allow(dead_code)]
     #[allow(clippy::type_complexity)]
     pub fn to_graph<T, U, F>(
         &self,
@@ -201,7 +196,6 @@ where
         (all_left_nodes, all_middle_nodes, all_right_nodes, graph)
     }
 
-    #[allow(dead_code)]
     pub fn compose(self, other: Self) -> Result<Self, &'static str> {
         let mut self_interface = self.right.iter().map(|mid| self.middle[*mid]);
         let mut other_interface = other.left.iter().map(|mid| other.middle[*mid]);
@@ -266,7 +260,6 @@ type PushoutResult = (
     Vec<MiddleIndex>,
     Vec<Either<LeftIndex, RightIndex>>,
 );
-#[allow(dead_code)]
 fn perform_pushout<T, Lambda: Eq>(
     left_leg: &[LeftIndex],
     left_leg_max_target: LeftIndex,
@@ -427,16 +420,4 @@ mod test {
             }
         }
     }
-}
-
-#[macro_export]
-macro_rules! assert_ok {
-    ( $x:expr ) => {
-        match $x {
-            std::result::Result::Ok(v) => v,
-            std::result::Result::Err(e) => {
-                panic!("Error calling {}: {:?}", stringify!($x), e);
-            }
-        }
-    };
 }

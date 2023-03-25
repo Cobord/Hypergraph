@@ -1,6 +1,5 @@
 use either::Either::{self, Left, Right};
 
-#[allow(dead_code)]
 pub fn bimap<T, U, V, W, F, G>(x: Either<T, U>, f1: F, f2: G) -> Either<V, W>
 where
     F: Fn(T) -> V,
@@ -47,4 +46,16 @@ pub fn position_max<T: Ord>(slice: &[T]) -> Option<usize> {
         .enumerate()
         .max_by(|(_, value0), (_, value1)| value0.cmp(value1))
         .map(|(idx, _)| idx)
+}
+
+#[macro_export]
+macro_rules! assert_ok {
+    ( $x:expr ) => {
+        match $x {
+            std::result::Result::Ok(v) => v,
+            std::result::Result::Err(e) => {
+                panic!("Error calling {}: {:?}", stringify!($x), e);
+            }
+        }
+    };
 }

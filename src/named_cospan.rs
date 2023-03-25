@@ -4,15 +4,11 @@ use petgraph::{matrix_graph::NodeIndex, prelude::Graph, stable_graph::DefaultIx}
 
 use crate::{cospan::Cospan, utils::to_vec_01};
 
-#[allow(dead_code)]
 type LeftIndex = usize;
-#[allow(dead_code)]
 type RightIndex = usize;
-#[allow(dead_code)]
 type MiddleIndex = usize;
-#[allow(dead_code)]
 type MiddleIndexOrLambda<Lambda> = Either<MiddleIndex, Lambda>;
-#[allow(dead_code)]
+
 pub struct NamedCospan<Lambda: Sized + Eq + Copy, LeftPortName, RightPortName> {
     underlying_cospan: Cospan<Lambda>,
     left_names: Vec<LeftPortName>,
@@ -25,7 +21,7 @@ where
     LeftPortName: Eq,
     RightPortName: Eq,
 {
-    #[allow(dead_code)]
+
     pub fn new(
         left: Vec<MiddleIndex>,
         right: Vec<MiddleIndex>,
@@ -58,7 +54,6 @@ where
         }
     }
 
-    #[allow(dead_code)]
     pub fn add_boundary_node_known_target(
         &mut self,
         new_arrow: MiddleIndex,
@@ -67,7 +62,6 @@ where
         self.add_boundary_node(Left(new_arrow), new_name)
     }
 
-    #[allow(dead_code)]
     pub fn add_boundary_node_unknown_target(
         &mut self,
         new_arrow: Lambda,
@@ -76,7 +70,6 @@ where
         self.add_boundary_node(Right(new_arrow), new_name)
     }
 
-    #[allow(dead_code)]
     pub fn add_boundary_node(
         &mut self,
         new_arrow: MiddleIndexOrLambda<Lambda>,
@@ -94,7 +87,6 @@ where
         }
     }
 
-    #[allow(dead_code)]
     pub fn delete_boundary_node(&mut self, which_node: Either<LeftIndex, RightIndex>) {
         match which_node {
             Left(z) => {
@@ -179,7 +171,6 @@ where
         self.right_names.extend(other.right_names);
     }
 
-    #[allow(dead_code)]
     #[allow(clippy::type_complexity)]
     pub fn to_graph<T, U, V, F, G>(
         &self,
