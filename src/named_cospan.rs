@@ -1,5 +1,6 @@
 use either::Either::{self, Left, Right};
 use log::warn;
+use permutations::Permutation;
 use petgraph::{matrix_graph::NodeIndex, prelude::Graph, stable_graph::DefaultIx};
 
 use crate::{cospan::Cospan, utils::to_vec_01};
@@ -51,6 +52,22 @@ where
             left_names,
             right_names,
         }
+    }
+
+    #[allow(dead_code)]
+    pub fn from_permutation<T, F>(
+        p: Permutation,
+        types: &[Lambda],
+        prenames: &[T],
+        _prename_to_name: F,
+    ) -> Self
+    where
+        F: Fn(T) -> (LeftPortName, RightPortName),
+        T: Copy,
+    {
+        assert_eq!(types.len(), prenames.len());
+        let _underlying_cospan = Cospan::<Lambda>::from_permutation(p, types);
+        todo!()
     }
 
     pub fn add_boundary_node_known_target(
@@ -124,7 +141,25 @@ where
                 }
             }
         } else {
-            todo!()
+            let mut matched_indices: Vec<Either<LeftIndex, RightIndex>> = self
+                .left_names
+                .iter()
+                .enumerate()
+                .filter_map(|(index, &r)| {
+                    if left_pred(r) {
+                        Some(Left(index))
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            let right_indices = self
+                .right_names
+                .iter()
+                .enumerate()
+                .filter_map(|(index, &r)| if right_pred(r) { Some(index) } else { None });
+            matched_indices.extend(right_indices.map(Right));
+            matched_indices
         }
     }
 

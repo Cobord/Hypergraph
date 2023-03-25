@@ -40,6 +40,13 @@ pub fn to_vec_01<A>(me: Option<A>) -> Vec<A> {
     }
 }
 
+pub fn keep_left<T: Copy, U>(me: &Either<T, U>) -> Option<T> {
+    match me {
+        Left(z) => Some(*z),
+        Right(_) => None,
+    }
+}
+
 pub fn position_max<T: Ord>(slice: &[T]) -> Option<usize> {
     slice
         .iter()

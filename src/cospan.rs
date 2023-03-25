@@ -1,4 +1,5 @@
 use either::Either::{self, Left, Right};
+use permutations::Permutation;
 use petgraph::{prelude::Graph, stable_graph::DefaultIx, stable_graph::NodeIndex};
 use std::collections::HashMap;
 use union_find::{UnionBySize, UnionFind};
@@ -70,6 +71,20 @@ where
             right: (0..num_types).collect(),
             middle: types.to_vec(),
             is_left_id: true,
+            is_right_id: true,
+        }
+    }
+
+    pub fn from_permutation(p: Permutation, types: &[Lambda]) -> Self {
+        let num_types = types.len();
+        assert_eq!(p.len(), num_types);
+        let id_temp = (0..num_types).collect::<Vec<usize>>();
+        let p_underlying = p.permute(&id_temp);
+        Self {
+            left: p_underlying,
+            right: (0..num_types).collect(),
+            middle: types.to_vec(),
+            is_left_id: false,
             is_right_id: true,
         }
     }
