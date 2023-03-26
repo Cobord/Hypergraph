@@ -73,6 +73,7 @@ where
             .iter()
             .map(|pre| prename_to_name(*pre).1)
             .collect();
+        //todo!("Might have mixed up p and p inverse");
         Self {
             underlying_cospan,
             left_names,

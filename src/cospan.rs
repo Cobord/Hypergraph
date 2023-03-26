@@ -80,6 +80,7 @@ where
         assert_eq!(p.len(), num_types);
         let id_temp = (0..num_types).collect::<Vec<usize>>();
         let p_underlying = p.permute(&id_temp);
+        //todo!("Might have mixed up p and p inverse");
         Self {
             left: p_underlying,
             right: (0..num_types).collect(),
