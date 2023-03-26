@@ -59,15 +59,25 @@ where
         p: Permutation,
         types: &[Lambda],
         prenames: &[T],
-        _prename_to_name: F,
+        prename_to_name: F,
     ) -> Self
     where
         F: Fn(T) -> (LeftPortName, RightPortName),
         T: Copy,
     {
         assert_eq!(types.len(), prenames.len());
-        let _underlying_cospan = Cospan::<Lambda>::from_permutation(p, types);
-        todo!()
+        let underlying_cospan = Cospan::<Lambda>::from_permutation(p.clone(), types);
+        let left_names = prenames.iter().map(|pre| prename_to_name(*pre).0).collect();
+        let right_names = p
+            .permute(prenames)
+            .iter()
+            .map(|pre| prename_to_name(*pre).1)
+            .collect();
+        Self {
+            underlying_cospan,
+            left_names,
+            right_names,
+        }
     }
 
     pub fn add_boundary_node_known_target(
