@@ -599,7 +599,7 @@ mod test {
                 assert_eq!(real_res.middle, expected_res.middle);
             }
             Err(e) => {
-                panic!("Could not compose simple example {:?}", e)
+                panic!("Could not compose simple example\n{:?}", e)
             }
         }
         let types_as_on_source = false;
@@ -629,7 +629,7 @@ mod test {
                 assert_eq!(real_res.middle, expected_res.middle);
             }
             Err(e) => {
-                panic!("Could not compose simple example {:?}", e)
+                panic!("Could not compose simple example\n{:?}", e)
             }
         }
     }
