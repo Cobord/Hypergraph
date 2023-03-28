@@ -105,7 +105,6 @@ where
         }
     }
 
-    #[allow(dead_code)]
     fn source_size(&self) -> usize {
         self.op.source_size()
     }
@@ -118,7 +117,6 @@ where
             .collect()
     }
 
-    #[allow(dead_code)]
     fn target_size(&self) -> usize {
         self.op.target_size()
     }

@@ -2,17 +2,19 @@ use either::Either::{self, Left, Right};
 use permutations::Permutation;
 use petgraph::{prelude::Graph, stable_graph::DefaultIx, stable_graph::NodeIndex};
 use std::collections::HashMap;
+use std::fmt::Debug;
 use union_find::{UnionBySize, UnionFind};
 
 use crate::finset::FinSetMap;
-use crate::utils::{bimap, represents_id};
+use crate::utils::{bimap, in_place_permute, represents_id};
 
 type LeftIndex = usize;
 type RightIndex = usize;
 type MiddleIndex = usize;
 type MiddleIndexOrLambda<Lambda> = Either<MiddleIndex, Lambda>;
 
-pub struct Cospan<Lambda: Sized + Eq + Copy> {
+#[derive(Clone)]
+pub struct Cospan<Lambda: Sized + Eq + Copy + Debug> {
     left: Vec<MiddleIndex>,
     right: Vec<MiddleIndex>,
     middle: Vec<Lambda>,
@@ -22,7 +24,7 @@ pub struct Cospan<Lambda: Sized + Eq + Copy> {
 
 impl<'a, Lambda> Cospan<Lambda>
 where
-    Lambda: Sized + Eq + Copy,
+    Lambda: Sized + Eq + Copy + Debug,
 {
     pub fn assert_valid(&self, check_id: bool) {
         let middle_size = self.middle.len();
@@ -64,6 +66,15 @@ where
         answer
     }
 
+    #[allow(dead_code)]
+    pub fn left_to_middle(&self) -> Vec<MiddleIndex> {
+        self.left.clone()
+    }
+    #[allow(dead_code)]
+    pub fn right_to_middle(&self) -> Vec<MiddleIndex> {
+        self.right.clone()
+    }
+
     pub fn identity(types: &[Lambda]) -> Self {
         let num_types = types.len();
         Self {
@@ -75,18 +86,44 @@ where
         }
     }
 
-    pub fn from_permutation(p: Permutation, types: &[Lambda]) -> Self {
+    pub fn permute_leg(&mut self, p: &Permutation, of_right_leg: bool) {
+        if of_right_leg {
+            self.is_right_id = false;
+            in_place_permute(&mut self.right, p);
+        } else {
+            self.is_left_id = false;
+            in_place_permute(&mut self.left, p);
+        }
+    }
+
+    pub fn from_permutation(p: Permutation, types: &[Lambda], types_as_on_source: bool) -> Self {
         let num_types = types.len();
         assert_eq!(p.len(), num_types);
         let id_temp = (0..num_types).collect::<Vec<usize>>();
-        let p_underlying = p.permute(&id_temp);
-        //todo!("Might have mixed up p and p inverse");
-        Self {
-            left: p_underlying,
-            right: (0..num_types).collect(),
-            middle: types.to_vec(),
-            is_left_id: false,
-            is_right_id: true,
+        // inverses placed so that from(p1);from(p2) = from(p1;p2)
+        //  left ; is cospan composition
+        //  right ; is composition of permutation functions
+        let p_underlying = if types_as_on_source {
+            p.inv().permute(&id_temp)
+        } else {
+            p.permute(&id_temp)
+        };
+        if types_as_on_source {
+            Self {
+                left: (0..num_types).collect(),
+                right: p_underlying,
+                middle: types.to_vec(),
+                is_left_id: true,
+                is_right_id: false,
+            }
+        } else {
+            Self {
+                left: p_underlying,
+                right: (0..num_types).collect(),
+                middle: types.to_vec(),
+                is_left_id: false,
+                is_right_id: true,
+            }
         }
     }
 
@@ -213,7 +250,15 @@ where
         (all_left_nodes, all_middle_nodes, all_right_nodes, graph)
     }
 
-    pub fn compose(self, other: Self) -> Result<Self, &'static str> {
+    pub fn left_interface(&self) -> Vec<Lambda> {
+        self.left.iter().map(|mid| self.middle[*mid]).collect()
+    }
+
+    pub fn right_interface(&self) -> Vec<Lambda> {
+        self.right.iter().map(|mid| self.middle[*mid]).collect()
+    }
+
+    pub fn compose(self, other: Self) -> Result<Self, String> {
         let mut self_interface = self.right.iter().map(|mid| self.middle[*mid]);
         let mut other_interface = other.left.iter().map(|mid| other.middle[*mid]);
         let mut to_continue = true;
@@ -225,14 +270,17 @@ where
                     to_continue = false;
                 }
                 (Some(_), None) => {
-                    return Err("Mismatch in cardinalities of common interface");
+                    return Err("Mismatch in cardinalities of common interface".to_string());
                 }
                 (None, Some(_)) => {
-                    return Err("Mismatch in cardinalities of common interface");
+                    return Err("Mismatch in cardinalities of common interface".to_string());
                 }
                 (Some(w1), Some(w2)) => {
                     if w1 != w2 {
-                        return Err("Mismatch in labels of common interface");
+                        return Err(format!(
+                            "Mismatch in labels of common interface. At some index there was {:?} vs {:?}",
+                            w1, w2
+                        ));
                     }
                 }
             }
@@ -360,6 +408,7 @@ where
 }
 
 mod test {
+
     #[test]
     fn empty_cospan() {
         use super::Cospan;
@@ -414,23 +463,170 @@ mod test {
     }
 
     #[test]
-    fn permutataion() {
+    fn permutatation_manual() {
         use super::Cospan;
-        let my_cospan = Cospan::<()>::new(
-            vec![0, 1, 2, 3, 4, 5, 6],
-            vec![1, 0, 2, 3],
-            vec![(), (), (), (), (), (), ()],
-        );
+        let whatever_types = (0..5)
+            .map(|_| rand::random::<bool>())
+            .collect::<Vec<bool>>();
+        let mut full_types: Vec<bool> = vec![true, true];
+        full_types.extend(whatever_types.clone());
+        let my_cospan =
+            Cospan::<bool>::new(vec![0, 1, 2, 3, 4, 5, 6], vec![1, 0, 2, 3], full_types);
         assert!(my_cospan.is_left_id);
         assert!(!my_cospan.is_right_id);
-        let my_cospan2 =
-            Cospan::<()>::new(vec![0, 1, 2, 3], vec![1, 0, 2, 3], vec![(), (), (), ()]);
+        let my_cospan2 = Cospan::<bool>::new(
+            vec![0, 1, 2, 3],
+            vec![1, 0, 2, 3],
+            vec![true, true, whatever_types[0], whatever_types[1]],
+        );
         let res = my_cospan.compose(my_cospan2);
+        let mut exp_middle = vec![true, true];
+        exp_middle.extend(whatever_types.clone());
         match res {
             Ok(real_res) => {
                 assert_eq!(real_res.left, vec![0, 1, 2, 3, 4, 5, 6]);
                 assert_eq!(real_res.right, vec![0, 1, 2, 3]);
-                assert_eq!(real_res.middle, vec![(), (), (), (), (), (), ()]);
+                assert_eq!(real_res.middle, exp_middle);
+            }
+            Err(e) => {
+                panic!("Could not compose simple example\n{:?}", e)
+            }
+        }
+    }
+
+    #[test]
+    fn permutatation_manual_labelled() {
+        use super::Cospan;
+        use permutations::Permutation;
+        #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+        enum COLOR {
+            RED,
+            GREEN,
+            BLUE,
+        }
+        let type_names_on_source = true;
+        let my_cospan = Cospan::<COLOR>::from_permutation(
+            Permutation::rotation_left(3, 1),
+            &vec![COLOR::RED, COLOR::GREEN, COLOR::BLUE],
+            type_names_on_source,
+        );
+        let my_cospan_2 = Cospan::<COLOR>::from_permutation(
+            Permutation::rotation_left(3, 2),
+            &vec![COLOR::BLUE, COLOR::RED, COLOR::GREEN],
+            type_names_on_source,
+        );
+        let my_mid_interface_1 = my_cospan.right_interface();
+        let my_mid_interface_2 = my_cospan_2.left_interface();
+        let comp = my_cospan.compose(my_cospan_2);
+        match comp {
+            Ok(real_res) => {
+                let expected_res = Cospan::identity(&vec![COLOR::RED, COLOR::GREEN, COLOR::BLUE]);
+                assert_eq!(expected_res.left, real_res.left);
+                assert_eq!(expected_res.right, real_res.right);
+                assert_eq!(expected_res.middle, real_res.middle);
+            }
+            Err(e) => {
+                panic!(
+                    "Could not compose simple example because {:?} did not match {:?}\n{:?}",
+                    my_mid_interface_1, my_mid_interface_2, e
+                );
+            }
+        }
+        let type_names_on_source = false;
+        let my_cospan = Cospan::<COLOR>::from_permutation(
+            Permutation::rotation_left(3, 1),
+            &vec![COLOR::RED, COLOR::GREEN, COLOR::BLUE],
+            type_names_on_source,
+        );
+        let my_cospan_2 = Cospan::<COLOR>::from_permutation(
+            Permutation::rotation_left(3, 2),
+            &vec![COLOR::GREEN, COLOR::BLUE, COLOR::RED],
+            type_names_on_source,
+        );
+        let my_mid_interface_1 = my_cospan.right_interface();
+        let my_mid_interface_2 = my_cospan_2.left_interface();
+        let comp = my_cospan.compose(my_cospan_2);
+        match comp {
+            Ok(real_res) => {
+                let expected_res = Cospan::identity(&vec![COLOR::GREEN, COLOR::BLUE, COLOR::RED]);
+                assert_eq!(expected_res.left, real_res.left);
+                assert_eq!(expected_res.right, real_res.right);
+                assert_eq!(expected_res.middle, real_res.middle);
+            }
+            Err(e) => {
+                panic!(
+                    "Could not compose simple example because {:?} did not match {:?}\n{:?}",
+                    my_mid_interface_1, my_mid_interface_2, e
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn permutatation_automatic() {
+        use super::Cospan;
+        use crate::utils::rand_perm;
+        use rand::distributions::Uniform;
+        use rand::prelude::Distribution;
+        let n_max = 10;
+        let between = Uniform::<usize>::from(2..n_max);
+        let mut rng = rand::thread_rng();
+        let my_n = between.sample(&mut rng);
+        let types_as_on_source = true;
+        let p1 = rand_perm(my_n, my_n * 2);
+        let p2 = rand_perm(my_n, my_n * 2);
+        let prod = p1.clone() * p2.clone();
+        let cospan_p1 = Cospan::from_permutation(
+            p1,
+            &(0..my_n).map(|_| ()).collect::<Vec<()>>(),
+            types_as_on_source,
+        );
+        let cospan_p2 = Cospan::from_permutation(
+            p2,
+            &(0..my_n).map(|_| ()).collect::<Vec<()>>(),
+            types_as_on_source,
+        );
+        let cospan_prod = cospan_p1.compose(cospan_p2);
+        match cospan_prod {
+            Ok(real_res) => {
+                let expected_res = Cospan::from_permutation(
+                    prod,
+                    &(0..my_n).map(|_| ()).collect::<Vec<()>>(),
+                    types_as_on_source,
+                );
+                assert_eq!(real_res.left, expected_res.left);
+                assert_eq!(real_res.right, expected_res.right);
+                assert_eq!(real_res.middle, expected_res.middle);
+            }
+            Err(e) => {
+                panic!("Could not compose simple example {:?}", e)
+            }
+        }
+        let types_as_on_source = false;
+        let p1 = rand_perm(my_n, my_n * 2);
+        let p2 = rand_perm(my_n, my_n * 2);
+        let prod = p1.clone() * p2.clone();
+        let cospan_p1 = Cospan::from_permutation(
+            p1,
+            &(0..my_n).map(|_| ()).collect::<Vec<()>>(),
+            types_as_on_source,
+        );
+        let cospan_p2 = Cospan::from_permutation(
+            p2,
+            &(0..my_n).map(|_| ()).collect::<Vec<()>>(),
+            types_as_on_source,
+        );
+        let cospan_prod = cospan_p1.compose(cospan_p2);
+        match cospan_prod {
+            Ok(real_res) => {
+                let expected_res = Cospan::from_permutation(
+                    prod,
+                    &(0..my_n).map(|_| ()).collect::<Vec<()>>(),
+                    types_as_on_source,
+                );
+                assert_eq!(real_res.left, expected_res.left);
+                assert_eq!(real_res.right, expected_res.right);
+                assert_eq!(real_res.middle, expected_res.middle);
             }
             Err(e) => {
                 panic!("Could not compose simple example {:?}", e)
