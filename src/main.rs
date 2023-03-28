@@ -14,6 +14,9 @@ use finset::{Decomposition, OrderPresInj, OrderPresSurj};
 mod frobenius;
 use frobenius::{special_frobenius_morphism, FrobeniusMorphism, FrobeniusOperation};
 mod wiring_diagram;
+use wiring_diagram::WiringDiagram;
+
+use crate::wiring_diagram::InOut;
 
 fn main() {
     let mut x =
@@ -33,4 +36,19 @@ fn main() {
     assert!(exp_counit_spider == counit_spider);
     assert_eq!(counit_spider.source_types(), vec![()]);
     assert_eq!(counit_spider.target_types(), vec![]);
+
+    let unchanged_right_names = vec![
+        (InOut::In, 0),
+        (InOut::Out, 1),
+        (InOut::In, 2),
+        (InOut::Out, 3),
+        (InOut::Out, 4),
+    ];
+    let _example: WiringDiagram<_, (), _> = WiringDiagram::new(
+        vec![],
+        vec![0, 1, 2, 2, 0],
+        vec![true, true, false],
+        vec![],
+        unchanged_right_names,
+    );
 }

@@ -6,7 +6,7 @@ use crate::utils::{keep_left, necessary_permutation, remove_multiple};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 #[allow(dead_code)]
-enum InOut {
+pub enum InOut {
     In,
     Out,
 }
@@ -16,9 +16,11 @@ type Doubled<T> = (T, T);
 type DoubledEither<T, U> = Either<Doubled<T>, Doubled<U>>;
 
 #[allow(dead_code)]
-struct WiringDiagram<Lambda: Eq + Copy + Debug, InterCircle: Eq + Clone, IntraCircle: Eq + Clone>(
-    NamedCospan<Lambda, (InOut, InterCircle, IntraCircle), (InOut, IntraCircle)>,
-);
+pub struct WiringDiagram<
+    Lambda: Eq + Copy + Debug,
+    InterCircle: Eq + Clone,
+    IntraCircle: Eq + Clone,
+>(NamedCospan<Lambda, (InOut, InterCircle, IntraCircle), (InOut, IntraCircle)>);
 
 impl<'a, Lambda, InterCircle, IntraCircle> WiringDiagram<Lambda, InterCircle, IntraCircle>
 where
@@ -26,7 +28,6 @@ where
     InterCircle: Eq + Clone,
     IntraCircle: Eq + Clone,
 {
-    #[allow(dead_code)]
     pub fn new(
         left: Vec<MiddleIndex>,
         right: Vec<MiddleIndex>,
