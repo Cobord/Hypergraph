@@ -81,7 +81,8 @@ pub fn necessary_permutation<T: Eq>(side_1: &[T], side_2: &[T]) -> Result<Permut
         match pos_in_side_2 {
             None => {
                 return Err("No permutation can take side 1 to side 2 \
-                because an item in side 1 was not in side 2".to_string());
+                because an item in side 1 was not in side 2"
+                    .to_string());
             }
             Some(idx) => {
                 trial_perm.push(idx);
@@ -89,9 +90,11 @@ pub fn necessary_permutation<T: Eq>(side_1: &[T], side_2: &[T]) -> Result<Permut
         }
     }
     Permutation::try_from(trial_perm)
-        .map_err(|_| {"No permutation can take side 1 to side 2\n\
+        .map_err(|_| {
+            "No permutation can take side 1 to side 2\n\
             because there were multiple in side 1 that were equal \
-            and so mapped to the same index in side 2".to_string()
+            and so mapped to the same index in side 2"
+                .to_string()
         })
         .map(|e| e.inv())
 }
