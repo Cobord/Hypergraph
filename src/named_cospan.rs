@@ -247,6 +247,36 @@ where
         self.delete_boundary_node(which_node_idx);
     }
 
+    pub fn change_boundary_node_name(
+        &mut self,
+        name_pair: Either<(LeftPortName, LeftPortName), (RightPortName, RightPortName)>,
+    ) {
+        match name_pair {
+            Left((z1, z2)) => {
+                let index = self.left_names.iter().position(|r| *r == z1);
+                match index {
+                    None => {
+                        warn!("Node to be changed does not exist. No change made.");
+                    }
+                    Some(idx_left) => {
+                        self.left_names[idx_left] = z2;
+                    }
+                }
+            }
+            Right((z1, z2)) => {
+                let index = self.right_names.iter().position(|r| *r == z1);
+                match index {
+                    None => {
+                        warn!("Node to be changed does not exist. No change made.");
+                    }
+                    Some(idx_right) => {
+                        self.right_names[idx_right] = z2;
+                    }
+                }
+            }
+        }
+    }
+
     #[allow(dead_code)]
     pub fn add_middle(&mut self, new_middle: Lambda) {
         self.underlying_cospan.add_middle(new_middle);

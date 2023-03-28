@@ -1,3 +1,4 @@
+use either::Either;
 use std::fmt::Debug;
 
 use crate::named_cospan::NamedCospan;
@@ -10,17 +11,41 @@ enum InOut {
     Out,
 }
 
+type MiddleIndex = usize;
+type Doubled<T> = (T, T);
+type DoubledEither<T, U> = Either<Doubled<T>, Doubled<U>>;
+
 #[allow(dead_code)]
-struct WiringDiagram<Lambda: Eq + Copy + Debug, InterCircle: Eq, IntraCircle: Eq>(
+struct WiringDiagram<Lambda: Eq + Copy + Debug, InterCircle: Eq + Clone, IntraCircle: Eq + Clone>(
     NamedCospan<Lambda, (InOut, InterCircle, IntraCircle), (InOut, IntraCircle)>,
 );
 
 impl<'a, Lambda, InterCircle, IntraCircle> WiringDiagram<Lambda, InterCircle, IntraCircle>
 where
     Lambda: Eq + Copy + Debug,
-    InterCircle: Eq,
-    IntraCircle: Eq,
+    InterCircle: Eq + Clone,
+    IntraCircle: Eq + Clone,
 {
+    #[allow(dead_code)]
+    pub fn new(
+        left: Vec<MiddleIndex>,
+        right: Vec<MiddleIndex>,
+        middle: Vec<Lambda>,
+        left_names: Vec<(InOut, InterCircle, IntraCircle)>,
+        right_names: Vec<(InOut, IntraCircle)>,
+    ) -> Self {
+        let inside = NamedCospan::new(left, right, middle, left_names, right_names);
+        Self { 0: inside }
+    }
+
+    #[allow(dead_code)]
+    pub fn change_boundary_node_name(
+        &mut self,
+        name_pair: DoubledEither<(InOut, InterCircle, IntraCircle), (InOut, IntraCircle)>,
+    ) {
+        self.0.change_boundary_node_name(name_pair);
+    }
+
     #[allow(dead_code)]
     pub fn operadic_substitution(
         &mut self,
@@ -69,5 +94,33 @@ where
         internal_other.0.permute_leg(&p, true);
         self.0 = self.0.compose(internal_other.0)?;
         Ok(())
+    }
+}
+
+mod test {
+
+    #[test]
+    fn no_input_example() {
+        use super::{InOut, WiringDiagram};
+        use either::Right;
+        let unchanged_right_names = vec![
+            (InOut::In, 0),
+            (InOut::Out, 1),
+            (InOut::In, 2),
+            (InOut::Out, 3),
+            (InOut::Out, 4),
+        ];
+        let mut example: WiringDiagram<_, (), _> = WiringDiagram::new(
+            vec![],
+            vec![0, 1, 2, 2, 0],
+            vec![true, true, false],
+            vec![],
+            unchanged_right_names.clone(),
+        );
+        assert_eq!(*example.0.right_names(), unchanged_right_names);
+        example.change_boundary_node_name(Right(((InOut::In, 0), (InOut::Out, 0))));
+        let changed_names = example.0.right_names();
+        assert_eq!(changed_names[0], (InOut::Out, 0));
+        assert_eq!(changed_names[1..], unchanged_right_names[1..]);
     }
 }
