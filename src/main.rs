@@ -12,6 +12,7 @@ mod finset;
 #[allow(unused_imports)]
 use finset::{Decomposition, OrderPresInj, OrderPresSurj};
 mod frobenius;
+use frobenius::{special_frobenius_morphism, FrobeniusMorphism, FrobeniusOperation};
 mod wiring_diagram;
 
 fn main() {
@@ -27,4 +28,9 @@ fn main() {
     );
 
     println!("{:?}", Dot::new(&graph));
+    let counit_spider: FrobeniusMorphism<(), ()> = special_frobenius_morphism(1, 0, ());
+    let exp_counit_spider = FrobeniusMorphism::single_op(FrobeniusOperation::Counit(()));
+    assert!(exp_counit_spider == counit_spider);
+    assert_eq!(counit_spider.source_types(), vec![()]);
+    assert_eq!(counit_spider.target_types(), vec![]);
 }
