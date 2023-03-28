@@ -9,6 +9,18 @@ use crate::utils::{keep_left, necessary_permutation, remove_multiple};
 pub enum InOut {
     In,
     Out,
+    Undirected,
+}
+
+impl InOut {
+    #[allow(dead_code)]
+    pub fn flipped(self) -> Self {
+        match self {
+            InOut::In => InOut::Out,
+            InOut::Out => InOut::In,
+            InOut::Undirected => InOut::Undirected,
+        }
+    }
 }
 
 type MiddleIndex = usize;
@@ -73,6 +85,9 @@ where
         remove_multiple(&mut self_inner_interface_unaffected, found_nodes.clone());
         let mut self_inner_names_unaffected = self.0.left_names().clone();
         remove_multiple(&mut self_inner_names_unaffected, found_nodes);
+
+        // todo handle orientations
+
         let left_name_to_both_names =
             |left_name: (InOut, InterCircle, IntraCircle)| (left_name, (left_name.0, left_name.2));
         let cur_identity = NamedCospan::identity(
