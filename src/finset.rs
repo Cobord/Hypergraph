@@ -4,7 +4,7 @@ use permutations::Permutation;
 
 use crate::category::{Composable, HasIdentity};
 use crate::monoidal::{Monoidal, MonoidalMorphism};
-use crate::symmetric_monoidal::SymmetricMonoidalMorphism;
+use crate::symmetric_monoidal::SymmetricMonoidalDiscreteMorphism;
 use crate::utils::position_max;
 
 pub type FinSetMap = Vec<usize>;
@@ -340,12 +340,12 @@ impl Composable<usize> for Decomposition {
 
 impl MonoidalMorphism<usize> for Decomposition {}
 
-impl SymmetricMonoidalMorphism<usize> for Decomposition {
+impl SymmetricMonoidalDiscreteMorphism<usize> for Decomposition {
     fn permute_side(&mut self, _p: &Permutation, _of_codomain: bool) {
         todo!()
     }
 
-    fn from_permutation(_p: Permutation, _types: &usize, _types_as_on_domain: bool) -> Self {
+    fn from_permutation(_p: Permutation, _types: usize, _types_as_on_domain: bool) -> Self {
         todo!()
     }
 }

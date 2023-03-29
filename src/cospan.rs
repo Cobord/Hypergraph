@@ -299,7 +299,7 @@ where
 impl<Lambda> MonoidalMorphism<Vec<Lambda>> for Cospan<Lambda> where Lambda: Eq + Sized + Copy + Debug
 {}
 
-impl<Lambda> SymmetricMonoidalMorphism<Vec<Lambda>> for Cospan<Lambda>
+impl<Lambda> SymmetricMonoidalMorphism<Lambda> for Cospan<Lambda>
 where
     Lambda: Eq + Sized + Copy + Debug,
 {
@@ -313,7 +313,7 @@ where
         }
     }
 
-    fn from_permutation(p: Permutation, types: &Vec<Lambda>, types_as_on_domain: bool) -> Self {
+    fn from_permutation(p: Permutation, types: &[Lambda], types_as_on_domain: bool) -> Self {
         let num_types = types.len();
         assert_eq!(p.len(), num_types);
         let id_temp = (0..num_types).collect::<Vec<usize>>();

@@ -339,7 +339,7 @@ where
 {
 }
 
-impl<Lambda, LeftPortName, RightPortName> SymmetricMonoidalMorphism<Vec<Lambda>>
+impl<Lambda, LeftPortName, RightPortName> SymmetricMonoidalMorphism<Lambda>
     for NamedCospan<Lambda, LeftPortName, RightPortName>
 where
     Lambda: Sized + Eq + Copy + Debug,
@@ -355,7 +355,7 @@ where
         self.underlying_cospan.permute_side(p, of_right_leg);
     }
 
-    fn from_permutation(_p: Permutation, _types: &Vec<Lambda>, _types_as_on_domain: bool) -> Self {
+    fn from_permutation(_p: Permutation, _types: &[Lambda], _types_as_on_domain: bool) -> Self {
         panic!("Not enough data. Use from_permutation_extra_data instead");
     }
 }

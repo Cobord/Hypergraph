@@ -354,7 +354,7 @@ where
 {
 }
 
-impl<Lambda, BlackBoxLabel> SymmetricMonoidalMutatingMorphism<Vec<Lambda>>
+impl<Lambda, BlackBoxLabel> SymmetricMonoidalMutatingMorphism<Lambda>
     for FrobeniusMorphism<Lambda, BlackBoxLabel>
 where
     Lambda: Eq + Copy,
@@ -366,7 +366,7 @@ where
 
     fn from_permutation(
         _p: permutations::Permutation,
-        _types: &Vec<Lambda>,
+        _types: &[Lambda],
         _types_as_on_domain: bool,
     ) -> Self {
         todo!()
