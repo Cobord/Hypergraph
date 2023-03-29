@@ -1,3 +1,5 @@
+use permutations::Permutation;
+
 use crate::category::{ComposableMutating, HasIdentity};
 use crate::monoidal::{Monoidal, MonoidalMutatingMorphism};
 use crate::symmetric_monoidal::SymmetricMonoidalMutatingMorphism;
@@ -86,7 +88,7 @@ where
 }
 
 #[derive(PartialEq, Eq, Clone)]
-pub struct FrobeniusBlock<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy> {
+struct FrobeniusBlock<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy> {
     op: FrobeniusOperation<Lambda, BlackBoxLabel>,
     source_side_placement: usize,
     target_side_placement: usize,
@@ -145,7 +147,7 @@ where
 }
 
 #[derive(PartialEq, Eq, Clone)]
-pub struct FrobeniusLayer<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy> {
+struct FrobeniusLayer<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy> {
     blocks: Vec<FrobeniusBlock<Lambda, BlackBoxLabel>>,
     left_type: Vec<Lambda>,
     right_type: Vec<Lambda>,
@@ -244,7 +246,7 @@ where
         answer
     }
 
-    pub fn append_layer(
+    fn append_layer(
         &mut self,
         next_layer: FrobeniusLayer<Lambda, BlackBoxLabel>,
     ) -> Result<(), String> {
@@ -416,6 +418,99 @@ pub fn special_frobenius_morphism<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy>(
                 answer
             }
         }
+    }
+}
+
+// TODO implement and test
+pub trait Frobenius<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy>:
+    SymmetricMonoidalMutatingMorphism<Lambda> + HasIdentity<Vec<Lambda>>
+{
+    fn interpret_unit(z: Lambda) -> Self;
+    fn interpret_counit(z: Lambda) -> Self;
+    fn interpret_multiplication(z: Lambda) -> Self;
+    fn interpret_comultiplication(z: Lambda) -> Self;
+
+    fn basic_interpret<F>(
+        single_step: &FrobeniusOperation<Lambda, BlackBoxLabel>,
+        black_box_interpreter: &F,
+    ) -> Self
+    where
+        F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Self,
+    {
+        match single_step {
+            FrobeniusOperation::Unit(z) => Self::interpret_unit(*z),
+            FrobeniusOperation::Counit(z) => Self::interpret_counit(*z),
+            FrobeniusOperation::Multiplication(z) => Self::interpret_multiplication(*z),
+            FrobeniusOperation::Comultiplication(z) => Self::interpret_comultiplication(*z),
+            FrobeniusOperation::Identity(z) => Self::identity(&vec![*z]),
+            FrobeniusOperation::SymmetricBraiding(z1, z2) => {
+                let transposition = Permutation::try_from(vec![0, 1]).unwrap();
+                Self::from_permutation(transposition, &[*z1, *z2], true)
+            }
+            FrobeniusOperation::UnSpecifiedBox(bbl, z1, z2) => black_box_interpreter(bbl, z1, z2),
+        }
+    }
+
+    fn interpret<F>(
+        morphism: &FrobeniusMorphism<Lambda, BlackBoxLabel>,
+        black_box_interpreter: &F,
+    ) -> Result<Self, String>
+    where
+        F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Self,
+    {
+        let mut answer = Self::identity(&morphism.domain());
+        for layer in &morphism.layers {
+            if layer.blocks.is_empty() {
+                panic!("???")
+            }
+            let first = &layer.blocks[0];
+            let mut cur_layer = Self::basic_interpret(&first.op, black_box_interpreter);
+            for block in &layer.blocks[1..] {
+                cur_layer.monoidal(Self::basic_interpret(&block.op, black_box_interpreter));
+            }
+            let _ = answer.compose(cur_layer)?;
+        }
+        Ok(answer)
+    }
+}
+
+impl<Lambda, BlackBoxLabel> Frobenius<Lambda, BlackBoxLabel>
+    for FrobeniusMorphism<Lambda, BlackBoxLabel>
+where
+    Lambda: Eq + Copy,
+    BlackBoxLabel: Eq + Copy,
+{
+    fn interpret_unit(z: Lambda) -> Self {
+        Self::single_op(FrobeniusOperation::Unit(z))
+    }
+    fn interpret_counit(z: Lambda) -> Self {
+        Self::single_op(FrobeniusOperation::Counit(z))
+    }
+    fn interpret_multiplication(z: Lambda) -> Self {
+        Self::single_op(FrobeniusOperation::Multiplication(z))
+    }
+    fn interpret_comultiplication(z: Lambda) -> Self {
+        Self::single_op(FrobeniusOperation::Comultiplication(z))
+    }
+
+    fn basic_interpret<F>(
+        single_step: &FrobeniusOperation<Lambda, BlackBoxLabel>,
+        _black_box_interpreter: &F,
+    ) -> Self
+    where
+        F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Self,
+    {
+        Self::single_op(single_step.clone())
+    }
+
+    fn interpret<F>(
+        morphism: &FrobeniusMorphism<Lambda, BlackBoxLabel>,
+        _black_box_interpreter: &F,
+    ) -> Result<Self, String>
+    where
+        F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Self,
+    {
+        Ok(morphism.clone())
     }
 }
 
