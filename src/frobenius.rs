@@ -433,11 +433,11 @@ pub trait Frobenius<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy>:
     fn basic_interpret<F>(
         single_step: &FrobeniusOperation<Lambda, BlackBoxLabel>,
         black_box_interpreter: &F,
-    ) -> Self
+    ) -> Result<Self, String>
     where
-        F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Self,
+        F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Result<Self, String>,
     {
-        match single_step {
+        let answer = match single_step {
             FrobeniusOperation::Unit(z) => Self::interpret_unit(*z),
             FrobeniusOperation::Counit(z) => Self::interpret_counit(*z),
             FrobeniusOperation::Multiplication(z) => Self::interpret_multiplication(*z),
@@ -447,8 +447,9 @@ pub trait Frobenius<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy>:
                 let transposition = Permutation::try_from(vec![0, 1]).unwrap();
                 Self::from_permutation(transposition, &[*z1, *z2], true)
             }
-            FrobeniusOperation::UnSpecifiedBox(bbl, z1, z2) => black_box_interpreter(bbl, z1, z2),
-        }
+            FrobeniusOperation::UnSpecifiedBox(bbl, z1, z2) => black_box_interpreter(bbl, z1, z2)?,
+        };
+        Ok(answer)
     }
 
     fn interpret<F>(
@@ -456,17 +457,17 @@ pub trait Frobenius<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy>:
         black_box_interpreter: &F,
     ) -> Result<Self, String>
     where
-        F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Self,
+        F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Result<Self, String>,
     {
         let mut answer = Self::identity(&morphism.domain());
         for layer in &morphism.layers {
             if layer.blocks.is_empty() {
-                panic!("???")
+                return Err("???".to_string());
             }
             let first = &layer.blocks[0];
-            let mut cur_layer = Self::basic_interpret(&first.op, black_box_interpreter);
+            let mut cur_layer = Self::basic_interpret(&first.op, black_box_interpreter)?;
             for block in &layer.blocks[1..] {
-                cur_layer.monoidal(Self::basic_interpret(&block.op, black_box_interpreter));
+                cur_layer.monoidal(Self::basic_interpret(&block.op, black_box_interpreter)?);
             }
             let _ = answer.compose(cur_layer)?;
         }
@@ -496,11 +497,11 @@ where
     fn basic_interpret<F>(
         single_step: &FrobeniusOperation<Lambda, BlackBoxLabel>,
         _black_box_interpreter: &F,
-    ) -> Self
+    ) -> Result<Self, String>
     where
-        F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Self,
+        F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Result<Self, String>,
     {
-        Self::single_op(single_step.clone())
+        Ok(Self::single_op(single_step.clone()))
     }
 
     fn interpret<F>(
@@ -508,7 +509,7 @@ where
         _black_box_interpreter: &F,
     ) -> Result<Self, String>
     where
-        F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Self,
+        F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Result<Self, String>,
     {
         Ok(morphism.clone())
     }
