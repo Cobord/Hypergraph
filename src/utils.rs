@@ -14,6 +14,7 @@ where
     }
 }
 
+#[allow(dead_code)]
 pub fn either_f<T, U, V, F, G>(x: Either<T, U>, f1: F, f2: G) -> V
 where
     F: Fn(T) -> V,

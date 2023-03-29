@@ -26,7 +26,6 @@ impl InOut {
     }
 }
 
-type MiddleIndex = usize;
 type Doubled<T> = (T, T);
 type DoubledEither<T, U> = Either<Doubled<T>, Doubled<U>>;
 
@@ -44,13 +43,8 @@ where
     IntraCircle: Eq + Clone,
 {
     pub fn new(
-        left: Vec<MiddleIndex>,
-        right: Vec<MiddleIndex>,
-        middle: Vec<Lambda>,
-        left_names: Vec<(InOut, InterCircle, IntraCircle)>,
-        right_names: Vec<(InOut, IntraCircle)>,
+        inside: NamedCospan<Lambda, (InOut, InterCircle, IntraCircle), (InOut, IntraCircle)>,
     ) -> Self {
-        let inside = NamedCospan::new(left, right, middle, left_names, right_names);
         Self { 0: inside }
     }
 
@@ -60,6 +54,32 @@ where
         name_pair: DoubledEither<(InOut, InterCircle, IntraCircle), (InOut, IntraCircle)>,
     ) {
         self.0.change_boundary_node_name(name_pair);
+    }
+
+    #[allow(dead_code)]
+    pub fn add_boundary_node_unconnected(
+        &mut self,
+        my_type: Lambda,
+        new_name: Either<(InOut, InterCircle, IntraCircle), (InOut, IntraCircle)>,
+    ) {
+        let _loc = self.0.add_boundary_node_unknown_target(my_type, new_name);
+    }
+
+    #[allow(dead_code)]
+    pub fn connect_pair(
+        &mut self,
+        node_1: Either<(InOut, InterCircle, IntraCircle), (InOut, IntraCircle)>,
+        node_2: Either<(InOut, InterCircle, IntraCircle), (InOut, IntraCircle)>,
+    ) {
+        self.0.connect_pair(node_1, node_2)
+    }
+
+    #[allow(dead_code)]
+    pub fn delete_boundary_node(
+        &mut self,
+        which_node: Either<(InOut, InterCircle, IntraCircle), (InOut, IntraCircle)>,
+    ) {
+        self.0.delete_boundary_node_by_name(which_node)
     }
 
     #[allow(dead_code)]
@@ -121,6 +141,7 @@ mod test {
     #[test]
     fn no_input_example() {
         use super::{InOut, WiringDiagram};
+        use crate::named_cospan::NamedCospan;
         use either::Right;
         let unchanged_right_names = vec![
             (InOut::In, 0),
@@ -129,13 +150,13 @@ mod test {
             (InOut::Out, 3),
             (InOut::Out, 4),
         ];
-        let mut example: WiringDiagram<_, (), _> = WiringDiagram::new(
+        let mut example: WiringDiagram<_, (), _> = WiringDiagram::new(NamedCospan::new(
             vec![],
             vec![0, 1, 2, 2, 0],
             vec![true, true, false],
             vec![],
             unchanged_right_names.clone(),
-        );
+        ));
         assert_eq!(*example.0.right_names(), unchanged_right_names);
         example.change_boundary_node_name(Right(((InOut::In, 0), (InOut::Out, 0))));
         let changed_names = example.0.right_names();

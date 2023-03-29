@@ -1,4 +1,6 @@
 use permutations::Permutation;
+use std::convert::identity;
+use std::fmt::Debug;
 
 use crate::category::{ComposableMutating, HasIdentity};
 use crate::monoidal::{Monoidal, MonoidalMutatingMorphism};
@@ -220,13 +222,13 @@ where
 }
 
 #[derive(Clone, PartialEq, Eq)]
-pub struct FrobeniusMorphism<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy> {
+pub struct FrobeniusMorphism<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Copy> {
     layers: Vec<FrobeniusLayer<Lambda, BlackBoxLabel>>,
 }
 
 impl<'a, Lambda, BlackBoxLabel> FrobeniusMorphism<Lambda, BlackBoxLabel>
 where
-    Lambda: Eq + Copy,
+    Lambda: Eq + Copy + Debug,
     BlackBoxLabel: Eq + Copy,
 {
     pub fn new() -> Self {
@@ -279,7 +281,7 @@ where
 
 impl<Lambda, BlackBoxLabel> HasIdentity<Vec<Lambda>> for FrobeniusMorphism<Lambda, BlackBoxLabel>
 where
-    Lambda: Eq + Copy,
+    Lambda: Eq + Copy + Debug,
     BlackBoxLabel: Eq + Copy,
 {
     fn identity(on_this: &Vec<Lambda>) -> Self {
@@ -292,7 +294,7 @@ where
 
 impl<Lambda, BlackBoxLabel> Monoidal for FrobeniusMorphism<Lambda, BlackBoxLabel>
 where
-    Lambda: Eq + Copy,
+    Lambda: Eq + Copy + Debug,
     BlackBoxLabel: Eq + Copy,
 {
     fn monoidal(&mut self, other: Self) {
@@ -321,11 +323,48 @@ where
 impl<Lambda, BlackBoxLabel> ComposableMutating<Vec<Lambda>>
     for FrobeniusMorphism<Lambda, BlackBoxLabel>
 where
-    Lambda: Eq + Copy,
+    Lambda: Eq + Copy + Debug,
     BlackBoxLabel: Eq + Copy,
 {
-    fn composable(&self, _other: &Self) -> Result<(), String> {
-        todo!()
+    fn composable(&self, other: &Self) -> Result<(), String> {
+        if self.layers.is_empty() || other.layers.is_empty() {
+            if self.layers.is_empty() && other.layers.is_empty() {
+                return Ok(());
+            } else if self.layers.is_empty() {
+                let other_interface = &other.layers[0].left_type;
+                if other_interface.is_empty() {
+                    return Ok(());
+                } else {
+                    return Err("Mismatch in cardinalities of common interface".to_string());
+                }
+            } else {
+                let self_interface = &self.layers[self.layers.len() - 1].right_type;
+                if self_interface.is_empty() {
+                    return Ok(());
+                } else {
+                    return Err("Mismatch in cardinalities of common interface".to_string());
+                }
+            }
+        }
+        let self_interface = &self.layers[self.layers.len() - 1].right_type;
+        let other_interface = &other.layers[0].left_type;
+        if self_interface.len() != other_interface.len() {
+            Err("Mismatch in cardinalities of common interface".to_string())
+        } else if self_interface != other_interface {
+            for idx in 0..self_interface.len() {
+                let w1 = self_interface[idx];
+                let w2 = other_interface[idx];
+                if w1 != w2 {
+                    return Err(format!(
+                        "Mismatch in labels of common interface. At some index there was {:?} vs {:?}",
+                        w1, w2
+                    ));
+                }
+            }
+            Err("Mismatch in labels of common interface at some unknown index.".to_string())
+        } else {
+            Ok(())
+        }
     }
 
     fn compose(&mut self, other: Self) -> Result<(), String> {
@@ -355,7 +394,7 @@ where
 impl<Lambda, BlackBoxLabel> MonoidalMutatingMorphism<Vec<Lambda>>
     for FrobeniusMorphism<Lambda, BlackBoxLabel>
 where
-    Lambda: Eq + Copy,
+    Lambda: Eq + Copy + Debug,
     BlackBoxLabel: Eq + Copy,
 {
 }
@@ -363,11 +402,20 @@ where
 impl<Lambda, BlackBoxLabel> SymmetricMonoidalMutatingMorphism<Lambda>
     for FrobeniusMorphism<Lambda, BlackBoxLabel>
 where
-    Lambda: Eq + Copy,
+    Lambda: Eq + Copy + Debug,
     BlackBoxLabel: Eq + Copy,
 {
-    fn permute_side(&mut self, _p: &permutations::Permutation, _of_codomain: bool) {
-        todo!()
+    fn permute_side(&mut self, p: &permutations::Permutation, of_codomain: bool) {
+        if of_codomain {
+            assert_eq!(p.len(), self.codomain().len());
+            let p_frob = Self::from_permutation(p.clone(), &self.codomain(), true);
+            self.compose(p_frob).unwrap();
+            todo!("might be p.inv() instead")
+        } else {
+            self.hflip(&identity);
+            self.permute_side(&p.inv(), true);
+            self.hflip(&identity)
+        }
     }
 
     fn from_permutation(
@@ -379,7 +427,7 @@ where
     }
 }
 
-pub fn special_frobenius_morphism<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy>(
+pub fn special_frobenius_morphism<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Copy>(
     m: usize,
     n: usize,
     wire_type: Lambda,
@@ -422,7 +470,7 @@ pub fn special_frobenius_morphism<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy>(
 }
 
 // TODO implement and test
-pub trait Frobenius<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy>:
+pub trait Frobenius<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Copy>:
     SymmetricMonoidalMutatingMorphism<Lambda> + HasIdentity<Vec<Lambda>>
 {
     fn interpret_unit(z: Lambda) -> Self;
@@ -478,7 +526,7 @@ pub trait Frobenius<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy>:
 impl<Lambda, BlackBoxLabel> Frobenius<Lambda, BlackBoxLabel>
     for FrobeniusMorphism<Lambda, BlackBoxLabel>
 where
-    Lambda: Eq + Copy,
+    Lambda: Eq + Copy + Debug,
     BlackBoxLabel: Eq + Copy,
 {
     fn interpret_unit(z: Lambda) -> Self {
@@ -598,7 +646,7 @@ mod test {
             FrobeniusMorphism::single_op(FrobeniusOperation::Comultiplication(false));
         assert!(exp_comul_spider == comul_spider);
 
-        #[derive(PartialEq, Eq, Clone, Copy)]
+        #[derive(PartialEq, Eq, Clone, Copy, Debug)]
         enum COLOR {
             RED,
             GREEN,

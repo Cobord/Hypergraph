@@ -1,11 +1,9 @@
 use either::Either::{Left, Right};
 use petgraph::dot::Dot;
-use std::convert::identity;
 use union_find::{QuickUnionUf, UnionBySize};
 
-mod utils;
-use utils::either_f;
 mod category;
+mod utils;
 use category::ComposableMutating;
 mod cospan;
 mod monoidal;
@@ -29,10 +27,27 @@ fn main() {
     x.add_boundary_node_unknown_target(0, Right("out1"));
     x.add_boundary_node_known_target(0, Right("out2"));
     x.add_boundary_node_known_target(0, Left("in1"));
+    x.add_boundary_node_unknown_target(0, Right("out4"));
+    x.add_boundary_node_unknown_target(1, Left("in2"));
+    x.add_boundary_node_unknown_target(1, Left("in3"));
+    x.connect_pair(Left("in2"), Left("in3"));
 
     let (_, _, _, graph) = x.to_graph(
-        |lambda| ((), lambda),
-        |port_name| either_f(port_name, identity, identity),
+        |lambda| (lambda.to_string(), ()),
+        |port_type_color, port_name| {
+            *port_type_color = format!("{} of type {}", port_name, *port_type_color);
+        },
+    );
+
+    println!("{:?}", Dot::new(&graph));
+
+    x.connect_pair(Right("out1"), Right("out4"));
+
+    let (_, _, _, graph) = x.to_graph(
+        |lambda| (lambda.to_string(), ()),
+        |port_type_color, port_name| {
+            *port_type_color = format!("{} of type {}", port_name, *port_type_color);
+        },
     );
 
     println!("{:?}", Dot::new(&graph));
@@ -49,11 +64,11 @@ fn main() {
         (InOut::Out, 3),
         (InOut::Out, 4),
     ];
-    let _example: WiringDiagram<_, (), _> = WiringDiagram::new(
+    let _example: WiringDiagram<_, (), _> = WiringDiagram::new(NamedCospan::new(
         vec![],
         vec![0, 1, 2, 2, 0],
         vec![true, true, false],
         vec![],
         unchanged_right_names,
-    );
+    ));
 }

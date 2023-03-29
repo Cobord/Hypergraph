@@ -1,4 +1,5 @@
 use either::Either::{self, Left, Right};
+use log::warn;
 use permutations::Permutation;
 use petgraph::{prelude::Graph, stable_graph::DefaultIx, stable_graph::NodeIndex};
 use std::collections::HashMap;
@@ -140,6 +141,48 @@ where
                 self.right.swap_remove(z);
             }
         }
+    }
+
+    pub fn connect_pair(
+        &mut self,
+        node_1: Either<LeftIndex, RightIndex>,
+        node_2: Either<LeftIndex, RightIndex>,
+    ) {
+        let mid_for_node_1 = match node_1 {
+            Left(z) => self.left[z],
+            Right(z) => self.right[z],
+        };
+        let mid_for_node_2 = match node_2 {
+            Left(z) => self.left[z],
+            Right(z) => self.right[z],
+        };
+        if mid_for_node_1 == mid_for_node_2 {
+            return;
+        }
+        let my_type = self.middle[mid_for_node_1];
+        if my_type != self.middle[mid_for_node_2] {
+            warn!("Incompatible types. No change made.");
+            return;
+        }
+        let _ = self.middle.swap_remove(mid_for_node_2);
+        let old_last = self.middle.len();
+        let last_removed = mid_for_node_2 == old_last;
+        self.left.iter_mut().for_each(|v| {
+            if mid_for_node_2 == *v {
+                *v = mid_for_node_1;
+            } else if *v == old_last && !last_removed {
+                *v = mid_for_node_2;
+            } else {
+            }
+        });
+        self.right.iter_mut().for_each(|v| {
+            if mid_for_node_2 == *v {
+                *v = mid_for_node_1;
+            } else if *v == old_last && !last_removed {
+                *v = mid_for_node_2;
+            } else {
+            }
+        });
     }
 
     pub fn add_middle(&mut self, new_middle: Lambda) -> MiddleIndex {

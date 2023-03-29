@@ -30,8 +30,32 @@ impl Monoidal for OrderPresSurj {
 }
 
 impl Composable<usize> for OrderPresSurj {
-    fn compose(&self, _other: &Self) -> Result<Self, String> {
-        todo!()
+    fn compose(&self, other: &Self) -> Result<Self, String> {
+        if Self::composable(self, other).is_err() {
+            let self_codomain = self.codomain();
+            let other_domain = other.domain();
+            return Err(format!(
+                "Not composable. The codomain of self was {}. The domain of other was {}",
+                self_codomain, other_domain
+            ));
+        }
+        let my_codomain = other.codomain();
+        let mut answer = Vec::with_capacity(my_codomain);
+        let mut self_idx = 0;
+        for idx in 0..my_codomain {
+            let how_many_mid = other.preimage_card_minus_1[idx] + 1;
+            let preimage_card_cur: usize = self.preimage_card_minus_1
+                [self_idx..self_idx + how_many_mid]
+                .iter()
+                .sum::<usize>()
+                + how_many_mid;
+            answer.push(preimage_card_cur - 1);
+            self_idx += how_many_mid;
+        }
+        Ok(Self {
+            preimage_card_minus_1: answer,
+        })
+        // todo test
     }
 
     fn domain(&self) -> usize {
@@ -86,8 +110,22 @@ impl Monoidal for OrderPresInj {
 }
 
 impl Composable<usize> for OrderPresInj {
-    fn compose(&self, _other: &Self) -> Result<Self, String> {
-        todo!()
+    fn compose(&self, other: &Self) -> Result<Self, String> {
+        if Self::composable(self, other).is_err() {
+            let self_codomain = self.codomain();
+            let other_domain = other.domain();
+            return Err(format!(
+                "Not composable. The codomain of self was {}. The domain of other was {}",
+                self_codomain, other_domain
+            ));
+        }
+        let ord_self = self.to_ordinary();
+        let ord_other = other.to_ordinary();
+        let composite = (0..ord_self.len())
+            .map(|s| ord_other[ord_self[s]])
+            .collect::<Vec<usize>>();
+        OrderPresInj::try_from(composite).map_err(|_| "???".to_string())
+        //todo test
     }
 
     fn domain(&self) -> usize {
@@ -325,8 +363,22 @@ impl Monoidal for Decomposition {
 }
 
 impl Composable<usize> for Decomposition {
-    fn compose(&self, _other: &Self) -> Result<Self, String> {
-        todo!()
+    fn compose(&self, other: &Self) -> Result<Self, String> {
+        if Self::composable(self, other).is_err() {
+            let self_codomain = self.codomain();
+            let other_domain = other.domain();
+            return Err(format!(
+                "Not composable. The codomain of self was {}. The domain of other was {}",
+                self_codomain, other_domain
+            ));
+        }
+        let ord_self = self.to_ordinary();
+        let ord_other = other.to_ordinary();
+        let composite = (0..ord_self.len())
+            .map(|s| ord_other[ord_self[s]])
+            .collect::<Vec<usize>>();
+        Decomposition::try_from(composite).map_err(|_| "???".to_string())
+        //todo test
     }
 
     fn domain(&self) -> usize {
@@ -341,21 +393,42 @@ impl Composable<usize> for Decomposition {
 impl MonoidalMorphism<usize> for Decomposition {}
 
 impl SymmetricMonoidalDiscreteMorphism<usize> for Decomposition {
-    fn permute_side(&mut self, _p: &Permutation, _of_codomain: bool) {
-        todo!()
+    fn permute_side(&mut self, p: &Permutation, of_codomain: bool) {
+        if !of_codomain {
+            assert_eq!(p.len(), self.domain());
+            self.permutation_part = p * self.permutation_part.clone();
+            todo!("might be p.inv() instead or the multiplication might be backwards")
+        } else {
+            assert_eq!(p.len(), self.codomain());
+            let p_decompose = Self::from_permutation(p.clone(), p.len(), true);
+            let new_self = self.compose(&p_decompose).unwrap();
+            *self = new_self;
+            todo!("might be p.inv() instead")
+        }
     }
 
-    fn from_permutation(_p: Permutation, _types: usize, _types_as_on_domain: bool) -> Self {
-        todo!()
+    fn from_permutation(p: Permutation, my_type: usize, _: bool) -> Self {
+        assert_eq!(p.len(), my_type);
+        let _answer = Self {
+            permutation_part: p,
+            order_preserving_injection: OrderPresInj::identity(&my_type),
+            order_preserving_surjection: OrderPresSurj::identity(&my_type),
+        };
+        todo!("might be p.inv() instead")
     }
 }
 
 impl Decomposition {
-    #[allow(dead_code)]
     fn apply(&self, test_pt: usize) -> usize {
         let dest_after_perm = self.permutation_part.apply(test_pt);
         let dest_after_surj = self.order_preserving_surjection.apply(dest_after_perm);
         self.order_preserving_injection.apply(dest_after_surj)
+    }
+
+    fn to_ordinary(&self) -> FinSetMap {
+        (0..self.domain())
+            .map(|z| self.apply(z))
+            .collect::<FinSetMap>()
     }
 }
 

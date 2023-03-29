@@ -154,6 +154,39 @@ where
         self.underlying_cospan.delete_boundary_node(which_node);
     }
 
+    pub fn connect_pair(
+        &mut self,
+        node_1: Either<LeftPortName, RightPortName>,
+        node_2: Either<LeftPortName, RightPortName>,
+    ) {
+        let node_1_loc = self.find_node_by_name(node_1);
+        let node_2_loc = self.find_node_by_name(node_2);
+        if let (Some(node_1_loc_real), Some(node_2_loc_real)) = (node_1_loc, node_2_loc) {
+            self.underlying_cospan
+                .connect_pair(node_1_loc_real, node_2_loc_real);
+        }
+    }
+
+    fn find_node_by_name(
+        &self,
+        desired_name: Either<LeftPortName, RightPortName>,
+    ) -> Option<Either<LeftIndex, RightIndex>> {
+        match desired_name {
+            Left(desired_name_left) => {
+                let index_in_left: Option<LeftIndex> =
+                    self.left_names.iter().position(|r| *r == desired_name_left);
+                index_in_left.map(Left)
+            }
+            Right(desired_name_right) => {
+                let index_in_right: Option<LeftIndex> = self
+                    .right_names
+                    .iter()
+                    .position(|r| *r == desired_name_right);
+                index_in_right.map(Right)
+            }
+        }
+    }
+
     pub fn find_nodes_by_name_predicate<F, G>(
         &self,
         left_pred: F,
@@ -202,7 +235,6 @@ where
         }
     }
 
-    #[allow(dead_code)]
     pub fn delete_boundary_node_by_name(
         &mut self,
         which_node: Either<LeftPortName, RightPortName>,
@@ -268,10 +300,10 @@ where
     }
 
     #[allow(clippy::type_complexity)]
-    pub fn to_graph<T, U, V, F, G>(
+    pub fn to_graph<T, U, F, G>(
         &self,
         lambda_decorator: F,
-        _port_decorator: G,
+        port_decorator: G,
     ) -> (
         Vec<NodeIndex<DefaultIx>>,
         Vec<NodeIndex<DefaultIx>>,
@@ -280,10 +312,21 @@ where
     )
     where
         F: Fn(Lambda) -> (T, U),
-        G: Fn(Either<LeftPortName, RightPortName>) -> V,
+        G: Fn(&mut T, Either<LeftPortName, RightPortName>),
+        RightPortName: Clone,
     {
-        let (left_nodes, middle_nodes, right_nodes, graph) =
+        let (left_nodes, middle_nodes, right_nodes, mut graph) =
             self.underlying_cospan.to_graph(lambda_decorator);
+        for (left_idx, left_node) in left_nodes.iter().enumerate() {
+            let cur_left_weight = graph.node_weight_mut(*left_node).unwrap();
+            let cur_left_name = Left(self.left_names[left_idx].clone());
+            port_decorator(cur_left_weight, cur_left_name);
+        }
+        for (right_idx, right_node) in right_nodes.iter().enumerate() {
+            let cur_right_weight = graph.node_weight_mut(*right_node).unwrap();
+            let cur_right_name = Right(self.right_names[right_idx].clone());
+            port_decorator(cur_right_weight, cur_right_name);
+        }
         (left_nodes, middle_nodes, right_nodes, graph)
     }
 }
