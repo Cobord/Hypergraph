@@ -10,6 +10,7 @@ use category::ComposableMutating;
 mod cospan;
 mod monoidal;
 mod named_cospan;
+mod span;
 mod symmetric_monoidal;
 use named_cospan::NamedCospan;
 mod finset;
