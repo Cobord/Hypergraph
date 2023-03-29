@@ -1,7 +1,10 @@
 use either::Either;
 use std::fmt::Debug;
 
+use crate::category::Composable;
+use crate::monoidal::Monoidal;
 use crate::named_cospan::NamedCospan;
+use crate::symmetric_monoidal::SymmetricMonoidalMorphism;
 use crate::utils::{keep_left, necessary_permutation, remove_multiple};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -81,7 +84,7 @@ where
         .filter_map(keep_left)
         .collect();
 
-        let mut self_inner_interface_unaffected = self.0.left_interface();
+        let mut self_inner_interface_unaffected = self.0.domain();
         remove_multiple(&mut self_inner_interface_unaffected, found_nodes.clone());
         let mut self_inner_names_unaffected = self.0.left_names().clone();
         remove_multiple(&mut self_inner_names_unaffected, found_nodes);
@@ -107,8 +110,8 @@ where
                 .collect::<Vec<(InOut, IntraCircle)>>(),
         )?;
 
-        internal_other.0.permute_leg(&p, true);
-        self.0 = self.0.compose(internal_other.0)?;
+        internal_other.0.permute_side(&p, true);
+        self.0 = self.0.compose(&internal_other.0)?;
         Ok(())
     }
 }

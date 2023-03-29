@@ -5,7 +5,10 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use union_find::{UnionBySize, UnionFind};
 
+use crate::category::Composable;
 use crate::finset::FinSetMap;
+use crate::monoidal::{Monoidal, MonoidalMorphism};
+use crate::symmetric_monoidal::SymmetricMonoidalMorphism;
 use crate::utils::{bimap, in_place_permute, represents_id};
 
 type LeftIndex = usize;
@@ -86,47 +89,6 @@ where
         }
     }
 
-    pub fn permute_leg(&mut self, p: &Permutation, of_right_leg: bool) {
-        if of_right_leg {
-            self.is_right_id = false;
-            in_place_permute(&mut self.right, p);
-        } else {
-            self.is_left_id = false;
-            in_place_permute(&mut self.left, p);
-        }
-    }
-
-    pub fn from_permutation(p: Permutation, types: &[Lambda], types_as_on_source: bool) -> Self {
-        let num_types = types.len();
-        assert_eq!(p.len(), num_types);
-        let id_temp = (0..num_types).collect::<Vec<usize>>();
-        // inverses placed so that from(p1);from(p2) = from(p1;p2)
-        //  left ; is cospan composition
-        //  right ; is composition of permutation functions
-        let p_underlying = if types_as_on_source {
-            p.inv().permute(&id_temp)
-        } else {
-            p.permute(&id_temp)
-        };
-        if types_as_on_source {
-            Self {
-                left: (0..num_types).collect(),
-                right: p_underlying,
-                middle: types.to_vec(),
-                is_left_id: true,
-                is_right_id: false,
-            }
-        } else {
-            Self {
-                left: p_underlying,
-                right: (0..num_types).collect(),
-                middle: types.to_vec(),
-                is_left_id: false,
-                is_right_id: true,
-            }
-        }
-    }
-
     #[allow(dead_code)]
     pub fn add_boundary_node_known_target(
         &mut self,
@@ -198,17 +160,6 @@ where
         self.middle.len() - 1
     }
 
-    pub fn monoidal(&mut self, mut other: Self) {
-        let middle_shift = self.middle.len();
-        other.left.iter_mut().for_each(|v| *v += middle_shift);
-        other.right.iter_mut().for_each(|v| *v += middle_shift);
-        self.left.extend(other.left);
-        self.right.extend(other.right);
-        self.middle.extend(other.middle);
-        self.is_left_id &= other.is_left_id;
-        self.is_right_id &= other.is_right_id;
-    }
-
     #[allow(clippy::type_complexity)]
     pub fn to_graph<T, U, F>(
         &self,
@@ -249,16 +200,29 @@ where
         }
         (all_left_nodes, all_middle_nodes, all_right_nodes, graph)
     }
+}
 
-    pub fn left_interface(&self) -> Vec<Lambda> {
-        self.left.iter().map(|mid| self.middle[*mid]).collect()
+impl<Lambda> Monoidal for Cospan<Lambda>
+where
+    Lambda: Eq + Sized + Copy + Debug,
+{
+    fn monoidal(&mut self, mut other: Self) {
+        let middle_shift = self.middle.len();
+        other.left.iter_mut().for_each(|v| *v += middle_shift);
+        other.right.iter_mut().for_each(|v| *v += middle_shift);
+        self.left.extend(other.left);
+        self.right.extend(other.right);
+        self.middle.extend(other.middle);
+        self.is_left_id &= other.is_left_id;
+        self.is_right_id &= other.is_right_id;
     }
+}
 
-    pub fn right_interface(&self) -> Vec<Lambda> {
-        self.right.iter().map(|mid| self.middle[*mid]).collect()
-    }
-
-    pub fn compose(self, other: Self) -> Result<Self, String> {
+impl<Lambda> Composable<Vec<Lambda>> for Cospan<Lambda>
+where
+    Lambda: Eq + Sized + Copy + Debug,
+{
+    fn compose(&self, other: &Self) -> Result<Self, String> {
         let mut self_interface = self.right.iter().map(|mid| self.middle[*mid]);
         let mut other_interface = other.left.iter().map(|mid| other.middle[*mid]);
         let mut to_continue = true;
@@ -307,15 +271,72 @@ where
             };
             composition.add_middle(lambda_assign);
         }
-        for target_in_self_middle in self.left {
-            let target_in_pushout = left_to_pushout[target_in_self_middle];
+        for target_in_self_middle in &self.left {
+            let target_in_pushout = left_to_pushout[*target_in_self_middle];
             composition.add_boundary_node(Left(Left(target_in_pushout)));
         }
-        for target_in_other_middle in other.right {
-            let target_in_pushout = right_to_pushout[target_in_other_middle];
+        for target_in_other_middle in &other.right {
+            let target_in_pushout = right_to_pushout[*target_in_other_middle];
             composition.add_boundary_node(Right(Left(target_in_pushout)));
         }
         Ok(composition)
+    }
+
+    fn domain(&self) -> Vec<Lambda> {
+        self.left.iter().map(|mid| self.middle[*mid]).collect()
+    }
+
+    fn codomain(&self) -> Vec<Lambda> {
+        self.right.iter().map(|mid| self.middle[*mid]).collect()
+    }
+}
+
+impl<Lambda> MonoidalMorphism<Vec<Lambda>> for Cospan<Lambda> where Lambda: Eq + Sized + Copy + Debug
+{}
+
+impl<Lambda> SymmetricMonoidalMorphism<Vec<Lambda>> for Cospan<Lambda>
+where
+    Lambda: Eq + Sized + Copy + Debug,
+{
+    fn permute_side(&mut self, p: &Permutation, of_right_leg: bool) {
+        if of_right_leg {
+            self.is_right_id = false;
+            in_place_permute(&mut self.right, p);
+        } else {
+            self.is_left_id = false;
+            in_place_permute(&mut self.left, p);
+        }
+    }
+
+    fn from_permutation(p: Permutation, types: &Vec<Lambda>, types_as_on_domain: bool) -> Self {
+        let num_types = types.len();
+        assert_eq!(p.len(), num_types);
+        let id_temp = (0..num_types).collect::<Vec<usize>>();
+        // inverses placed so that from(p1);from(p2) = from(p1;p2)
+        //  left ; is cospan composition
+        //  right ; is composition of permutation functions
+        let p_underlying = if types_as_on_domain {
+            p.inv().permute(&id_temp)
+        } else {
+            p.permute(&id_temp)
+        };
+        if types_as_on_domain {
+            Self {
+                left: (0..num_types).collect(),
+                right: p_underlying,
+                middle: types.to_vec(),
+                is_left_id: true,
+                is_right_id: false,
+            }
+        } else {
+            Self {
+                left: p_underlying,
+                right: (0..num_types).collect(),
+                middle: types.to_vec(),
+                is_left_id: false,
+                is_right_id: true,
+            }
+        }
     }
 }
 
@@ -408,6 +429,12 @@ where
 }
 
 mod test {
+    #[allow(unused_imports)]
+    use crate::category::Composable;
+    #[allow(unused_imports)]
+    use crate::monoidal::{Monoidal, MonoidalMorphism};
+    #[allow(unused_imports)]
+    use crate::symmetric_monoidal::SymmetricMonoidalMorphism;
 
     #[test]
     fn empty_cospan() {
@@ -479,7 +506,7 @@ mod test {
             vec![1, 0, 2, 3],
             vec![true, true, whatever_types[0], whatever_types[1]],
         );
-        let res = my_cospan.compose(my_cospan2);
+        let res = my_cospan.compose(&my_cospan2);
         let mut exp_middle = vec![true, true];
         exp_middle.extend(whatever_types.clone());
         match res {
@@ -515,9 +542,9 @@ mod test {
             &vec![COLOR::BLUE, COLOR::RED, COLOR::GREEN],
             type_names_on_source,
         );
-        let my_mid_interface_1 = my_cospan.right_interface();
-        let my_mid_interface_2 = my_cospan_2.left_interface();
-        let comp = my_cospan.compose(my_cospan_2);
+        let my_mid_interface_1 = my_cospan.codomain();
+        let my_mid_interface_2 = my_cospan_2.domain();
+        let comp = my_cospan.compose(&my_cospan_2);
         match comp {
             Ok(real_res) => {
                 let expected_res = Cospan::identity(&vec![COLOR::RED, COLOR::GREEN, COLOR::BLUE]);
@@ -543,9 +570,9 @@ mod test {
             &vec![COLOR::GREEN, COLOR::BLUE, COLOR::RED],
             type_names_on_source,
         );
-        let my_mid_interface_1 = my_cospan.right_interface();
-        let my_mid_interface_2 = my_cospan_2.left_interface();
-        let comp = my_cospan.compose(my_cospan_2);
+        let my_mid_interface_1 = my_cospan.codomain();
+        let my_mid_interface_2 = my_cospan_2.domain();
+        let comp = my_cospan.compose(&my_cospan_2);
         match comp {
             Ok(real_res) => {
                 let expected_res = Cospan::identity(&vec![COLOR::GREEN, COLOR::BLUE, COLOR::RED]);
@@ -586,7 +613,7 @@ mod test {
             &(0..my_n).map(|_| ()).collect::<Vec<()>>(),
             types_as_on_source,
         );
-        let cospan_prod = cospan_p1.compose(cospan_p2);
+        let cospan_prod = cospan_p1.compose(&cospan_p2);
         match cospan_prod {
             Ok(real_res) => {
                 let expected_res = Cospan::from_permutation(
@@ -616,7 +643,7 @@ mod test {
             &(0..my_n).map(|_| ()).collect::<Vec<()>>(),
             types_as_on_source,
         );
-        let cospan_prod = cospan_p1.compose(cospan_p2);
+        let cospan_prod = cospan_p1.compose(&cospan_p2);
         match cospan_prod {
             Ok(real_res) => {
                 let expected_res = Cospan::from_permutation(

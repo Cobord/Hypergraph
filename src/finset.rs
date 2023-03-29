@@ -2,6 +2,8 @@ use std::{collections::HashSet, error, fmt};
 
 use permutations::Permutation;
 
+use crate::category::Composable;
+use crate::monoidal::{Monoidal, MonoidalMorphism};
 use crate::utils::position_max;
 
 pub type FinSetMap = Vec<usize>;
@@ -11,10 +13,32 @@ pub struct OrderPresSurj {
     preimage_card_minus_1: Vec<usize>,
 }
 
+impl Monoidal for OrderPresSurj {
+    fn monoidal(&mut self, other: Self) {
+        self.preimage_card_minus_1
+            .extend(other.preimage_card_minus_1);
+    }
+}
+
+impl Composable<usize> for OrderPresSurj {
+    fn compose(&self, _other: &Self) -> Result<Self, String> {
+        todo!()
+    }
+
+    fn domain(&self) -> usize {
+        self.preimage_card_minus_1.iter().sum::<usize>() + self.preimage_card_minus_1.len()
+    }
+
+    fn codomain(&self) -> usize {
+        self.preimage_card_minus_1.len()
+    }
+}
+
+impl MonoidalMorphism<usize> for OrderPresSurj {}
+
 impl OrderPresSurj {
     fn to_ordinary(&self) -> FinSetMap {
-        let domain_size: usize =
-            self.preimage_card_minus_1.iter().sum::<usize>() + self.preimage_card_minus_1.len();
+        let domain_size: usize = self.domain();
         let mut answer = Vec::with_capacity(domain_size);
         for (cur_target, v) in self.preimage_card_minus_1.iter().enumerate() {
             for _ in 0..(v + 1) {
@@ -34,14 +58,49 @@ pub struct OrderPresInj {
     counts_iden_unit_alternating: Vec<usize>,
 }
 
-impl OrderPresInj {
-    fn to_ordinary(&self) -> FinSetMap {
-        let domain_size: usize = self
-            .counts_iden_unit_alternating
+impl Monoidal for OrderPresInj {
+    fn monoidal(&mut self, other: Self) {
+        if self.counts_iden_unit_alternating.len() % 2 == 1 {
+            self.counts_iden_unit_alternating.push(0);
+        }
+        self.counts_iden_unit_alternating
+            .extend(other.counts_iden_unit_alternating);
+    }
+}
+
+impl Composable<usize> for OrderPresInj {
+    fn compose(&self, _other: &Self) -> Result<Self, String> {
+        todo!()
+    }
+
+    fn domain(&self) -> usize {
+        self.counts_iden_unit_alternating
             .iter()
             .enumerate()
             .map(|(n, v)| (n % 2) * v)
-            .sum::<usize>();
+            .sum::<usize>()
+    }
+
+    fn codomain(&self) -> usize {
+        let mut cur_target = 0;
+        for (n, v) in self.counts_iden_unit_alternating.iter().enumerate() {
+            if n % 2 == 0 {
+                for _ in 0..*v {
+                    cur_target += 1;
+                }
+            } else {
+                cur_target += v;
+            }
+        }
+        cur_target
+    }
+}
+
+impl MonoidalMorphism<usize> for OrderPresInj {}
+
+impl OrderPresInj {
+    fn to_ordinary(&self) -> FinSetMap {
+        let domain_size: usize = self.domain();
         let mut answer = Vec::with_capacity(domain_size);
         let mut cur_target = 0;
         for (n, v) in self.counts_iden_unit_alternating.iter().enumerate() {
@@ -220,6 +279,39 @@ pub struct Decomposition {
     order_preserving_surjection: OrderPresSurj,
     order_preserving_injection: OrderPresInj,
 }
+
+impl Monoidal for Decomposition {
+    fn monoidal(&mut self, other: Self) {
+        let self_len = self.permutation_part.len();
+        let other_permutation_shifted = (0..other.permutation_part.len())
+            .map(|idx| other.permutation_part.apply(idx) + self_len);
+        let mut perm_underlying = (0..self_len)
+            .map(|idx| self.permutation_part.apply(idx))
+            .collect::<Vec<usize>>();
+        perm_underlying.extend(other_permutation_shifted);
+        self.permutation_part = Permutation::try_from(perm_underlying).unwrap();
+        self.order_preserving_surjection
+            .monoidal(other.order_preserving_surjection);
+        self.order_preserving_injection
+            .monoidal(other.order_preserving_injection);
+    }
+}
+
+impl Composable<usize> for Decomposition {
+    fn compose(&self, _other: &Self) -> Result<Self, String> {
+        todo!()
+    }
+
+    fn domain(&self) -> usize {
+        self.permutation_part.len()
+    }
+
+    fn codomain(&self) -> usize {
+        self.order_preserving_injection.codomain()
+    }
+}
+
+impl MonoidalMorphism<usize> for Decomposition {}
 
 impl Decomposition {
     #[allow(dead_code)]

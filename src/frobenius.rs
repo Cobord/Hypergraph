@@ -1,3 +1,5 @@
+use crate::{category::ComposableMutating, monoidal::Monoidal};
+
 #[derive(PartialEq, Eq, Clone)]
 pub enum FrobeniusOperation<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy> {
     Unit(Lambda),
@@ -193,8 +195,14 @@ where
         );
         self.blocks.push(my_op);
     }
+}
 
-    pub fn monoidal(&mut self, other: Self) {
+impl<Lambda, BlackBoxLabel> Monoidal for FrobeniusLayer<Lambda, BlackBoxLabel>
+where
+    Lambda: Eq + Copy,
+    BlackBoxLabel: Eq + Copy,
+{
+    fn monoidal(&mut self, other: Self) {
         for new_op in other.blocks {
             self.append_block(new_op.op);
         }
@@ -224,41 +232,28 @@ where
         let mut answer_layer = FrobeniusLayer::new();
         answer_layer.append_block(op);
         let mut answer = FrobeniusMorphism::new();
-        answer.append_layer(answer_layer);
+        let _ = answer.append_layer(answer_layer);
         answer
     }
 
-    pub fn source_types(&self) -> Vec<Lambda> {
-        if self.layers.is_empty() {
-            vec![]
-        } else {
-            self.layers[0].left_type.clone()
-        }
-    }
-
-    pub fn target_types(&self) -> Vec<Lambda> {
-        if self.layers.is_empty() {
-            vec![]
-        } else {
-            self.layers[self.layers.len() - 1].right_type.clone()
-        }
-    }
-
-    pub fn append_layer(&mut self, next_layer: FrobeniusLayer<Lambda, BlackBoxLabel>) {
+    pub fn append_layer(
+        &mut self,
+        next_layer: FrobeniusLayer<Lambda, BlackBoxLabel>,
+    ) -> Result<(), String> {
         let last_so_far = self.layers.pop();
         match last_so_far {
             None => {
                 self.layers.push(next_layer);
             }
             Some(v) => {
-                assert!(
-                    v.right_type == next_layer.left_type,
-                    "type mismatch in frobenius morphims composition"
-                );
+                if v.right_type != next_layer.left_type {
+                    return Err("type mismatch in frobenius morphims composition".to_string());
+                }
                 self.layers.push(v);
                 self.layers.push(next_layer);
             }
         }
+        Ok(())
     }
 
     fn hflip<F>(&mut self, black_box_changer: &F)
@@ -270,14 +265,14 @@ where
         }
         self.layers.reverse();
     }
+}
 
-    pub fn compose(&mut self, other: Self) {
-        for next_layer in other.layers {
-            self.append_layer(next_layer);
-        }
-    }
-
-    pub fn monoidal(&mut self, other: Self) {
+impl<Lambda, BlackBoxLabel> Monoidal for FrobeniusMorphism<Lambda, BlackBoxLabel>
+where
+    Lambda: Eq + Copy,
+    BlackBoxLabel: Eq + Copy,
+{
+    fn monoidal(&mut self, other: Self) {
         let self_len = self.layers.len();
         let others_len = other.layers.len();
         let mut last_other_type: Vec<Lambda> = vec![];
@@ -295,7 +290,37 @@ where
         for n in self_len..others_len {
             let mut new_layer = FrobeniusLayer::identity(&last_self_type);
             new_layer.monoidal(other.layers[n].clone());
-            self.append_layer(new_layer);
+            let _ = self.append_layer(new_layer);
+        }
+    }
+}
+
+impl<Lambda, BlackBoxLabel> ComposableMutating<Vec<Lambda>>
+    for FrobeniusMorphism<Lambda, BlackBoxLabel>
+where
+    Lambda: Eq + Copy,
+    BlackBoxLabel: Eq + Copy,
+{
+    fn compose(&mut self, other: Self) -> Result<(), String> {
+        for next_layer in other.layers {
+            self.append_layer(next_layer)?;
+        }
+        Ok(())
+    }
+
+    fn domain(&self) -> Vec<Lambda> {
+        if self.layers.is_empty() {
+            vec![]
+        } else {
+            self.layers[0].left_type.clone()
+        }
+    }
+
+    fn codomain(&self) -> Vec<Lambda> {
+        if self.layers.is_empty() {
+            vec![]
+        } else {
+            self.layers[self.layers.len() - 1].right_type.clone()
         }
     }
 }
@@ -319,12 +344,12 @@ pub fn special_frobenius_morphism<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy>(
             } else if n != 1 {
                 let mut x = special_frobenius_morphism(m, 1, wire_type);
                 let y = special_frobenius_morphism(1, n, wire_type);
-                x.compose(y);
+                let _ = x.compose(y);
                 x
             } else if m % 2 == 0 {
                 let mut answer = special_frobenius_morphism(m / 2, 1, wire_type);
                 answer.monoidal(answer.clone());
-                answer.compose(FrobeniusMorphism::single_op(
+                let _ = answer.compose(FrobeniusMorphism::single_op(
                     FrobeniusOperation::Multiplication(wire_type),
                 ));
                 answer
@@ -333,7 +358,7 @@ pub fn special_frobenius_morphism<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy>(
                 answer.monoidal(FrobeniusMorphism::single_op(FrobeniusOperation::Identity(
                     wire_type,
                 )));
-                answer.compose(FrobeniusMorphism::single_op(
+                let _ = answer.compose(FrobeniusMorphism::single_op(
                     FrobeniusOperation::Multiplication(wire_type),
                 ));
                 answer
@@ -343,6 +368,8 @@ pub fn special_frobenius_morphism<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy>(
 }
 
 mod test {
+    #[allow(unused_imports)]
+    use crate::category::ComposableMutating;
 
     #[test]
     fn rand_spiders() {
@@ -357,8 +384,8 @@ mod test {
             let rand_spider: FrobeniusMorphism<(), ()> = special_frobenius_morphism(m, n, ());
             let exp_source_type: Vec<()> = (0..m).map(|_| ()).collect();
             let exp_target_type: Vec<()> = (0..n).map(|_| ()).collect();
-            assert_eq!(exp_source_type, rand_spider.source_types());
-            assert_eq!(exp_target_type, rand_spider.target_types());
+            assert_eq!(exp_source_type, rand_spider.domain());
+            assert_eq!(exp_target_type, rand_spider.codomain());
         }
         let between = Uniform::from(128..255);
         let mut rng = rand::thread_rng();
@@ -368,8 +395,8 @@ mod test {
             let rand_spider: FrobeniusMorphism<(), ()> = special_frobenius_morphism(m, n, ());
             let exp_source_type: Vec<()> = (0..m).map(|_| ()).collect();
             let exp_target_type: Vec<()> = (0..n).map(|_| ()).collect();
-            assert_eq!(exp_source_type, rand_spider.source_types());
-            assert_eq!(exp_target_type, rand_spider.target_types());
+            assert_eq!(exp_source_type, rand_spider.domain());
+            assert_eq!(exp_target_type, rand_spider.codomain());
             assert!(
                 rand_spider.depth() <= 4 * 8,
                 "Depth of {} to {} was {} instead of {}",

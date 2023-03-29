@@ -5,8 +5,12 @@ use union_find::{QuickUnionUf, UnionBySize};
 
 mod utils;
 use utils::either_f;
+mod category;
+use category::ComposableMutating;
 mod cospan;
+mod monoidal;
 mod named_cospan;
+mod symmetric_monoidal;
 use named_cospan::NamedCospan;
 mod finset;
 #[allow(unused_imports)]
@@ -34,8 +38,8 @@ fn main() {
     let counit_spider: FrobeniusMorphism<(), ()> = special_frobenius_morphism(1, 0, ());
     let exp_counit_spider = FrobeniusMorphism::single_op(FrobeniusOperation::Counit(()));
     assert!(exp_counit_spider == counit_spider);
-    assert_eq!(counit_spider.source_types(), vec![()]);
-    assert_eq!(counit_spider.target_types(), vec![]);
+    assert_eq!(counit_spider.domain(), vec![()]);
+    assert_eq!(counit_spider.codomain(), vec![]);
 
     let unchanged_right_names = vec![
         (InOut::In, 0),
