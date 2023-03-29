@@ -322,6 +322,10 @@ where
     Lambda: Eq + Copy,
     BlackBoxLabel: Eq + Copy,
 {
+    fn composable(&self, _other: &Self) -> Result<(), String> {
+        todo!()
+    }
+
     fn compose(&mut self, other: Self) -> Result<(), String> {
         for next_layer in other.layers {
             self.append_layer(next_layer)?;

@@ -22,7 +22,15 @@ where
     is_right_id: bool,
 }
 
-impl<Lambda> Span<Lambda> where Lambda: Sized + Eq + Copy + Debug {}
+impl<Lambda> Span<Lambda>
+where
+    Lambda: Sized + Eq + Copy + Debug,
+{
+    #[allow(dead_code)]
+    fn is_jointly_injective(&self) -> bool {
+        todo!()
+    }
+}
 
 impl<Lambda> HasIdentity<Vec<Lambda>> for Span<Lambda>
 where
@@ -37,6 +45,10 @@ impl<Lambda> Composable<Vec<Lambda>> for Span<Lambda>
 where
     Lambda: Sized + Eq + Copy + Debug,
 {
+    fn composable(&self, _other: &Self) -> Result<(), String> {
+        todo!()
+    }
+
     fn compose(&self, _other: &Self) -> Result<Self, String> {
         todo!()
     }

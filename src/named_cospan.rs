@@ -309,11 +309,12 @@ where
     LeftPortName: Eq + Clone,
     RightPortName: Eq + Clone,
 {
+    fn composable(&self, other: &Self) -> Result<(), String> {
+        self.underlying_cospan.composable(&other.underlying_cospan)
+    }
+
     fn compose(&self, other: &Self) -> Result<Self, String> {
-        let new_underlying = self
-            .underlying_cospan
-            .clone()
-            .compose(&other.underlying_cospan)?;
+        let new_underlying = self.underlying_cospan.compose(&other.underlying_cospan)?;
         Ok(Self {
             underlying_cospan: new_underlying,
             left_names: self.left_names.clone(),

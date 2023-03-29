@@ -227,7 +227,7 @@ impl<Lambda> Composable<Vec<Lambda>> for Cospan<Lambda>
 where
     Lambda: Eq + Sized + Copy + Debug,
 {
-    fn compose(&self, other: &Self) -> Result<Self, String> {
+    fn composable(&self, other: &Self) -> Result<(), String> {
         let mut self_interface = self.right.iter().map(|mid| self.middle[*mid]);
         let mut other_interface = other.left.iter().map(|mid| other.middle[*mid]);
         let mut to_continue = true;
@@ -254,7 +254,11 @@ where
                 }
             }
         }
+        Ok(())
+    }
 
+    fn compose(&self, other: &Self) -> Result<Self, String> {
+        let _ = self.composable(other)?;
         let (pushout_target, left_to_pushout, right_to_pushout, representative) =
             perform_pushout::<crate::QuickUnionUf<crate::UnionBySize>, Lambda>(
                 &self.right,
