@@ -2,8 +2,9 @@ use std::{collections::HashSet, error, fmt};
 
 use permutations::Permutation;
 
-use crate::category::Composable;
+use crate::category::{Composable, HasIdentity};
 use crate::monoidal::{Monoidal, MonoidalMorphism};
+use crate::symmetric_monoidal::SymmetricMonoidalMorphism;
 use crate::utils::position_max;
 
 pub type FinSetMap = Vec<usize>;
@@ -11,6 +12,14 @@ pub type FinSetMap = Vec<usize>;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OrderPresSurj {
     preimage_card_minus_1: Vec<usize>,
+}
+
+impl HasIdentity<usize> for OrderPresSurj {
+    fn identity(on_this: &usize) -> Self {
+        Self {
+            preimage_card_minus_1: vec![0; *on_this],
+        }
+    }
 }
 
 impl Monoidal for OrderPresSurj {
@@ -56,6 +65,14 @@ impl OrderPresSurj {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OrderPresInj {
     counts_iden_unit_alternating: Vec<usize>,
+}
+
+impl HasIdentity<usize> for OrderPresInj {
+    fn identity(on_this: &usize) -> Self {
+        Self {
+            counts_iden_unit_alternating: vec![*on_this],
+        }
+    }
 }
 
 impl Monoidal for OrderPresInj {
@@ -280,6 +297,16 @@ pub struct Decomposition {
     order_preserving_injection: OrderPresInj,
 }
 
+impl HasIdentity<usize> for Decomposition {
+    fn identity(on_this: &usize) -> Self {
+        Self {
+            permutation_part: Permutation::identity(*on_this),
+            order_preserving_surjection: OrderPresSurj::identity(on_this),
+            order_preserving_injection: OrderPresInj::identity(on_this),
+        }
+    }
+}
+
 impl Monoidal for Decomposition {
     fn monoidal(&mut self, other: Self) {
         let self_len = self.permutation_part.len();
@@ -312,6 +339,16 @@ impl Composable<usize> for Decomposition {
 }
 
 impl MonoidalMorphism<usize> for Decomposition {}
+
+impl SymmetricMonoidalMorphism<usize> for Decomposition {
+    fn permute_side(&mut self, _p: &Permutation, _of_codomain: bool) {
+        todo!()
+    }
+
+    fn from_permutation(_p: Permutation, _types: &usize, _types_as_on_domain: bool) -> Self {
+        todo!()
+    }
+}
 
 impl Decomposition {
     #[allow(dead_code)]

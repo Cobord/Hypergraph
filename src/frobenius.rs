@@ -1,4 +1,6 @@
-use crate::{category::ComposableMutating, monoidal::Monoidal};
+use crate::category::{ComposableMutating, HasIdentity};
+use crate::monoidal::{Monoidal, MonoidalMutatingMorphism};
+use crate::symmetric_monoidal::SymmetricMonoidalMutatingMorphism;
 
 #[derive(PartialEq, Eq, Clone)]
 pub enum FrobeniusOperation<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy> {
@@ -162,15 +164,6 @@ where
         }
     }
 
-    pub fn identity(on_type: &[Lambda]) -> Self {
-        let mut answer = FrobeniusLayer::new();
-        for cur_type in on_type {
-            let op = FrobeniusOperation::Identity(*cur_type);
-            answer.append_block(op);
-        }
-        answer
-    }
-
     fn hflip<F>(&mut self, black_box_changer: &F)
     where
         F: Fn(BlackBoxLabel) -> BlackBoxLabel,
@@ -194,6 +187,21 @@ where
             target_side_placement,
         );
         self.blocks.push(my_op);
+    }
+}
+
+impl<Lambda, BlackBoxLabel> HasIdentity<Vec<Lambda>> for FrobeniusLayer<Lambda, BlackBoxLabel>
+where
+    Lambda: Eq + Copy,
+    BlackBoxLabel: Eq + Copy,
+{
+    fn identity(on_type: &Vec<Lambda>) -> Self {
+        let mut answer = FrobeniusLayer::new();
+        for cur_type in on_type {
+            let op = FrobeniusOperation::Identity(*cur_type);
+            answer.append_block(op);
+        }
+        answer
     }
 }
 
@@ -267,6 +275,19 @@ where
     }
 }
 
+impl<Lambda, BlackBoxLabel> HasIdentity<Vec<Lambda>> for FrobeniusMorphism<Lambda, BlackBoxLabel>
+where
+    Lambda: Eq + Copy,
+    BlackBoxLabel: Eq + Copy,
+{
+    fn identity(on_this: &Vec<Lambda>) -> Self {
+        let empty_layer = FrobeniusLayer::identity(on_this);
+        Self {
+            layers: vec![empty_layer],
+        }
+    }
+}
+
 impl<Lambda, BlackBoxLabel> Monoidal for FrobeniusMorphism<Lambda, BlackBoxLabel>
 where
     Lambda: Eq + Copy,
@@ -322,6 +343,33 @@ where
         } else {
             self.layers[self.layers.len() - 1].right_type.clone()
         }
+    }
+}
+
+impl<Lambda, BlackBoxLabel> MonoidalMutatingMorphism<Vec<Lambda>>
+    for FrobeniusMorphism<Lambda, BlackBoxLabel>
+where
+    Lambda: Eq + Copy,
+    BlackBoxLabel: Eq + Copy,
+{
+}
+
+impl<Lambda, BlackBoxLabel> SymmetricMonoidalMutatingMorphism<Vec<Lambda>>
+    for FrobeniusMorphism<Lambda, BlackBoxLabel>
+where
+    Lambda: Eq + Copy,
+    BlackBoxLabel: Eq + Copy,
+{
+    fn permute_side(&mut self, _p: &permutations::Permutation, _of_codomain: bool) {
+        todo!()
+    }
+
+    fn from_permutation(
+        _p: permutations::Permutation,
+        _types: &Vec<Lambda>,
+        _types_as_on_domain: bool,
+    ) -> Self {
+        todo!()
     }
 }
 

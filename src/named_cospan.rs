@@ -4,7 +4,7 @@ use permutations::Permutation;
 use petgraph::{matrix_graph::NodeIndex, prelude::Graph, stable_graph::DefaultIx};
 use std::fmt::Debug;
 
-use crate::category::Composable;
+use crate::category::{Composable, HasIdentity};
 use crate::cospan::Cospan;
 use crate::monoidal::{Monoidal, MonoidalMorphism};
 use crate::symmetric_monoidal::SymmetricMonoidalMorphism;
@@ -56,7 +56,7 @@ where
         T: Copy,
     {
         assert_eq!(types.len(), prenames.len());
-        let underlying_cospan = Cospan::<Lambda>::identity(types);
+        let underlying_cospan = Cospan::<Lambda>::identity(&types.to_vec());
         let left_names = prenames.iter().map(|pre| prename_to_name(*pre).0).collect();
         let right_names = prenames.iter().map(|pre| prename_to_name(*pre).1).collect();
         Self {

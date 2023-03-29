@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use union_find::{UnionBySize, UnionFind};
 
-use crate::category::Composable;
+use crate::category::{Composable, HasIdentity};
 use crate::finset::FinSetMap;
 use crate::monoidal::{Monoidal, MonoidalMorphism};
 use crate::symmetric_monoidal::SymmetricMonoidalMorphism;
@@ -76,17 +76,6 @@ where
     #[allow(dead_code)]
     pub fn right_to_middle(&self) -> Vec<MiddleIndex> {
         self.right.clone()
-    }
-
-    pub fn identity(types: &[Lambda]) -> Self {
-        let num_types = types.len();
-        Self {
-            left: (0..num_types).collect(),
-            right: (0..num_types).collect(),
-            middle: types.to_vec(),
-            is_left_id: true,
-            is_right_id: true,
-        }
     }
 
     #[allow(dead_code)]
@@ -199,6 +188,22 @@ where
             );
         }
         (all_left_nodes, all_middle_nodes, all_right_nodes, graph)
+    }
+}
+
+impl<Lambda> HasIdentity<Vec<Lambda>> for Cospan<Lambda>
+where
+    Lambda: Eq + Copy + Debug,
+{
+    fn identity(types: &Vec<Lambda>) -> Self {
+        let num_types = types.len();
+        Self {
+            left: (0..num_types).collect(),
+            right: (0..num_types).collect(),
+            middle: types.to_vec(),
+            is_left_id: true,
+            is_right_id: true,
+        }
     }
 }
 
@@ -430,7 +435,7 @@ where
 
 mod test {
     #[allow(unused_imports)]
-    use crate::category::Composable;
+    use crate::category::{Composable, HasIdentity};
     #[allow(unused_imports)]
     use crate::monoidal::{Monoidal, MonoidalMorphism};
     #[allow(unused_imports)]

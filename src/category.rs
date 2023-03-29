@@ -1,3 +1,7 @@
+pub trait HasIdentity<T>: Sized {
+    fn identity(on_this: &T) -> Self;
+}
+
 pub trait Composable<T>: Sized {
     fn compose(&self, other: &Self) -> Result<Self, String>;
     fn domain(&self) -> T;
