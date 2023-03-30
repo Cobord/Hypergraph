@@ -8,7 +8,7 @@ use union_find::{UnionBySize, UnionFind};
 
 use crate::category::{Composable, HasIdentity};
 use crate::finset::FinSetMap;
-use crate::monoidal::{Monoidal, MonoidalMorphism};
+use crate::monoidal::{Monoidal, MonoidalMorphism, GenericMonoidalInterpretable};
 use crate::symmetric_monoidal::SymmetricMonoidalMorphism;
 use crate::utils::{bimap, in_place_permute, represents_id};
 
@@ -26,7 +26,7 @@ pub struct Cospan<Lambda: Sized + Eq + Copy + Debug> {
     is_right_id: bool,
 }
 
-impl<'a, Lambda> Cospan<Lambda>
+impl<Lambda> Cospan<Lambda>
 where
     Lambda: Sized + Eq + Copy + Debug,
 {
@@ -345,6 +345,13 @@ where
 
 impl<Lambda> MonoidalMorphism<Vec<Lambda>> for Cospan<Lambda> where Lambda: Eq + Sized + Copy + Debug
 {}
+
+impl<Lambda> GenericMonoidalInterpretable<Lambda>
+    for Cospan<Lambda>
+where
+    Lambda: Eq + Copy + Debug
+{
+}
 
 impl<Lambda> SymmetricMonoidalMorphism<Lambda> for Cospan<Lambda>
 where

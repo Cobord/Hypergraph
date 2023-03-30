@@ -17,7 +17,7 @@ pub enum FrobeniusOperation<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy> {
     UnSpecifiedBox(BlackBoxLabel, Vec<Lambda>, Vec<Lambda>),
 }
 
-impl<'a, Lambda, BlackBoxLabel> FrobeniusOperation<Lambda, BlackBoxLabel>
+impl<Lambda, BlackBoxLabel> FrobeniusOperation<Lambda, BlackBoxLabel>
 where
     Lambda: Eq + Copy,
     BlackBoxLabel: Eq + Copy,
@@ -96,7 +96,7 @@ struct FrobeniusBlock<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy> {
     target_side_placement: usize,
 }
 
-impl<'a, Lambda, BlackBoxLabel> FrobeniusBlock<Lambda, BlackBoxLabel>
+impl<Lambda, BlackBoxLabel> FrobeniusBlock<Lambda, BlackBoxLabel>
 where
     Lambda: Eq + Copy,
     BlackBoxLabel: Eq + Copy,
@@ -155,7 +155,7 @@ struct FrobeniusLayer<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy> {
     right_type: Vec<Lambda>,
 }
 
-impl<'a, Lambda, BlackBoxLabel> FrobeniusLayer<Lambda, BlackBoxLabel>
+impl<Lambda, BlackBoxLabel> FrobeniusLayer<Lambda, BlackBoxLabel>
 where
     Lambda: Eq + Copy,
     BlackBoxLabel: Eq + Copy,
@@ -226,7 +226,7 @@ pub struct FrobeniusMorphism<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Copy
     layers: Vec<FrobeniusLayer<Lambda, BlackBoxLabel>>,
 }
 
-impl<'a, Lambda, BlackBoxLabel> FrobeniusMorphism<Lambda, BlackBoxLabel>
+impl<Lambda, BlackBoxLabel> FrobeniusMorphism<Lambda, BlackBoxLabel>
 where
     Lambda: Eq + Copy + Debug,
     BlackBoxLabel: Eq + Copy,

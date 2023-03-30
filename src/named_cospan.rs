@@ -21,7 +21,7 @@ pub struct NamedCospan<Lambda: Sized + Eq + Copy + Debug, LeftPortName, RightPor
     right_names: Vec<RightPortName>,
 }
 
-impl<'a, Lambda, LeftPortName, RightPortName> NamedCospan<Lambda, LeftPortName, RightPortName>
+impl<Lambda, LeftPortName, RightPortName> NamedCospan<Lambda, LeftPortName, RightPortName>
 where
     Lambda: Sized + Eq + Copy + Debug,
     LeftPortName: Eq + Clone,

@@ -36,7 +36,7 @@ pub struct WiringDiagram<
     IntraCircle: Eq + Clone,
 >(NamedCospan<Lambda, (InOut, InterCircle, IntraCircle), (InOut, IntraCircle)>);
 
-impl<'a, Lambda, InterCircle, IntraCircle> WiringDiagram<Lambda, InterCircle, IntraCircle>
+impl<Lambda, InterCircle, IntraCircle> WiringDiagram<Lambda, InterCircle, IntraCircle>
 where
     Lambda: Eq + Copy + Debug,
     InterCircle: Eq + Clone,
