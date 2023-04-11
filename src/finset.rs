@@ -84,6 +84,10 @@ impl OrderPresSurj {
     fn apply(&self, test_pt: usize) -> usize {
         self.to_ordinary()[test_pt]
     }
+
+    pub fn preimage_cardinalities(&self) -> Vec<usize> {
+        self.preimage_card_minus_1.iter().map(|z| z + 1).collect()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -173,6 +177,10 @@ impl OrderPresInj {
 
     fn apply(&self, test_pt: usize) -> usize {
         self.to_ordinary()[test_pt]
+    }
+
+    pub fn iden_unit_counts(&self) -> Vec<usize> {
+        self.counts_iden_unit_alternating.clone()
     }
 }
 
@@ -429,6 +437,14 @@ impl Decomposition {
         (0..self.domain())
             .map(|z| self.apply(z))
             .collect::<FinSetMap>()
+    }
+
+    pub fn get_parts(&self) -> (&Permutation, &OrderPresSurj, &OrderPresInj) {
+        (
+            &self.permutation_part,
+            &self.order_preserving_surjection,
+            &self.order_preserving_injection,
+        )
     }
 }
 

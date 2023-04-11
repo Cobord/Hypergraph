@@ -3,6 +3,7 @@ use std::convert::identity;
 use std::fmt::Debug;
 
 use crate::category::{ComposableMutating, HasIdentity};
+use crate::finset::Decomposition;
 use crate::monoidal::{Monoidal, MonoidalMutatingMorphism};
 use crate::symmetric_monoidal::SymmetricMonoidalMutatingMorphism;
 use crate::utils::in_place_permute;
@@ -517,7 +518,7 @@ pub fn special_frobenius_morphism<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq +
         _ => {
             if m < n {
                 let mut x = special_frobenius_morphism(n, m, wire_type);
-                x.hflip(&|z| z);
+                x.hflip(&identity);
                 x
             } else if n != 1 {
                 let mut x = special_frobenius_morphism(m, 1, wire_type);
@@ -543,6 +544,66 @@ pub fn special_frobenius_morphism<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq +
             }
         }
     }
+}
+
+#[allow(dead_code)]
+pub fn from_decomposition<Lambda, BlackBoxLabel>(
+    v: Decomposition,
+    source_types: &[Lambda],
+    target_types: &[Lambda],
+) -> FrobeniusMorphism<Lambda, BlackBoxLabel>
+where
+    Lambda: Eq + Copy + Debug,
+    BlackBoxLabel: Eq + Copy,
+{
+    let (perm_part, surj_part, inj_part) = v.get_parts();
+    let mut answer = FrobeniusMorphism::<Lambda, BlackBoxLabel>::from_permutation(
+        perm_part.clone(),
+        source_types,
+        true,
+    );
+
+    let mut surj_part_frob = FrobeniusMorphism::<Lambda, BlackBoxLabel>::new();
+    let mut after_perm_number = 0;
+    for (_n, c) in surj_part.preimage_cardinalities().iter().enumerate() {
+        let after_perm_types = &answer.codomain()[after_perm_number..after_perm_number + c];
+        assert!(after_perm_types.iter().all(|l| *l == after_perm_types[0]));
+        let cur_part = special_frobenius_morphism::<_, BlackBoxLabel>(*c, 1, after_perm_types[0]);
+        surj_part_frob.monoidal(cur_part);
+        after_perm_number += c;
+    }
+
+    let mut inj_part_frob = FrobeniusMorphism::<Lambda, BlackBoxLabel>::new();
+    let mut target_number = 0;
+    for (n, c) in inj_part.iden_unit_counts().iter().enumerate() {
+        if n % 2 == 0 {
+            let cur_iden_type = target_types[target_number..target_number + c].to_vec();
+            let cur_iden = FrobeniusMorphism::<Lambda, BlackBoxLabel>::identity(&cur_iden_type);
+            inj_part_frob.monoidal(cur_iden);
+            target_number += c;
+        } else {
+            for idx in 0..*c {
+                let cur_unit = FrobeniusMorphism::<Lambda, BlackBoxLabel>::single_op(
+                    FrobeniusOperation::Unit(target_types[target_number + idx]),
+                );
+                inj_part_frob.monoidal(cur_unit);
+            }
+            target_number += c;
+        }
+    }
+    match answer.compose(surj_part_frob) {
+        Ok(_) => {}
+        Err(_) => {
+            panic!("The provided source and target types did not line up for the given decomposed finite set map");
+        }
+    };
+    match answer.compose(inj_part_frob) {
+        Ok(_) => {}
+        Err(_) => {
+            panic!("The provided source and target types did not line up for the given decomposed finite set map");
+        }
+    };
+    answer
 }
 
 // TODO implement and test
@@ -640,12 +701,11 @@ where
 }
 
 mod test {
-    #[allow(unused_imports)]
-    use crate::category::ComposableMutating;
 
     #[test]
     fn rand_spiders() {
         use super::{special_frobenius_morphism, FrobeniusMorphism};
+        use crate::category::ComposableMutating;
         use rand::distributions::Uniform;
         use rand::prelude::Distribution;
         let between = Uniform::from(0..5);
@@ -753,6 +813,7 @@ mod test {
     #[test]
     fn permutation_automatic() {
         use super::{FrobeniusMorphism, FrobeniusOperation};
+        use crate::category::ComposableMutating;
         use crate::symmetric_monoidal::SymmetricMonoidalMutatingMorphism;
         use crate::utils::{in_place_permute, rand_perm};
         use rand::distributions::Uniform;
@@ -804,5 +865,37 @@ mod test {
             })
         });
         assert!(all_swaps);
+    }
+
+    #[test]
+    fn decomposition_automatic() {
+        use super::{from_decomposition, FrobeniusMorphism};
+        use crate::finset::Decomposition;
+        use rand::distributions::Uniform;
+        use rand::prelude::Distribution;
+        let in_max = 20;
+        let out_max = 20;
+        let mut rng = rand::thread_rng();
+        let between = Uniform::<usize>::from(2..in_max);
+        let my_in = between.sample(&mut rng);
+        let between = Uniform::<usize>::from(2..out_max);
+        let my_out = between.sample(&mut rng);
+        let cur_test = (0..my_in)
+            .map(|_| Uniform::<usize>::from(0..my_out).sample(&mut rng))
+            .collect::<Vec<usize>>();
+        let domain_types = (0..my_in)
+            .map(|idx| cur_test[idx] + 100)
+            .collect::<Vec<usize>>();
+        let mut codomain_types = (0..my_out).map(|idx| idx + 40).collect::<Vec<usize>>();
+        for (idx, idx_goes) in cur_test.iter().enumerate() {
+            codomain_types[*idx_goes] = domain_types[idx];
+        }
+        let cur_res = Decomposition::try_from(cur_test.clone());
+        if let Ok(cur_decomp) = cur_res {
+            let _x: FrobeniusMorphism<_, ()> =
+                from_decomposition(cur_decomp, &domain_types, &codomain_types);
+        } else {
+            assert!(false, "All maps of finite sets decompose");
+        }
     }
 }
