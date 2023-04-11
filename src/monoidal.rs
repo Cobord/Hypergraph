@@ -211,9 +211,11 @@ where
 pub trait MonoidalMorphism<T: Eq>: Monoidal + Composable<T> {}
 pub trait MonoidalMutatingMorphism<T: Eq>: Monoidal + ComposableMutating<T> {}
 
-pub trait GenericMonoidalInterpretableMut<Lambda : Eq + Copy + Debug> : Monoidal + ComposableMutating<Vec<Lambda>> + HasIdentity<Vec<Lambda>> {
-    fn interpret<F,BoxType>(
-        morphism: &GenericMonoidalMorphism<BoxType,Lambda>,
+pub trait GenericMonoidalInterpretableMut<Lambda: Eq + Copy + Debug>:
+    Monoidal + ComposableMutating<Vec<Lambda>> + HasIdentity<Vec<Lambda>>
+{
+    fn interpret<F, BoxType>(
+        morphism: &GenericMonoidalMorphism<BoxType, Lambda>,
         black_box_interpreter: &F,
     ) -> Result<Self, String>
     where
@@ -234,9 +236,11 @@ pub trait GenericMonoidalInterpretableMut<Lambda : Eq + Copy + Debug> : Monoidal
         Ok(answer)
     }
 }
-pub trait GenericMonoidalInterpretable<Lambda : Eq + Copy + Debug> : Monoidal + Composable<Vec<Lambda>> + HasIdentity<Vec<Lambda>> {
-    fn interpret<F,BoxType>(
-        morphism: &GenericMonoidalMorphism<BoxType,Lambda>,
+pub trait GenericMonoidalInterpretable<Lambda: Eq + Copy + Debug>:
+    Monoidal + Composable<Vec<Lambda>> + HasIdentity<Vec<Lambda>>
+{
+    fn interpret<F, BoxType>(
+        morphism: &GenericMonoidalMorphism<BoxType, Lambda>,
         black_box_interpreter: &F,
     ) -> Result<Self, String>
     where

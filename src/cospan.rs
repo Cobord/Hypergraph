@@ -8,7 +8,7 @@ use union_find::{UnionBySize, UnionFind};
 
 use crate::category::{Composable, HasIdentity};
 use crate::finset::FinSetMap;
-use crate::monoidal::{Monoidal, MonoidalMorphism, GenericMonoidalInterpretable};
+use crate::monoidal::{GenericMonoidalInterpretable, Monoidal, MonoidalMorphism};
 use crate::symmetric_monoidal::SymmetricMonoidalMorphism;
 use crate::utils::{bimap, in_place_permute, represents_id};
 
@@ -346,12 +346,7 @@ where
 impl<Lambda> MonoidalMorphism<Vec<Lambda>> for Cospan<Lambda> where Lambda: Eq + Sized + Copy + Debug
 {}
 
-impl<Lambda> GenericMonoidalInterpretable<Lambda>
-    for Cospan<Lambda>
-where
-    Lambda: Eq + Copy + Debug
-{
-}
+impl<Lambda> GenericMonoidalInterpretable<Lambda> for Cospan<Lambda> where Lambda: Eq + Copy + Debug {}
 
 impl<Lambda> SymmetricMonoidalMorphism<Lambda> for Cospan<Lambda>
 where
@@ -649,9 +644,9 @@ mod test {
     }
 
     #[test]
-    fn permutatation_automatic() {
+    fn permutation_automatic() {
         use super::Cospan;
-        use crate::utils::rand_perm;
+        use crate::utils::{in_place_permute, rand_perm};
         use rand::distributions::Uniform;
         use rand::prelude::Distribution;
         let n_max = 10;
@@ -662,57 +657,50 @@ mod test {
         let p1 = rand_perm(my_n, my_n * 2);
         let p2 = rand_perm(my_n, my_n * 2);
         let prod = p1.clone() * p2.clone();
-        let cospan_p1 = Cospan::from_permutation(
-            p1,
-            &(0..my_n).map(|_| ()).collect::<Vec<()>>(),
-            types_as_on_source,
-        );
-        let cospan_p2 = Cospan::from_permutation(
-            p2,
-            &(0..my_n).map(|_| ()).collect::<Vec<()>>(),
-            types_as_on_source,
-        );
+        let domain_types = (0..my_n).map(|idx| idx + 100).collect::<Vec<usize>>();
+        let mut types_at_this_stage = domain_types.clone();
+        let cospan_p1 = Cospan::from_permutation(p1.clone(), &domain_types, types_as_on_source);
+        in_place_permute(&mut types_at_this_stage, &p1.inv());
+        let cospan_p2 =
+            Cospan::from_permutation(p2.clone(), &types_at_this_stage, types_as_on_source);
+        in_place_permute(&mut types_at_this_stage, &p2.inv());
         let cospan_prod = cospan_p1.compose(&cospan_p2);
         match cospan_prod {
             Ok(real_res) => {
-                let expected_res = Cospan::from_permutation(
-                    prod,
-                    &(0..my_n).map(|_| ()).collect::<Vec<()>>(),
-                    types_as_on_source,
-                );
+                let expected_res =
+                    Cospan::from_permutation(prod, &domain_types, types_as_on_source);
                 assert_eq!(real_res.left, expected_res.left);
                 assert_eq!(real_res.right, expected_res.right);
                 assert_eq!(real_res.middle, expected_res.middle);
+                assert_eq!(real_res.domain(), domain_types);
+                assert_eq!(real_res.codomain(), types_at_this_stage);
             }
             Err(e) => {
                 panic!("Could not compose simple example\n{:?}", e)
             }
         }
         let types_as_on_source = false;
+        let domain_types = (0..my_n).map(|idx| idx + 10).collect::<Vec<usize>>();
         let p1 = rand_perm(my_n, my_n * 2);
         let p2 = rand_perm(my_n, my_n * 2);
         let prod = p1.clone() * p2.clone();
-        let cospan_p1 = Cospan::from_permutation(
-            p1,
-            &(0..my_n).map(|_| ()).collect::<Vec<()>>(),
-            types_as_on_source,
-        );
-        let cospan_p2 = Cospan::from_permutation(
-            p2,
-            &(0..my_n).map(|_| ()).collect::<Vec<()>>(),
-            types_as_on_source,
-        );
+        let mut types_at_this_stage = domain_types.clone();
+        in_place_permute(&mut types_at_this_stage, &p1.inv());
+        let cospan_p1 =
+            Cospan::from_permutation(p1.clone(), &types_at_this_stage.clone(), types_as_on_source);
+        in_place_permute(&mut types_at_this_stage, &p2.inv());
+        let cospan_p2 =
+            Cospan::from_permutation(p2.clone(), &types_at_this_stage, types_as_on_source);
         let cospan_prod = cospan_p1.compose(&cospan_p2);
         match cospan_prod {
             Ok(real_res) => {
-                let expected_res = Cospan::from_permutation(
-                    prod,
-                    &(0..my_n).map(|_| ()).collect::<Vec<()>>(),
-                    types_as_on_source,
-                );
+                let expected_res =
+                    Cospan::from_permutation(prod, &types_at_this_stage, types_as_on_source);
                 assert_eq!(real_res.left, expected_res.left);
                 assert_eq!(real_res.right, expected_res.right);
                 assert_eq!(real_res.middle, expected_res.middle);
+                assert_eq!(real_res.domain(), domain_types);
+                assert_eq!(real_res.codomain(), types_at_this_stage);
             }
             Err(e) => {
                 panic!("Could not compose simple example\n{:?}", e)

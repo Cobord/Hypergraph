@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::fmt::Debug;
 
 use crate::category::{Composable, HasIdentity};
-use crate::monoidal::{Monoidal, MonoidalMorphism, GenericMonoidalInterpretable};
+use crate::monoidal::{GenericMonoidalInterpretable, Monoidal, MonoidalMorphism};
 use crate::symmetric_monoidal::SymmetricMonoidalMorphism;
 use crate::utils::in_place_permute;
 
@@ -98,12 +98,7 @@ where
 
 impl<Lambda> MonoidalMorphism<Vec<Lambda>> for Span<Lambda> where Lambda: Sized + Eq + Copy + Debug {}
 
-impl<Lambda> GenericMonoidalInterpretable<Lambda>
-    for Span<Lambda>
-where
-    Lambda: Eq + Copy + Debug
-{
-}
+impl<Lambda> GenericMonoidalInterpretable<Lambda> for Span<Lambda> where Lambda: Eq + Copy + Debug {}
 
 impl<Lambda> SymmetricMonoidalMorphism<Lambda> for Span<Lambda>
 where

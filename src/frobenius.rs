@@ -5,6 +5,7 @@ use std::fmt::Debug;
 use crate::category::{ComposableMutating, HasIdentity};
 use crate::monoidal::{Monoidal, MonoidalMutatingMorphism};
 use crate::symmetric_monoidal::SymmetricMonoidalMutatingMorphism;
+use crate::utils::in_place_permute;
 
 #[derive(PartialEq, Eq, Clone)]
 pub enum FrobeniusOperation<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy> {
@@ -419,11 +420,86 @@ where
     }
 
     fn from_permutation(
-        _p: permutations::Permutation,
-        _types: &[Lambda],
-        _types_as_on_domain: bool,
+        p: permutations::Permutation,
+        types: &[Lambda],
+        types_as_on_domain: bool,
     ) -> Self {
-        todo!()
+        if types_as_on_domain {
+            if p == Permutation::identity(p.len()) {
+                Self::identity(&types.to_vec())
+            } else {
+                let mut types_now = types.to_vec();
+                let mut p_remaining = p.clone();
+                let mut first_layer = Self::new();
+                for idx in (0..p_remaining.len() - 1).step_by(2) {
+                    let idx_goes = p_remaining.apply(idx);
+                    let jdx_goes = p_remaining.apply(idx + 1);
+                    if idx_goes > jdx_goes {
+                        let cur_swap = Permutation::transposition(p_remaining.len(), idx, idx + 1);
+                        let cur_block = Self::single_op(FrobeniusOperation::SymmetricBraiding(
+                            types_now[idx],
+                            types_now[idx + 1],
+                        ));
+                        first_layer.monoidal(cur_block);
+                        in_place_permute(&mut types_now, &cur_swap);
+                        p_remaining = cur_swap * p_remaining;
+                    } else {
+                        let cur_block =
+                            Self::single_op(FrobeniusOperation::Identity(types_now[idx]));
+                        first_layer.monoidal(cur_block);
+                        let cur_block =
+                            Self::single_op(FrobeniusOperation::Identity(types_now[idx + 1]));
+                        first_layer.monoidal(cur_block);
+                    }
+                }
+                if p_remaining.len() % 2 == 1 {
+                    let cur_block = Self::single_op(FrobeniusOperation::Identity(
+                        types_now[p_remaining.len() - 1],
+                    ));
+                    first_layer.monoidal(cur_block);
+                }
+                let mut second_layer = Self::single_op(FrobeniusOperation::Identity(types_now[0]));
+                for idx in (1..p_remaining.len() - 1).step_by(2) {
+                    let idx_goes = p_remaining.apply(idx);
+                    let jdx_goes = p_remaining.apply(idx + 1);
+                    if idx_goes > jdx_goes {
+                        let cur_swap = Permutation::transposition(p_remaining.len(), idx, idx + 1);
+                        let cur_block = Self::single_op(FrobeniusOperation::SymmetricBraiding(
+                            types_now[idx],
+                            types_now[idx + 1],
+                        ));
+                        second_layer.monoidal(cur_block);
+                        in_place_permute(&mut types_now, &cur_swap);
+                        p_remaining = cur_swap * p_remaining;
+                    } else {
+                        let cur_block =
+                            Self::single_op(FrobeniusOperation::Identity(types_now[idx]));
+                        second_layer.monoidal(cur_block);
+                        let cur_block =
+                            Self::single_op(FrobeniusOperation::Identity(types_now[idx + 1]));
+                        second_layer.monoidal(cur_block);
+                    }
+                }
+                if p_remaining.len() % 2 == 0 {
+                    let cur_block = Self::single_op(FrobeniusOperation::Identity(
+                        types_now[p_remaining.len() - 1],
+                    ));
+                    second_layer.monoidal(cur_block);
+                }
+                let _ = first_layer.compose(second_layer).unwrap();
+                let remaining = Self::from_permutation(p_remaining, &types_now, true);
+                let _ = first_layer.compose(remaining).unwrap();
+                assert_eq!(first_layer.domain(), types);
+                let mut types_after_all_p = types.to_vec();
+                in_place_permute(&mut types_after_all_p, &p.inv());
+                assert_eq!(first_layer.codomain(), types_after_all_p);
+                first_layer
+            }
+        } else {
+            let mut answer = Self::from_permutation(p.inv(), types, true);
+            answer.hflip(&identity);
+            answer
+        }
     }
 }
 
@@ -672,5 +748,61 @@ mod test {
         assert!(exp_id_spider == id_spider);
         let exp_id_spider = FrobeniusMorphism::single_op(FrobeniusOperation::Identity(COLOR::BLUE));
         assert!(exp_id_spider != id_spider);
+    }
+
+    #[test]
+    fn permutation_automatic() {
+        use super::{FrobeniusMorphism, FrobeniusOperation};
+        use crate::symmetric_monoidal::SymmetricMonoidalMutatingMorphism;
+        use crate::utils::{in_place_permute, rand_perm};
+        use rand::distributions::Uniform;
+        use rand::prelude::Distribution;
+        let n_max = 10;
+        let between = Uniform::<usize>::from(2..n_max);
+        let mut rng = rand::thread_rng();
+        let my_n = between.sample(&mut rng);
+        let types_as_on_source = true;
+        let domain_types = (0..my_n).map(|idx| idx + 100).collect::<Vec<usize>>();
+        let p1 = rand_perm(my_n, my_n * 2);
+        let frob_p1 = FrobeniusMorphism::<usize, ()>::from_permutation(
+            p1.clone(),
+            &domain_types,
+            types_as_on_source,
+        );
+        let mut frob_prod = frob_p1.clone();
+        assert_eq!(frob_prod.domain(), domain_types);
+        let mut types_after_this_layer = domain_types.clone();
+        in_place_permute(&mut types_after_this_layer, &p1.inv());
+        assert_eq!(frob_prod.codomain(), types_after_this_layer);
+        let p2 = rand_perm(my_n, my_n * 2);
+        let frob_p2 = FrobeniusMorphism::from_permutation(
+            p2.clone(),
+            &frob_p1.codomain(),
+            types_as_on_source,
+        );
+        frob_prod.compose(frob_p2).unwrap();
+        in_place_permute(&mut types_after_this_layer, &p2.inv());
+        assert_eq!(frob_prod.domain(), domain_types);
+        assert_eq!(frob_prod.codomain(), types_after_this_layer);
+        let types_as_on_source = false;
+        let p3 = rand_perm(my_n, my_n * 2);
+        let mut types_after_p3 = frob_prod.codomain().clone();
+        in_place_permute(&mut types_after_p3, &p3.inv());
+        let frob_p3 = FrobeniusMorphism::<usize, ()>::from_permutation(
+            p3.clone(),
+            &types_after_p3,
+            types_as_on_source,
+        );
+        frob_prod.compose(frob_p3).unwrap();
+        assert_eq!(frob_prod.domain(), domain_types);
+        assert_eq!(frob_prod.codomain(), types_after_p3);
+        let all_swaps = frob_prod.layers.iter().all(|layer| {
+            layer.blocks.iter().all(|block| match block.op {
+                FrobeniusOperation::SymmetricBraiding(_, _) => true,
+                FrobeniusOperation::Identity(_) => true,
+                _ => false,
+            })
+        });
+        assert!(all_swaps);
     }
 }
