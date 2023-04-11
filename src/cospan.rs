@@ -192,6 +192,18 @@ where
         self.middle.len() - 1
     }
 
+    pub fn change_lambda<F, Mu>(&self, f: F) -> Cospan<Mu>
+    where
+        F: Fn(Lambda) -> Mu,
+        Mu: Sized + Eq + Copy + Debug,
+    {
+        Cospan::<Mu>::new(
+            self.left.clone(),
+            self.right.clone(),
+            self.middle.iter().map(|l| f(*l)).collect(),
+        )
+    }
+
     #[allow(clippy::type_complexity)]
     pub fn to_graph<T, U, F>(
         &self,

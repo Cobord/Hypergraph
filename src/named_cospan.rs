@@ -299,6 +299,20 @@ where
         self.underlying_cospan.add_middle(new_middle);
     }
 
+    pub fn change_lambda<F, Mu>(&self, f: F) -> NamedCospan<Mu, LeftPortName, RightPortName>
+    where
+        F: Fn(Lambda) -> Mu,
+        Mu: Sized + Eq + Copy + Debug,
+        RightPortName: Clone,
+    {
+        let new_underlying = self.underlying_cospan.change_lambda(f);
+        NamedCospan::<Mu, LeftPortName, RightPortName> {
+            underlying_cospan: new_underlying,
+            left_names: self.left_names.clone(),
+            right_names: self.right_names.clone(),
+        }
+    }
+
     #[allow(clippy::type_complexity)]
     pub fn to_graph<T, U, F, G>(
         &self,
