@@ -524,12 +524,12 @@ mod test {
         assert_eq!(my_cospan.right.len(), 0);
         assert_eq!(my_cospan.middle.len(), 3);
         assert_eq!(my_cospan.left, vec![0, 1, 2, 1]);
+        assert_eq!(my_cospan.middle, vec![1, 2, 3]);
     }
 
     #[test]
     fn ugly_cospan() {
         use super::Cospan;
-        use crate::assert_ok;
         use either::{Left, Right};
         use petgraph::Graph;
         let mut my_cospan = Cospan::<bool>::new(vec![], vec![], vec![]);
@@ -551,8 +551,14 @@ mod test {
         my_cospan.add_boundary_node(Left(Left(3)));
         my_cospan.add_boundary_node(Left(Left(6)));
         let (_, _, _, _g): (_, _, _, Graph<bool, ()>) = my_cospan.to_graph(|z| (z, ()));
-        let valid_info: Result<(), &'static str> = Ok(());
-        assert_ok!(valid_info);
+        assert_eq!(my_cospan.right.len(), 6);
+        assert_eq!(my_cospan.right, vec![0, 1, 3, 4, 4, 6]);
+        assert_eq!(my_cospan.left.len(), 9);
+        assert_eq!(my_cospan.left, vec![1, 2, 3, 3, 1, 2, 5, 3, 6]);
+        assert_eq!(
+            my_cospan.middle,
+            vec![false, true, true, true, false, true, true]
+        );
     }
 
     #[test]

@@ -890,7 +890,7 @@ mod test {
         for (idx, idx_goes) in cur_test.iter().enumerate() {
             codomain_types[*idx_goes] = domain_types[idx];
         }
-        let cur_res = Decomposition::try_from(cur_test.clone());
+        let cur_res = Decomposition::try_from((cur_test.clone(), 0));
         if let Ok(cur_decomp) = cur_res {
             let _x: FrobeniusMorphism<_, ()> =
                 from_decomposition(cur_decomp, &domain_types, &codomain_types);

@@ -1,3 +1,4 @@
+use std::cmp::max;
 use std::{collections::HashSet, error, fmt};
 
 use permutations::Permutation;
@@ -8,6 +9,57 @@ use crate::symmetric_monoidal::SymmetricMonoidalDiscreteMorphism;
 use crate::utils::position_max;
 
 pub type FinSetMap = Vec<usize>;
+pub type FinSetMorphism = (Vec<usize>, usize);
+
+impl HasIdentity<usize> for FinSetMorphism {
+    fn identity(on_this: &usize) -> Self {
+        ((0..*on_this).collect(), 0)
+    }
+}
+
+impl Monoidal for FinSetMorphism {
+    fn monoidal(&mut self, other: Self) {
+        let other_empty = other.0.is_empty();
+        let self_codomain = self.codomain();
+        self.0.extend(other.0.iter().map(|o| o + self_codomain));
+        if other_empty {
+            self.1 += other.1;
+        } else {
+            self.1 = other.1;
+        }
+    }
+}
+
+impl Composable<usize> for FinSetMorphism {
+    fn compose(&self, other: &Self) -> Result<Self, String> {
+        let other_codomain = other.codomain();
+        let composite = (0..self.domain())
+            .map(|s| other.0[self.0[s]])
+            .collect::<Vec<usize>>();
+        let pos_max = position_max(&composite);
+        if let Some(max_val) = pos_max.map(|z| composite[z]) {
+            let leftover_needed = max(other_codomain - max_val - 1, 0);
+            Ok((composite, leftover_needed))
+        } else {
+            Ok((composite, other_codomain))
+        }
+    }
+
+    fn domain(&self) -> usize {
+        self.0.len()
+    }
+
+    fn codomain(&self) -> usize {
+        let pos_max = position_max(&self.0);
+        if let Some(max_val) = pos_max.map(|z| self.0[z]) {
+            max_val + self.1 + 1
+        } else {
+            self.1
+        }
+    }
+}
+
+impl MonoidalMorphism<usize> for FinSetMorphism {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OrderPresSurj {
@@ -70,7 +122,7 @@ impl Composable<usize> for OrderPresSurj {
 impl MonoidalMorphism<usize> for OrderPresSurj {}
 
 impl OrderPresSurj {
-    fn to_ordinary(&self) -> FinSetMap {
+    fn to_ordinary(&self) -> FinSetMorphism {
         let domain_size: usize = self.domain();
         let mut answer = Vec::with_capacity(domain_size);
         for (cur_target, v) in self.preimage_card_minus_1.iter().enumerate() {
@@ -78,11 +130,11 @@ impl OrderPresSurj {
                 answer.push(cur_target);
             }
         }
-        answer
+        (answer, 0)
     }
 
     fn apply(&self, test_pt: usize) -> usize {
-        self.to_ordinary()[test_pt]
+        self.to_ordinary().0[test_pt]
     }
 
     pub fn preimage_cardinalities(&self) -> Vec<usize> {
@@ -125,11 +177,8 @@ impl Composable<usize> for OrderPresInj {
         }
         let ord_self = self.to_ordinary();
         let ord_other = other.to_ordinary();
-        let composite = (0..ord_self.len())
-            .map(|s| ord_other[ord_self[s]])
-            .collect::<Vec<usize>>();
+        let composite = ord_self.compose(&ord_other)?;
         OrderPresInj::try_from(composite).map_err(|_| "???".to_string())
-        //todo test
     }
 
     fn domain(&self) -> usize {
@@ -158,25 +207,28 @@ impl Composable<usize> for OrderPresInj {
 impl MonoidalMorphism<usize> for OrderPresInj {}
 
 impl OrderPresInj {
-    fn to_ordinary(&self) -> FinSetMap {
+    fn to_ordinary(&self) -> FinSetMorphism {
         let domain_size: usize = self.domain();
         let mut answer = Vec::with_capacity(domain_size);
         let mut cur_target = 0;
+        let mut codomain_minus_greatest_range = 0;
         for (n, v) in self.counts_iden_unit_alternating.iter().enumerate() {
             if n % 2 == 0 {
+                codomain_minus_greatest_range = 0;
                 for _ in 0..*v {
                     answer.push(cur_target);
                     cur_target += 1;
                 }
             } else {
+                codomain_minus_greatest_range = *v;
                 cur_target += v;
             }
         }
-        answer
+        (answer, codomain_minus_greatest_range)
     }
 
     fn apply(&self, test_pt: usize) -> usize {
-        self.to_ordinary()[test_pt]
+        self.to_ordinary().0[test_pt]
     }
 
     pub fn iden_unit_counts(&self) -> Vec<usize> {
@@ -249,9 +301,13 @@ impl fmt::Display for TryFromSurjError {
     }
 }
 
-impl TryFrom<FinSetMap> for OrderPresSurj {
+impl TryFrom<FinSetMorphism> for OrderPresSurj {
     type Error = TryFromSurjError;
-    fn try_from(v: FinSetMap) -> Result<OrderPresSurj, TryFromSurjError> {
+    fn try_from(v_mor: FinSetMorphism) -> Result<OrderPresSurj, TryFromSurjError> {
+        if v_mor.1 > 0 {
+            return Err(TryFromSurjError);
+        }
+        let v = v_mor.0;
         if is_monotonic_inc(v.iter(), None) && is_surjective(&v) {
             if v.is_empty() {
                 return Ok(OrderPresSurj {
@@ -294,9 +350,10 @@ impl fmt::Display for TryFromInjError {
     }
 }
 
-impl TryFrom<FinSetMap> for OrderPresInj {
+impl TryFrom<FinSetMorphism> for OrderPresInj {
     type Error = TryFromInjError;
-    fn try_from(v: FinSetMap) -> Result<OrderPresInj, TryFromInjError> {
+    fn try_from(v_mor: FinSetMorphism) -> Result<OrderPresInj, TryFromInjError> {
+        let v = v_mor.0;
         if is_monotonic_inc(v.iter(), None) && is_injective(&v) {
             if v.is_empty() {
                 return Ok(OrderPresInj {
@@ -318,6 +375,12 @@ impl TryFrom<FinSetMap> for OrderPresInj {
             }
             if cur_consecutive > 0 {
                 counts_iden_unit_alternating.push(cur_consecutive);
+                if v_mor.1 > 0 {
+                    counts_iden_unit_alternating.push(v_mor.1);
+                }
+            } else if v_mor.1 > 0 {
+                counts_iden_unit_alternating.push(0);
+                counts_iden_unit_alternating.push(v_mor.1);
             }
             counts_iden_unit_alternating.shrink_to_fit();
             Ok(OrderPresInj {
@@ -380,12 +443,17 @@ impl Composable<usize> for Decomposition {
                 self_codomain, other_domain
             ));
         }
+        let other_codomain = other.codomain();
         let ord_self = self.to_ordinary();
         let ord_other = other.to_ordinary();
-        let composite = (0..ord_self.len())
-            .map(|s| ord_other[ord_self[s]])
-            .collect::<Vec<usize>>();
-        Decomposition::try_from(composite).map_err(|_| "???".to_string())
+        let composite = ord_self.compose(&ord_other)?;
+        let pos_max = position_max(&composite.0);
+        if let Some(max_val) = pos_max.map(|z| composite.0[z]) {
+            let leftover_needed = max(other_codomain - max_val - 1, 0);
+            Decomposition::try_from((composite.0, leftover_needed)).map_err(|_| "???".to_string())
+        } else {
+            Decomposition::try_from(composite).map_err(|_| "???".to_string())
+        }
         //todo test
     }
 
@@ -433,10 +501,18 @@ impl Decomposition {
         self.order_preserving_injection.apply(dest_after_surj)
     }
 
-    fn to_ordinary(&self) -> FinSetMap {
-        (0..self.domain())
+    fn to_ordinary(&self) -> FinSetMorphism {
+        let wanted_codomain = self.codomain();
+        let map_part = (0..self.domain())
             .map(|z| self.apply(z))
-            .collect::<FinSetMap>()
+            .collect::<FinSetMap>();
+        let pos_max = position_max(&map_part);
+        if let Some(max_val) = pos_max.map(|z| map_part[z]) {
+            let leftover_needed = max(wanted_codomain - max_val - 1, 0);
+            (map_part, leftover_needed)
+        } else {
+            (map_part, wanted_codomain)
+        }
     }
 
     pub fn get_parts(&self) -> (&Permutation, &OrderPresSurj, &OrderPresInj) {
@@ -459,16 +535,17 @@ impl fmt::Display for TryFromFinSetError {
     }
 }
 
-impl TryFrom<FinSetMap> for Decomposition {
+impl TryFrom<FinSetMorphism> for Decomposition {
     type Error = TryFromFinSetError;
-    fn try_from(v: FinSetMap) -> Result<Decomposition, TryFromFinSetError> {
+    fn try_from(v_mor: FinSetMorphism) -> Result<Decomposition, TryFromFinSetError> {
+        let v = v_mor.0;
         if is_monotonic_inc(v.iter(), None) {
             let permutation_part = Permutation::identity(v.len());
             let (epic_part, monic_part) = monotone_epi_mono_fact(v);
             let order_preserving_surjection =
-                OrderPresSurj::try_from(epic_part).map_err(|_| TryFromFinSetError)?;
+                OrderPresSurj::try_from((epic_part, 0)).map_err(|_| TryFromFinSetError)?;
             let order_preserving_injection =
-                OrderPresInj::try_from(monic_part).map_err(|_| TryFromFinSetError)?;
+                OrderPresInj::try_from((monic_part, v_mor.1)).map_err(|_| TryFromFinSetError)?;
             Ok(Decomposition {
                 permutation_part,
                 order_preserving_surjection,
@@ -479,9 +556,9 @@ impl TryFrom<FinSetMap> for Decomposition {
             let permutation_part = permutation_sort(&mut v_clone).inv();
             let (epic_part, monic_part) = monotone_epi_mono_fact(v_clone);
             let order_preserving_surjection =
-                OrderPresSurj::try_from(epic_part).map_err(|_| TryFromFinSetError)?;
+                OrderPresSurj::try_from((epic_part, 0)).map_err(|_| TryFromFinSetError)?;
             let order_preserving_injection =
-                OrderPresInj::try_from(monic_part).map_err(|_| TryFromFinSetError)?;
+                OrderPresInj::try_from((monic_part, v_mor.1)).map_err(|_| TryFromFinSetError)?;
             Ok(Decomposition {
                 permutation_part,
                 order_preserving_surjection,
@@ -604,13 +681,13 @@ mod test {
         let mut cur_result = Ok(OrderPresSurj {
             preimage_card_minus_1: vec![],
         });
-        assert_eq!(cur_result, OrderPresSurj::try_from(cur_test));
+        assert_eq!(cur_result, OrderPresSurj::try_from((cur_test, 0)));
 
         cur_test = vec![0];
         cur_result = Ok(OrderPresSurj {
             preimage_card_minus_1: vec![0],
         });
-        assert_eq!(cur_result, OrderPresSurj::try_from(cur_test.clone()));
+        assert_eq!(cur_result, OrderPresSurj::try_from((cur_test.clone(), 0)));
         let cur_result_unwrapped = cur_result.unwrap();
         for (n, v) in cur_test.iter().enumerate() {
             let dest_test_pt = cur_result_unwrapped.apply(n);
@@ -619,17 +696,17 @@ mod test {
 
         cur_test = vec![1];
         cur_result = Err(TryFromSurjError);
-        assert_eq!(cur_result, OrderPresSurj::try_from(cur_test));
+        assert_eq!(cur_result, OrderPresSurj::try_from((cur_test, 0)));
 
         cur_test = vec![2];
         cur_result = Err(TryFromSurjError);
-        assert_eq!(cur_result, OrderPresSurj::try_from(cur_test));
+        assert_eq!(cur_result, OrderPresSurj::try_from((cur_test, 0)));
 
         cur_test = vec![0, 1, 2];
         cur_result = Ok(OrderPresSurj {
             preimage_card_minus_1: vec![0, 0, 0],
         });
-        assert_eq!(cur_result, OrderPresSurj::try_from(cur_test.clone()));
+        assert_eq!(cur_result, OrderPresSurj::try_from((cur_test.clone(), 0)));
         let cur_result_unwrapped = cur_result.unwrap();
         for (n, v) in cur_test.iter().enumerate() {
             let dest_test_pt = cur_result_unwrapped.apply(n);
@@ -638,13 +715,13 @@ mod test {
 
         cur_test = vec![0, 2, 1];
         cur_result = Err(TryFromSurjError);
-        assert_eq!(cur_result, OrderPresSurj::try_from(cur_test));
+        assert_eq!(cur_result, OrderPresSurj::try_from((cur_test, 0)));
 
         cur_test = vec![0, 1, 1, 2, 3, 3, 3, 4];
         cur_result = Ok(OrderPresSurj {
             preimage_card_minus_1: vec![0, 1, 0, 2, 0],
         });
-        assert_eq!(cur_result, OrderPresSurj::try_from(cur_test.clone()));
+        assert_eq!(cur_result, OrderPresSurj::try_from((cur_test.clone(), 0)));
         let cur_result_unwrapped = cur_result.unwrap();
         for (n, v) in cur_test.iter().enumerate() {
             let dest_test_pt = cur_result_unwrapped.apply(n);
@@ -659,7 +736,7 @@ mod test {
         let mut cur_result = Ok(OrderPresInj {
             counts_iden_unit_alternating: vec![],
         });
-        assert_eq!(cur_result, OrderPresInj::try_from(cur_test.clone()));
+        assert_eq!(cur_result, OrderPresInj::try_from((cur_test.clone(), 0)));
         let cur_result_unwrapped = cur_result.unwrap();
         for (n, v) in cur_test.iter().enumerate() {
             let dest_test_pt = cur_result_unwrapped.apply(n);
@@ -670,7 +747,7 @@ mod test {
         cur_result = Ok(OrderPresInj {
             counts_iden_unit_alternating: vec![1],
         });
-        assert_eq!(cur_result, OrderPresInj::try_from(cur_test.clone()));
+        assert_eq!(cur_result, OrderPresInj::try_from((cur_test.clone(), 0)));
         let cur_result_unwrapped = cur_result.unwrap();
         for (n, v) in cur_test.iter().enumerate() {
             let dest_test_pt = cur_result_unwrapped.apply(n);
@@ -681,7 +758,7 @@ mod test {
         cur_result = Ok(OrderPresInj {
             counts_iden_unit_alternating: vec![0, 1, 1],
         });
-        assert_eq!(cur_result, OrderPresInj::try_from(cur_test.clone()));
+        assert_eq!(cur_result, OrderPresInj::try_from((cur_test.clone(), 0)));
         let cur_result_unwrapped = cur_result.unwrap();
         for (n, v) in cur_test.iter().enumerate() {
             let dest_test_pt = cur_result_unwrapped.apply(n);
@@ -692,7 +769,7 @@ mod test {
         cur_result = Ok(OrderPresInj {
             counts_iden_unit_alternating: vec![0, 2, 1],
         });
-        assert_eq!(cur_result, OrderPresInj::try_from(cur_test.clone()));
+        assert_eq!(cur_result, OrderPresInj::try_from((cur_test.clone(), 0)));
         let cur_result_unwrapped = cur_result.unwrap();
         for (n, v) in cur_test.iter().enumerate() {
             let dest_test_pt = cur_result_unwrapped.apply(n);
@@ -703,7 +780,7 @@ mod test {
         cur_result = Ok(OrderPresInj {
             counts_iden_unit_alternating: vec![3],
         });
-        assert_eq!(cur_result, OrderPresInj::try_from(cur_test.clone()));
+        assert_eq!(cur_result, OrderPresInj::try_from((cur_test.clone(), 0)));
         let cur_result_unwrapped = cur_result.unwrap();
         for (n, v) in cur_test.iter().enumerate() {
             let dest_test_pt = cur_result_unwrapped.apply(n);
@@ -712,17 +789,17 @@ mod test {
 
         cur_test = vec![0, 2, 1];
         cur_result = Err(TryFromInjError);
-        assert_eq!(cur_result, OrderPresInj::try_from(cur_test));
+        assert_eq!(cur_result, OrderPresInj::try_from((cur_test, 0)));
 
         cur_test = vec![0, 1, 1, 2, 3, 3, 3, 4];
         cur_result = Err(TryFromInjError);
-        assert_eq!(cur_result, OrderPresInj::try_from(cur_test));
+        assert_eq!(cur_result, OrderPresInj::try_from((cur_test, 0)));
 
         cur_test = vec![0, 1, 2, 4, 5, 8, 9, 11];
         cur_result = Ok(OrderPresInj {
             counts_iden_unit_alternating: vec![3, 1, 2, 2, 2, 1, 1],
         });
-        assert_eq!(cur_result, OrderPresInj::try_from(cur_test.clone()));
+        assert_eq!(cur_result, OrderPresInj::try_from((cur_test.clone(), 0)));
         let cur_result_unwrapped = cur_result.unwrap();
         for (n, v) in cur_test.iter().enumerate() {
             let dest_test_pt = cur_result_unwrapped.apply(n);
@@ -813,7 +890,7 @@ mod test {
         let exp_inj = OrderPresInj {
             counts_iden_unit_alternating: vec![5, 2, 3, 1, 1, 6, 3],
         };
-        let cur_res = Decomposition::try_from(cur_test.clone());
+        let cur_res = Decomposition::try_from((cur_test.clone(), 0));
         if let Ok(cur_decomp) = cur_res {
             assert_eq!(exp_surj, cur_decomp.order_preserving_surjection);
             assert_eq!(exp_inj, cur_decomp.order_preserving_injection);
