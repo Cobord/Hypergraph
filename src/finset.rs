@@ -185,7 +185,7 @@ impl Composable<usize> for OrderPresInj {
         self.counts_iden_unit_alternating
             .iter()
             .enumerate()
-            .map(|(n, v)| (n % 2) * v)
+            .map(|(n, v)| ((n + 1) % 2) * v)
             .sum::<usize>()
     }
 
@@ -676,7 +676,8 @@ mod test {
 
     #[test]
     fn ord_surj_conversion() {
-        use crate::finset::{FinSetMap, OrderPresSurj, TryFromSurjError};
+        use super::{FinSetMap, OrderPresSurj, TryFromSurjError};
+        use crate::category::Composable;
         let mut cur_test: FinSetMap = vec![];
         let mut cur_result = Ok(OrderPresSurj {
             preimage_card_minus_1: vec![],
@@ -693,6 +694,8 @@ mod test {
             let dest_test_pt = cur_result_unwrapped.apply(n);
             assert_eq!(dest_test_pt, *v);
         }
+        assert_eq!(cur_result_unwrapped.domain(), 1);
+        assert_eq!(cur_result_unwrapped.codomain(), 1);
 
         cur_test = vec![1];
         cur_result = Err(TryFromSurjError);
@@ -712,6 +715,8 @@ mod test {
             let dest_test_pt = cur_result_unwrapped.apply(n);
             assert_eq!(dest_test_pt, *v);
         }
+        assert_eq!(cur_result_unwrapped.domain(), 3);
+        assert_eq!(cur_result_unwrapped.codomain(), 3);
 
         cur_test = vec![0, 2, 1];
         cur_result = Err(TryFromSurjError);
@@ -727,11 +732,14 @@ mod test {
             let dest_test_pt = cur_result_unwrapped.apply(n);
             assert_eq!(dest_test_pt, *v);
         }
+        assert_eq!(cur_result_unwrapped.domain(), 8);
+        assert_eq!(cur_result_unwrapped.codomain(), 5);
     }
 
     #[test]
     fn ord_inj_conversion() {
-        use crate::finset::{FinSetMap, OrderPresInj, TryFromInjError};
+        use super::{FinSetMap, OrderPresInj, TryFromInjError};
+        use crate::category::Composable;
         let mut cur_test: FinSetMap = vec![];
         let mut cur_result = Ok(OrderPresInj {
             counts_iden_unit_alternating: vec![],
@@ -742,6 +750,8 @@ mod test {
             let dest_test_pt = cur_result_unwrapped.apply(n);
             assert_eq!(dest_test_pt, *v);
         }
+        assert_eq!(cur_result_unwrapped.domain(), 0);
+        assert_eq!(cur_result_unwrapped.codomain(), 0);
 
         cur_test = vec![0];
         cur_result = Ok(OrderPresInj {
@@ -753,6 +763,8 @@ mod test {
             let dest_test_pt = cur_result_unwrapped.apply(n);
             assert_eq!(dest_test_pt, *v);
         }
+        assert_eq!(cur_result_unwrapped.domain(), 1);
+        assert_eq!(cur_result_unwrapped.codomain(), 1);
 
         cur_test = vec![1];
         cur_result = Ok(OrderPresInj {
@@ -764,6 +776,8 @@ mod test {
             let dest_test_pt = cur_result_unwrapped.apply(n);
             assert_eq!(dest_test_pt, *v);
         }
+        assert_eq!(cur_result_unwrapped.domain(), 1);
+        assert_eq!(cur_result_unwrapped.codomain(), 2);
 
         cur_test = vec![2];
         cur_result = Ok(OrderPresInj {
@@ -775,6 +789,8 @@ mod test {
             let dest_test_pt = cur_result_unwrapped.apply(n);
             assert_eq!(dest_test_pt, *v);
         }
+        assert_eq!(cur_result_unwrapped.domain(), 1);
+        assert_eq!(cur_result_unwrapped.codomain(), 3);
 
         cur_test = vec![0, 1, 2];
         cur_result = Ok(OrderPresInj {
@@ -786,6 +802,8 @@ mod test {
             let dest_test_pt = cur_result_unwrapped.apply(n);
             assert_eq!(dest_test_pt, *v);
         }
+        assert_eq!(cur_result_unwrapped.domain(), 3);
+        assert_eq!(cur_result_unwrapped.codomain(), 3);
 
         cur_test = vec![0, 2, 1];
         cur_result = Err(TryFromInjError);
@@ -795,16 +813,22 @@ mod test {
         cur_result = Err(TryFromInjError);
         assert_eq!(cur_result, OrderPresInj::try_from((cur_test, 0)));
 
+        let leftovers = 23;
         cur_test = vec![0, 1, 2, 4, 5, 8, 9, 11];
         cur_result = Ok(OrderPresInj {
-            counts_iden_unit_alternating: vec![3, 1, 2, 2, 2, 1, 1],
+            counts_iden_unit_alternating: vec![3, 1, 2, 2, 2, 1, 1, leftovers],
         });
-        assert_eq!(cur_result, OrderPresInj::try_from((cur_test.clone(), 0)));
+        assert_eq!(
+            cur_result,
+            OrderPresInj::try_from((cur_test.clone(), leftovers))
+        );
         let cur_result_unwrapped = cur_result.unwrap();
         for (n, v) in cur_test.iter().enumerate() {
             let dest_test_pt = cur_result_unwrapped.apply(n);
             assert_eq!(dest_test_pt, *v);
         }
+        assert_eq!(cur_result_unwrapped.domain(), 8);
+        assert_eq!(cur_result_unwrapped.codomain(), 12 + leftovers);
     }
 
     #[test]
@@ -883,24 +907,30 @@ mod test {
     #[test]
     fn decomposition() {
         use crate::finset::{Decomposition, FinSetMap, OrderPresInj, OrderPresSurj};
-        let cur_test: FinSetMap = vec![0, 1, 1, 1, 2, 3, 4, 7, 8, 9, 11, 20, 18, 19];
-        let exp_surj = OrderPresSurj {
-            preimage_card_minus_1: vec![0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        };
-        let exp_inj = OrderPresInj {
-            counts_iden_unit_alternating: vec![5, 2, 3, 1, 1, 6, 3],
-        };
-        let cur_res = Decomposition::try_from((cur_test.clone(), 0));
-        if let Ok(cur_decomp) = cur_res {
-            assert_eq!(exp_surj, cur_decomp.order_preserving_surjection);
-            assert_eq!(exp_inj, cur_decomp.order_preserving_injection);
-            for test_pt in 0..cur_test.len() {
-                let actual_dest = cur_test[test_pt];
-                let apparent_dest = cur_decomp.apply(test_pt);
-                assert_eq!(apparent_dest, actual_dest);
+        for leftovers in [0, 5, 12] {
+            let cur_test: FinSetMap = vec![0, 1, 1, 1, 2, 3, 4, 7, 8, 9, 11, 20, 18, 19];
+            let exp_surj = OrderPresSurj {
+                preimage_card_minus_1: vec![0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            };
+            let exp_inj = OrderPresInj {
+                counts_iden_unit_alternating: if leftovers > 0 {
+                    vec![5, 2, 3, 1, 1, 6, 3, leftovers]
+                } else {
+                    vec![5, 2, 3, 1, 1, 6, 3]
+                },
+            };
+            let cur_res = Decomposition::try_from((cur_test.clone(), leftovers));
+            if let Ok(cur_decomp) = cur_res {
+                assert_eq!(exp_surj, cur_decomp.order_preserving_surjection);
+                assert_eq!(exp_inj, cur_decomp.order_preserving_injection);
+                for test_pt in 0..cur_test.len() {
+                    let actual_dest = cur_test[test_pt];
+                    let apparent_dest = cur_decomp.apply(test_pt);
+                    assert_eq!(apparent_dest, actual_dest);
+                }
+            } else {
+                assert!(false, "All maps of finite sets decompose");
             }
-        } else {
-            assert!(false, "All maps of finite sets decompose");
         }
     }
 }
