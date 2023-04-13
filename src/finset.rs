@@ -32,6 +32,14 @@ impl Monoidal for FinSetMorphism {
 
 impl Composable<usize> for FinSetMorphism {
     fn compose(&self, other: &Self) -> Result<Self, String> {
+        if Self::composable(self, other).is_err() {
+            let self_codomain = self.codomain();
+            let other_domain = other.domain();
+            return Err(format!(
+                "Not composable. The codomain of self was {}. The domain of other was {}",
+                self_codomain, other_domain
+            ));
+        }
         let other_codomain = other.codomain();
         let composite = (0..self.domain())
             .map(|s| other.0[self.0[s]])
@@ -907,8 +915,11 @@ mod test {
     #[test]
     fn decomposition() {
         use crate::finset::{Decomposition, FinSetMap, OrderPresInj, OrderPresSurj};
-        for leftovers in [0, 5, 12] {
+        use permutations::Permutation;
+        for leftovers in [0, 5, 7] {
             let cur_test: FinSetMap = vec![0, 1, 1, 1, 2, 3, 4, 7, 8, 9, 11, 20, 18, 19];
+            let exp_perm =
+                Permutation::try_from(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 11, 12]).unwrap();
             let exp_surj = OrderPresSurj {
                 preimage_card_minus_1: vec![0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             };
@@ -921,6 +932,7 @@ mod test {
             };
             let cur_res = Decomposition::try_from((cur_test.clone(), leftovers));
             if let Ok(cur_decomp) = cur_res {
+                assert_eq!(exp_perm, cur_decomp.permutation_part);
                 assert_eq!(exp_surj, cur_decomp.order_preserving_surjection);
                 assert_eq!(exp_inj, cur_decomp.order_preserving_injection);
                 for test_pt in 0..cur_test.len() {

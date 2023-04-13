@@ -116,11 +116,6 @@ where
         }
     }
 
-    #[allow(dead_code)]
-    pub fn delete_boundary_node(&mut self, _which_node: Either<LeftIndex, RightIndex>) {
-        todo!();
-    }
-
     pub fn add_middle(
         &mut self,
         new_middle: (LeftIndex, RightIndex),
