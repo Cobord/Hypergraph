@@ -65,7 +65,6 @@ where
         }
     }
 
-    #[allow(dead_code)]
     pub fn new(
         left: Vec<Lambda>,
         right: Vec<Lambda>,
@@ -147,8 +146,7 @@ where
         )
     }
 
-    #[allow(dead_code)]
-    fn is_jointly_injective(&self) -> bool {
+    pub fn is_jointly_injective(&self) -> bool {
         let mut seen = HashSet::with_capacity(self.middle.len());
         for cur_mid in &self.middle {
             if !seen.insert(*cur_mid) {
@@ -157,6 +155,17 @@ where
         }
         true
         //todo test
+    }
+
+    pub fn dagger(&self) -> Self {
+        Self::new(
+            self.codomain(),
+            self.domain(),
+            self.middle
+                .iter()
+                .map(|(z, w)| (*w, *z))
+                .collect::<Vec<(usize, usize)>>(),
+        )
     }
 }
 
@@ -210,7 +219,7 @@ where
     }
 
     fn compose(&self, other: &Self) -> Result<Self, String> {
-        let _ = self.composable(other)?;
+        self.composable(other)?;
         #[allow(clippy::if_same_then_else)]
         if self.is_right_id {
             // todo shortcut
@@ -320,5 +329,95 @@ where
             };
             todo!("p and p inverse straighten out")
         }
+    }
+}
+
+pub struct Rel<Lambda: Eq + Sized + Debug + Copy>(Span<Lambda>);
+
+impl<Lambda: Eq + Sized + Debug + Copy> Rel<Lambda> {
+    fn new(x: Span<Lambda>, do_check: bool) -> Rel<Lambda> {
+        if do_check {
+            assert!(x.is_jointly_injective());
+        }
+        Rel::<Lambda>(x)
+    }
+
+    fn subsumes(&self, _other: &Rel<Lambda>) -> bool {
+        todo!()
+    }
+
+    #[allow(dead_code)]
+    fn union(&self, _other: &Self) -> Self {
+        todo!()
+    }
+
+    #[allow(dead_code)]
+    fn intersection(&self, _other: &Self) -> Self {
+        todo!()
+    }
+
+    #[allow(dead_code)]
+    fn complement(&self) -> Self {
+        todo!()
+    }
+
+    fn is_homogeneous(&self) -> bool {
+        self.0.domain() == self.0.codomain()
+    }
+
+    fn is_reflexive(&self) -> bool {
+        let identity_rel = Self::new(Span::<Lambda>::identity(&self.0.domain()), false);
+        self.subsumes(&identity_rel)
+    }
+
+    #[allow(dead_code)]
+    fn is_irreflexive(&self) -> bool {
+        self.complement().is_reflexive()
+    }
+
+    fn is_symmetric(&self) -> bool {
+        let dagger = Self::new(self.0.dagger(), false);
+        self.subsumes(&dagger)
+    }
+
+    #[allow(dead_code)]
+    fn is_antisymmetric(&self) -> bool {
+        let dagger = Self::new(self.0.dagger(), false);
+        let intersect = self.intersection(&dagger);
+        let identity_rel = Self::new(Span::<Lambda>::identity(&self.0.domain()), false);
+        identity_rel.subsumes(&intersect)
+    }
+
+    fn is_transitive(&self) -> bool {
+        let twice = Self::new(self.0.compose(&self.0).unwrap(), true);
+        self.subsumes(&twice)
+    }
+
+    #[allow(dead_code)]
+    fn is_equivalence_rel(&self) -> bool {
+        if !self.is_homogeneous() {
+            return false;
+        }
+        if !self.is_reflexive() {
+            return false;
+        }
+        if !self.is_symmetric() {
+            return false;
+        }
+        self.is_transitive()
+    }
+
+    #[allow(dead_code)]
+    fn is_partial_order(&self) -> bool {
+        if !self.is_homogeneous() {
+            return false;
+        }
+        if !self.is_reflexive() {
+            return false;
+        }
+        if !self.is_antisymmetric() {
+            return false;
+        }
+        self.is_transitive()
     }
 }
