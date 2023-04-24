@@ -80,7 +80,7 @@ where
     {
         assert_eq!(types.len(), prenames.len());
         let underlying_cospan =
-            Cospan::<Lambda>::from_permutation(p.clone(), &types.to_vec(), types_as_on_domain);
+            Cospan::<Lambda>::from_permutation(p.clone(), types, types_as_on_domain);
         if types_as_on_domain {
             let left_names = prenames.iter().map(|pre| prename_to_name(*pre).0).collect();
             let right_names = p

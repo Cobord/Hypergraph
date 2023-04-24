@@ -231,7 +231,7 @@ pub trait GenericMonoidalInterpretableMut<Lambda: Eq + Copy + Debug>:
             for block in &layer.blocks[1..] {
                 cur_layer.monoidal(black_box_interpreter(block)?);
             }
-            let _ = answer.compose(cur_layer)?;
+            answer.compose(cur_layer)?;
         }
         Ok(answer)
     }

@@ -487,9 +487,9 @@ where
                     ));
                     second_layer.monoidal(cur_block);
                 }
-                let _ = first_layer.compose(second_layer).unwrap();
+                first_layer.compose(second_layer).unwrap();
                 let remaining = Self::from_permutation(p_remaining, &types_now, true);
-                let _ = first_layer.compose(remaining).unwrap();
+                first_layer.compose(remaining).unwrap();
                 assert_eq!(first_layer.domain(), types);
                 let mut types_after_all_p = types.to_vec();
                 in_place_permute(&mut types_after_all_p, &p.inv());
@@ -654,7 +654,7 @@ pub trait Frobenius<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Copy>:
             for block in &layer.blocks[1..] {
                 cur_layer.monoidal(Self::basic_interpret(&block.op, black_box_interpreter)?);
             }
-            let _ = answer.compose(cur_layer)?;
+            answer.compose(cur_layer)?;
         }
         Ok(answer)
     }

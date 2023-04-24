@@ -45,7 +45,7 @@ where
     pub fn new(
         inside: NamedCospan<Lambda, (InOut, InterCircle, IntraCircle), (InOut, IntraCircle)>,
     ) -> Self {
-        Self { 0: inside }
+        Self(inside)
     }
 
     #[allow(dead_code)]

@@ -126,7 +126,7 @@ where
             }
             Right(self.right.len() - 1)
         } else {
-            panic!("All possibilities destructured. Unreachable");
+            unreachable!("All possibilities destructured. Unreachable");
         }
     }
 
@@ -313,9 +313,9 @@ where
     }
 
     fn compose(&self, other: &Self) -> Result<Self, String> {
-        let _ = self.composable(other)?;
+        self.composable(other)?;
         let (pushout_target, left_to_pushout, right_to_pushout, representative) =
-            perform_pushout::<crate::QuickUnionUf<crate::UnionBySize>, Lambda>(
+            perform_pushout::<crate::QuickUnionUf<crate::UnionBySize>>(
                 &self.right,
                 self.middle.len(),
                 self.is_right_id,
@@ -412,7 +412,7 @@ type PushoutResult = (
     Vec<MiddleIndex>,
     Vec<Either<LeftIndex, RightIndex>>,
 );
-fn perform_pushout<T, Lambda: Eq>(
+fn perform_pushout<T>(
     left_leg: &[LeftIndex],
     left_leg_max_target: LeftIndex,
     left_leg_id: bool,
