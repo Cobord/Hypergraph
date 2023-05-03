@@ -244,7 +244,7 @@ impl OrderPresInj {
     }
 }
 
-fn is_monotonic_inc<T: Ord, I>(mut my_iter: I, prev_elt: Option<T>) -> bool
+pub fn is_monotonic_inc<T: Ord, I>(mut my_iter: I, prev_elt: Option<T>) -> bool
 where
     I: Iterator<Item = T>,
 {

@@ -21,6 +21,9 @@ use wiring_diagram::WiringDiagram;
 
 use crate::wiring_diagram::InOut;
 
+mod linear_combination;
+mod temperley_lieb;
+
 fn main() {
     let mut x =
         NamedCospan::<u32, &'static str, &'static str>::new(vec![], vec![], vec![], vec![], vec![]);
