@@ -2,6 +2,7 @@ use either::Either::{self, Left, Right};
 use permutations::Permutation;
 use rand::distributions::Uniform;
 use rand::prelude::Distribution;
+use std::fmt::Debug;
 
 pub fn bimap<T, U, V, W, F, G>(x: Either<T, U>, f1: F, f2: G) -> Either<V, W>
 where
@@ -139,6 +140,34 @@ pub fn rand_perm(n: usize, max_depth: usize) -> Permutation {
         answer = answer * Permutation::transposition(n, i, j);
     }
     answer
+}
+
+#[allow(dead_code)]
+pub fn test_asserter<T, U, F>(
+    observed: Result<T, U>,
+    expected: Result<T, U>,
+    aux_test: F,
+    equation_str: &str,
+) where
+    F: Fn(&T, &T) -> bool,
+    T: Debug + PartialEq,
+{
+    match (observed, expected) {
+        (Ok(real_observed), Ok(real_expected)) => {
+            assert!(aux_test(&real_observed, &real_expected));
+            assert!(
+                PartialEq::eq(&real_observed, &real_expected),
+                "{:?} vs {:?} when checking {:?}",
+                real_observed,
+                real_expected,
+                equation_str
+            );
+        }
+        _ => panic!(
+            "Error on one of observed/expected sides when checking {:?}",
+            equation_str
+        ),
+    }
 }
 
 #[macro_export]

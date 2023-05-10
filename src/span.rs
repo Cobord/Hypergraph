@@ -1,5 +1,5 @@
 use either::Either::{self, Left, Right};
-use std::cmp::max;
+use std::cmp::{max, min};
 use std::collections::HashSet;
 use std::fmt::Debug;
 
@@ -154,7 +154,6 @@ where
             }
         }
         true
-        //todo test
     }
 
     pub fn dagger(&self) -> Self {
@@ -220,12 +219,7 @@ where
 
     fn compose(&self, other: &Self) -> Result<Self, String> {
         self.composable(other)?;
-        #[allow(clippy::if_same_then_else)]
-        if self.is_right_id {
-            // todo shortcut
-        } else if other.is_left_id {
-            // todo shortcut
-        }
+        // could shortuct if self.is_right_id or other.is_left_id, but unnecessary
         let max_middle = max(self.middle.len(), other.middle.len());
         let mut answer = Self::new(
             self.left.clone(),
@@ -334,6 +328,49 @@ where
 
 pub struct Rel<Lambda: Eq + Sized + Debug + Copy>(Span<Lambda>);
 
+impl<Lambda> HasIdentity<Vec<Lambda>> for Rel<Lambda>
+where
+    Lambda: Sized + Eq + Copy + Debug,
+{
+    fn identity(on_this: &Vec<Lambda>) -> Self {
+        Self(Span::<Lambda>::identity(on_this))
+    }
+}
+
+impl<Lambda> Composable<Vec<Lambda>> for Rel<Lambda>
+where
+    Lambda: Sized + Eq + Copy + Debug,
+{
+    fn compose(&self, other: &Self) -> Result<Self, String> {
+        self.0.compose(&other.0).map(|x| Self(x))
+    }
+
+    fn domain(&self) -> Vec<Lambda> {
+        self.0.domain()
+    }
+
+    fn codomain(&self) -> Vec<Lambda> {
+        self.0.codomain()
+    }
+
+    fn composable(&self, other: &Self) -> Result<(), String> {
+        self.0.composable(&other.0)
+    }
+}
+
+impl<Lambda> Monoidal for Rel<Lambda>
+where
+    Lambda: Sized + Eq + Copy + Debug,
+{
+    fn monoidal(&mut self, other: Self) {
+        self.0.monoidal(other.0);
+    }
+}
+
+impl<Lambda> MonoidalMorphism<Vec<Lambda>> for Rel<Lambda> where Lambda: Sized + Eq + Copy + Debug {}
+
+impl<Lambda> GenericMonoidalInterpretable<Lambda> for Rel<Lambda> where Lambda: Eq + Copy + Debug {}
+
 impl<Lambda: Eq + Sized + Debug + Copy> Rel<Lambda> {
     fn new(x: Span<Lambda>, do_check: bool) -> Rel<Lambda> {
         if do_check {
@@ -342,23 +379,66 @@ impl<Lambda: Eq + Sized + Debug + Copy> Rel<Lambda> {
         Rel::<Lambda>(x)
     }
 
-    fn subsumes(&self, _other: &Rel<Lambda>) -> bool {
-        todo!()
+    fn subsumes(&self, other: &Rel<Lambda>) -> bool {
+        assert_eq!(self.domain(), other.domain());
+        assert_eq!(self.codomain(), other.codomain());
+
+        let self_pairs: HashSet<(usize, usize)> = HashSet::from_iter(self.0.middle.iter().cloned());
+        let other_pairs: HashSet<(usize, usize)> =
+            HashSet::from_iter(other.0.middle.iter().cloned());
+
+        self_pairs.is_superset(&other_pairs)
     }
 
     #[allow(dead_code)]
-    fn union(&self, _other: &Self) -> Self {
-        todo!()
+    fn union(&self, other: &Self) -> Self {
+        assert_eq!(self.domain(), other.domain());
+        assert_eq!(self.codomain(), other.codomain());
+
+        let mut ret_val = self.0.clone();
+        for (x, y) in &other.0.middle {
+            ret_val.add_middle((*x, *y)).unwrap();
+        }
+        Self(ret_val)
     }
 
     #[allow(dead_code)]
-    fn intersection(&self, _other: &Self) -> Self {
-        todo!()
+    fn intersection(&self, other: &Self) -> Self {
+        assert_eq!(self.domain(), other.domain());
+        assert_eq!(self.codomain(), other.codomain());
+
+        let capacity = min(self.0.middle.len(), other.0.middle.len());
+        let mut ret_val =
+            Span::<Lambda>::new(self.domain(), self.codomain(), Vec::with_capacity(capacity));
+
+        let self_pairs: HashSet<(usize, usize)> = HashSet::from_iter(self.0.middle.iter().cloned());
+        let other_pairs: HashSet<(usize, usize)> =
+            HashSet::from_iter(other.0.middle.iter().cloned());
+
+        let in_common = self_pairs.intersection(&other_pairs);
+        for (x, y) in in_common {
+            ret_val.add_middle((*x, *y)).unwrap();
+        }
+        Self(ret_val)
     }
 
     #[allow(dead_code)]
-    fn complement(&self) -> Self {
-        todo!()
+    fn complement(&self) -> Result<Self, String> {
+        let source_size = self.domain().len();
+        let target_size = self.codomain().len();
+
+        let capacity = source_size * target_size - self.0.middle.len();
+        let mut ret_val =
+            Span::<Lambda>::new(self.domain(), self.codomain(), Vec::with_capacity(capacity));
+
+        let self_pairs: HashSet<(usize, usize)> = HashSet::from_iter(self.0.middle.iter().cloned());
+
+        for (x, y) in (0..source_size).zip(0..target_size) {
+            if !self_pairs.contains(&(x, y)) {
+                ret_val.add_middle((x, y))?;
+            }
+        }
+        Ok(Self(ret_val))
     }
 
     fn is_homogeneous(&self) -> bool {
@@ -372,7 +452,7 @@ impl<Lambda: Eq + Sized + Debug + Copy> Rel<Lambda> {
 
     #[allow(dead_code)]
     fn is_irreflexive(&self) -> bool {
-        self.complement().is_reflexive()
+        self.complement().map(|x| x.is_reflexive()).unwrap_or(false)
     }
 
     fn is_symmetric(&self) -> bool {

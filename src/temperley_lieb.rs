@@ -61,10 +61,10 @@ impl PerfectMatching {
     }
 
     fn non_crossing(&self, source: usize, _target: usize) -> bool {
-        // todo simplify
         let in_between = |query, (interval1, interval2)| {
             (query < interval1 && query > interval2) || (query < interval2 && query > interval1)
         };
+        // the lines connecting two points both on source side
         let source_lines = self
             .pairs
             .iter()
@@ -77,15 +77,20 @@ impl PerfectMatching {
             let a = in_between(second_block.0, first_block);
             let b = in_between(second_block.1, first_block);
             if a != b {
+                // a pair of lines that both connected source dots, crossed
                 return false;
             }
         }
+        // no crossing lines can use these indices because they are blocked by a line connecting
+        //      two source points
         let mut no_through_lines_idx = HashSet::<usize>::new();
         for (x, y) in source_lines {
             for z in (1 + min(x, y))..max(x, y) {
                 no_through_lines_idx.insert(z);
             }
         }
+
+        // the lines connecting two points both on target side
         let target_lines = self
             .pairs
             .iter()
@@ -98,14 +103,20 @@ impl PerfectMatching {
             let a = in_between(second_block.0, first_block);
             let b = in_between(second_block.1, first_block);
             if a != b {
+                // a pair of lines that both connected source dots, crossed
                 return false;
             }
         }
+
+        // no crossing lines can use these indices because they are blocked by a line connecting
+        //      two target points
         for (x, y) in target_lines {
             for z in (1 + min(x, y))..max(x, y) {
                 no_through_lines_idx.insert(z);
             }
         }
+
+        // now check that those crossing lines don't use those indices that were stated to be forbidden
         let through_lines = self
             .pairs
             .iter()
@@ -116,6 +127,8 @@ impl PerfectMatching {
                 return false;
             }
         }
+
+        // the induced map from the through_lines is monotonically increasing
         is_monotonic_inc(through_lines.map(|(_, w)| w), None)
     }
 }
@@ -503,7 +516,6 @@ where
 }
 
 mod test {
-    use std::fmt::Debug;
     use std::ops::{AddAssign, MulAssign};
 
     use super::BrauerMorphism;
@@ -548,37 +560,10 @@ mod test {
         }
     }
 
-    #[allow(dead_code)]
-    fn test_asserter<T, U, F>(
-        observed: Result<T, U>,
-        expected: Result<T, U>,
-        aux_test: F,
-        equation_str: &str,
-    ) where
-        F: Fn(&T, &T) -> bool,
-        T: Debug + PartialEq,
-    {
-        match (observed, expected) {
-            (Ok(real_observed), Ok(real_expected)) => {
-                assert!(aux_test(&real_observed, &real_expected));
-                assert!(
-                    PartialEq::eq(&real_observed, &real_expected),
-                    "{:?} vs {:?} when checking {:?}",
-                    real_observed,
-                    real_expected,
-                    equation_str
-                );
-            }
-            _ => panic!(
-                "Error on one of observed/expected sides when checking {:?}",
-                equation_str
-            ),
-        }
-    }
-
     #[test]
     fn t_l_relations() {
         use crate::category::Composable;
+        use crate::utils::test_asserter;
         use either::Either::Left;
         use num::Complex;
         use std::cmp::PartialEq;
@@ -683,6 +668,7 @@ mod test {
     fn sym_relations() {
         use super::BrauerMorphism;
         use crate::category::{Composable, HasIdentity};
+        use crate::utils::test_asserter;
         use either::Either::Right;
         use num::Complex;
         let n = 7;
@@ -762,6 +748,7 @@ mod test {
     fn tangle_relations() {
         use super::BrauerMorphism;
         use crate::category::Composable;
+        use crate::utils::test_asserter;
         use either::Either::{Left, Right};
         use num::Complex;
         let n = 7;

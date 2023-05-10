@@ -115,7 +115,6 @@ impl Composable<usize> for OrderPresSurj {
         Ok(Self {
             preimage_card_minus_1: answer,
         })
-        // todo test
     }
 
     fn domain(&self) -> usize {
@@ -704,6 +703,10 @@ mod test {
         }
         assert_eq!(cur_result_unwrapped.domain(), 1);
         assert_eq!(cur_result_unwrapped.codomain(), 1);
+        let cur_composed = cur_result_unwrapped
+            .compose(&cur_result_unwrapped)
+            .map_err(|_| TryFromSurjError);
+        assert_eq!(cur_composed, OrderPresSurj::try_from((cur_test.clone(), 0)));
 
         cur_test = vec![1];
         cur_result = Err(TryFromSurjError);
@@ -725,6 +728,8 @@ mod test {
         }
         assert_eq!(cur_result_unwrapped.domain(), 3);
         assert_eq!(cur_result_unwrapped.codomain(), 3);
+        let cur_composed_2 = cur_result_unwrapped.compose(&cur_result_unwrapped).unwrap();
+        assert_eq!(cur_composed_2, cur_result_unwrapped);
 
         cur_test = vec![0, 2, 1];
         cur_result = Err(TryFromSurjError);
@@ -742,6 +747,15 @@ mod test {
         }
         assert_eq!(cur_result_unwrapped.domain(), 8);
         assert_eq!(cur_result_unwrapped.codomain(), 5);
+
+        let compose_3_after = OrderPresSurj {
+            preimage_card_minus_1: vec![1, 2],
+        };
+        let compose_3_exp = OrderPresSurj {
+            preimage_card_minus_1: vec![2, 4],
+        };
+        let cur_composed_3 = cur_result_unwrapped.compose(&compose_3_after).unwrap();
+        assert_eq!(cur_composed_3, compose_3_exp);
     }
 
     #[test]
