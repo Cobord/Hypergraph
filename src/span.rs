@@ -326,6 +326,7 @@ where
     }
 }
 
+#[repr(transparent)]
 pub struct Rel<Lambda: Eq + Sized + Debug + Copy>(Span<Lambda>);
 
 impl<Lambda> HasIdentity<Vec<Lambda>> for Rel<Lambda>

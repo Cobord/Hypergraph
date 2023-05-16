@@ -30,6 +30,7 @@ type Doubled<T> = (T, T);
 type DoubledEither<T, U> = Either<Doubled<T>, Doubled<U>>;
 
 #[allow(dead_code)]
+#[repr(transparent)]
 pub struct WiringDiagram<
     Lambda: Eq + Copy + Debug,
     InterCircle: Eq + Clone,

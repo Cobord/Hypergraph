@@ -5,6 +5,7 @@ use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use num::{One, Zero};
 
+#[repr(transparent)]
 pub struct LinearCombination<Coeffs: Copy, Target: Eq + Hash>(HashMap<Target, Coeffs>);
 
 impl<Coeffs: Copy, Target: Eq + Hash> Clone for LinearCombination<Coeffs, Target>
