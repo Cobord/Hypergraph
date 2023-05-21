@@ -192,7 +192,7 @@ where
         self.middle.len() - 1
     }
 
-    pub fn change_lambda<F, Mu>(&self, f: F) -> Cospan<Mu>
+    pub fn map<F, Mu>(&self, f: F) -> Cospan<Mu>
     where
         F: Fn(Lambda) -> Mu,
         Mu: Sized + Eq + Copy + Debug,
@@ -382,10 +382,10 @@ where
         //  left ; is cospan composition
         //  right ; is composition of permutation functions
         let p_underlying = if types_as_on_domain {
-            p.inv().permute(&id_temp)
+            p.inv()
         } else {
-            p.permute(&id_temp)
-        };
+            p
+        }.permute(&id_temp);
         if types_as_on_domain {
             Self {
                 left: (0..num_types).collect(),

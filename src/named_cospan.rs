@@ -297,14 +297,14 @@ where
         self.underlying_cospan.add_middle(new_middle);
     }
 
-    pub fn change_lambda<F, Mu>(&self, f: F) -> NamedCospan<Mu, LeftPortName, RightPortName>
+    pub fn map<F, Mu>(&self, f: F) -> NamedCospan<Mu, LeftPortName, RightPortName>
     where
         F: Fn(Lambda) -> Mu,
         Mu: Sized + Eq + Copy + Debug,
         RightPortName: Clone,
     {
         NamedCospan {
-            underlying_cospan: self.underlying_cospan.change_lambda(f),
+            underlying_cospan: self.underlying_cospan.map(f),
             left_names: self.left_names.clone(),
             right_names: self.right_names.clone(),
         }

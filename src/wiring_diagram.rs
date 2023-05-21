@@ -84,12 +84,12 @@ where
     }
 
     #[allow(dead_code)]
-    pub fn change_lambda<F, Mu>(&self, f: F) -> WiringDiagram<Mu, InterCircle, IntraCircle>
+    pub fn map<F, Mu>(&self, f: F) -> WiringDiagram<Mu, InterCircle, IntraCircle>
     where
         F: Fn(Lambda) -> Mu,
         Mu: Sized + Eq + Copy + Debug,
     {
-        WiringDiagram::<Mu, InterCircle, IntraCircle>::new(self.0.change_lambda(f))
+        WiringDiagram::new(self.0.map(f))
     }
 
     #[allow(dead_code)]

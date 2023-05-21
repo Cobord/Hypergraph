@@ -128,12 +128,12 @@ where
     }
 
     #[allow(dead_code)]
-    pub fn change_lambda<F, Mu>(&self, f: F) -> Span<Mu>
+    pub fn map<F, Mu>(&self, f: F) -> Span<Mu>
     where
         F: Fn(Lambda) -> Mu,
         Mu: Sized + Eq + Copy + Debug,
     {
-        Span::<Mu>::new(
+        Span::new(
             self.left.iter().map(|l| f(*l)).collect(),
             self.right.iter().map(|l| f(*l)).collect(),
             self.middle.clone(),
