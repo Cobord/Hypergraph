@@ -85,17 +85,11 @@ where
     }
 
     pub fn middle_to_left(&self) -> Vec<LeftIndex> {
-        self.middle
-            .iter()
-            .map(|tup| tup.0)
-            .collect::<Vec<LeftIndex>>()
+        self.middle.iter().map(|tup| tup.0).collect()
     }
 
     pub fn middle_to_right(&self) -> Vec<RightIndex> {
-        self.middle
-            .iter()
-            .map(|tup| tup.1)
-            .collect::<Vec<RightIndex>>()
+        self.middle.iter().map(|tup| tup.1).collect()
     }
 
     #[allow(dead_code)]
@@ -174,7 +168,7 @@ where
 {
     fn identity(on_this: &Vec<Lambda>) -> Self {
         Self {
-            middle: (0..on_this.len()).map(|idx| (idx, idx)).collect::<Vec<_>>(),
+            middle: (0..on_this.len()).map(|idx| (idx, idx)).collect(),
             left: on_this.clone(),
             right: on_this.clone(),
             is_left_id: true,
@@ -188,33 +182,14 @@ where
     Lambda: Sized + Eq + Copy + Debug,
 {
     fn composable(&self, other: &Self) -> Result<(), String> {
-        let mut self_interface = self.right.iter();
-        let mut other_interface = other.left.iter();
-        let mut to_continue = true;
-        while to_continue {
-            let current_self = self_interface.next();
-            let current_other = other_interface.next();
-            match (current_self, current_other) {
-                (None, None) => {
-                    to_continue = false;
-                }
-                (Some(_), None) => {
-                    return Err("Mismatch in cardinalities of common interface".to_string());
-                }
-                (None, Some(_)) => {
-                    return Err("Mismatch in cardinalities of common interface".to_string());
-                }
-                (Some(w1), Some(w2)) => {
-                    if w1 != w2 {
-                        return Err(format!(
-                            "Mismatch in labels of common interface. At some index there was {:?} vs {:?}",
-                            w1, w2
-                        ));
-                    }
-                }
-            }
+        if self.right.len() != other.left.len() {
+            return Err("Mismatch in cardinalities of common interface".to_string());
         }
-        Ok(())
+        let Some((w1,w2)) = self.right.iter().zip(other.left.iter()).find(|(a, b)| a != b ) else { return Ok(())};
+        return Err(format!(
+            "Mismatch in labels of common interface. At some index there was {:?} vs {:?}",
+            w1, w2
+        ));
     }
 
     fn compose(&self, other: &Self) -> Result<Self, String> {
