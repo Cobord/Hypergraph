@@ -247,14 +247,6 @@ where
         self.layers.len()
     }
 
-    pub fn single_op(op: FrobeniusOperation<Lambda, BlackBoxLabel>) -> Self {
-        let mut answer_layer = FrobeniusLayer::new();
-        answer_layer.append_block(op);
-        let mut answer = FrobeniusMorphism::new();
-        let _ = answer.append_layer(answer_layer);
-        answer
-    }
-
     fn append_layer(
         &mut self,
         next_layer: FrobeniusLayer<Lambda, BlackBoxLabel>,
@@ -442,48 +434,45 @@ where
                     let jdx_goes = p_remaining.apply(idx + 1);
                     if idx_goes > jdx_goes {
                         let cur_swap = Permutation::transposition(p_remaining.len(), idx, idx + 1);
-                        let cur_block = Self::single_op(FrobeniusOperation::SymmetricBraiding(
-                            types_now[idx],
-                            types_now[idx + 1],
-                        ));
-                        first_layer.monoidal(cur_block);
+                        first_layer.monoidal(
+                            FrobeniusOperation::SymmetricBraiding(
+                                types_now[idx],
+                                types_now[idx + 1],
+                            )
+                            .into(),
+                        );
                         in_place_permute(&mut types_now, &cur_swap);
                         p_remaining = cur_swap * p_remaining;
                     } else {
-                        let cur_block =
-                            Self::single_op(FrobeniusOperation::Identity(types_now[idx]));
-                        first_layer.monoidal(cur_block);
-                        let cur_block =
-                            Self::single_op(FrobeniusOperation::Identity(types_now[idx + 1]));
-                        first_layer.monoidal(cur_block);
+                        first_layer.monoidal(FrobeniusOperation::Identity(types_now[idx]).into());
+                        first_layer
+                            .monoidal(FrobeniusOperation::Identity(types_now[idx + 1]).into());
                     }
                 }
                 if p_remaining.len() % 2 == 1 {
-                    let cur_block = Self::single_op(FrobeniusOperation::Identity(
-                        types_now[p_remaining.len() - 1],
-                    ));
-                    first_layer.monoidal(cur_block);
+                    first_layer.monoidal(
+                        FrobeniusOperation::Identity(types_now[p_remaining.len() - 1]).into(),
+                    );
                 }
-                let mut second_layer = Self::single_op(FrobeniusOperation::Identity(types_now[0]));
+                let mut second_layer: Self = FrobeniusOperation::Identity(types_now[0]).into();
                 for idx in (1..p_remaining.len() - 1).step_by(2) {
                     let idx_goes = p_remaining.apply(idx);
                     let jdx_goes = p_remaining.apply(idx + 1);
                     if idx_goes > jdx_goes {
                         let cur_swap = Permutation::transposition(p_remaining.len(), idx, idx + 1);
-                        let cur_block = Self::single_op(FrobeniusOperation::SymmetricBraiding(
-                            types_now[idx],
-                            types_now[idx + 1],
-                        ));
-                        second_layer.monoidal(cur_block);
+                        second_layer.monoidal(
+                            FrobeniusOperation::SymmetricBraiding(
+                                types_now[idx],
+                                types_now[idx + 1],
+                            )
+                            .into(),
+                        );
                         in_place_permute(&mut types_now, &cur_swap);
                         p_remaining = cur_swap * p_remaining;
                     } else {
-                        let cur_block =
-                            Self::single_op(FrobeniusOperation::Identity(types_now[idx]));
-                        second_layer.monoidal(cur_block);
-                        let cur_block =
-                            Self::single_op(FrobeniusOperation::Identity(types_now[idx + 1]));
-                        second_layer.monoidal(cur_block);
+                        second_layer.monoidal(FrobeniusOperation::Identity(types_now[idx]).into());
+                        second_layer
+                            .monoidal(FrobeniusOperation::Identity(types_now[idx + 1]).into());
                     }
                 }
                 if p_remaining.len() % 2 == 0 {
@@ -576,15 +565,11 @@ where
     for (n, c) in inj_part.iden_unit_counts().iter().enumerate() {
         if n % 2 == 0 {
             let cur_iden_type = target_types[target_number..target_number + c].to_vec();
-            let cur_iden = FrobeniusMorphism::<Lambda, BlackBoxLabel>::identity(&cur_iden_type);
-            inj_part_frob.monoidal(cur_iden);
+            inj_part_frob.monoidal(FrobeniusMorphism::identity(&cur_iden_type));
             target_number += c;
         } else {
             for idx in 0..*c {
-                let cur_unit = FrobeniusMorphism::<Lambda, BlackBoxLabel>::single_op(
-                    FrobeniusOperation::Unit(target_types[target_number + idx]),
-                );
-                inj_part_frob.monoidal(cur_unit);
+                inj_part_frob.monoidal(FrobeniusOperation::Unit(target_types[target_number + idx]).into());
             }
             target_number += c;
         }
@@ -665,16 +650,16 @@ where
     BlackBoxLabel: Eq + Copy,
 {
     fn interpret_unit(z: Lambda) -> Self {
-        Self::single_op(FrobeniusOperation::Unit(z))
+        FrobeniusOperation::Unit(z).into()
     }
     fn interpret_counit(z: Lambda) -> Self {
-        Self::single_op(FrobeniusOperation::Counit(z))
+        FrobeniusOperation::Counit(z).into()
     }
     fn interpret_multiplication(z: Lambda) -> Self {
-        Self::single_op(FrobeniusOperation::Multiplication(z))
+        FrobeniusOperation::Multiplication(z).into()
     }
     fn interpret_comultiplication(z: Lambda) -> Self {
-        Self::single_op(FrobeniusOperation::Comultiplication(z))
+        FrobeniusOperation::Comultiplication(z).into()
     }
 
     fn basic_interpret<F>(
@@ -684,7 +669,7 @@ where
     where
         F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Result<Self, String>,
     {
-        Ok(Self::single_op(single_step.clone()))
+        Ok(single_step.clone().into())
     }
 
     fn interpret<F>(
@@ -742,28 +727,28 @@ mod test {
     fn basic_spiders() {
         use super::{special_frobenius_morphism, FrobeniusMorphism, FrobeniusOperation};
         let counit_spider: FrobeniusMorphism<(), ()> = special_frobenius_morphism(1, 0, ());
-        let exp_counit_spider = FrobeniusMorphism::single_op(FrobeniusOperation::Counit(()));
+        let exp_counit_spider: FrobeniusMorphism<_, _> = FrobeniusOperation::Counit(()).into();
         assert!(exp_counit_spider == counit_spider);
         assert_eq!(counit_spider.depth(), 1);
 
         let comul_spider: FrobeniusMorphism<(), ()> = special_frobenius_morphism(1, 2, ());
-        let exp_comul_spider =
-            FrobeniusMorphism::single_op(FrobeniusOperation::Comultiplication(()));
+        let exp_comul_spider: FrobeniusMorphism<_, _> =
+            FrobeniusOperation::Comultiplication(()).into();
         assert!(exp_comul_spider == comul_spider);
         assert_eq!(comul_spider.depth(), 1);
 
         let mul_spider: FrobeniusMorphism<(), ()> = special_frobenius_morphism(2, 1, ());
-        let exp_mul_spider = FrobeniusMorphism::single_op(FrobeniusOperation::Multiplication(()));
+        let exp_mul_spider: FrobeniusMorphism<_, _> = FrobeniusOperation::Multiplication(()).into();
         assert!(exp_mul_spider == mul_spider);
         assert_eq!(mul_spider.depth(), 1);
 
         let unit_spider: FrobeniusMorphism<(), ()> = special_frobenius_morphism(0, 1, ());
-        let exp_unit_spider = FrobeniusMorphism::single_op(FrobeniusOperation::Unit(()));
+        let exp_unit_spider: FrobeniusMorphism<_, _> = FrobeniusOperation::Unit(()).into();
         assert!(exp_unit_spider == unit_spider);
         assert_eq!(unit_spider.depth(), 1);
 
         let id_spider: FrobeniusMorphism<(), ()> = special_frobenius_morphism(1, 1, ());
-        let exp_id_spider = FrobeniusMorphism::single_op(FrobeniusOperation::Identity(()));
+        let exp_id_spider: FrobeniusMorphism<_, _> = FrobeniusOperation::Identity(()).into();
         assert!(exp_id_spider == id_spider);
         assert_eq!(id_spider.depth(), 1);
     }
@@ -772,12 +757,12 @@ mod test {
     fn basic_typed_spiders() {
         use super::{special_frobenius_morphism, FrobeniusMorphism, FrobeniusOperation};
         let counit_spider: FrobeniusMorphism<bool, ()> = special_frobenius_morphism(1, 0, true);
-        let exp_counit_spider = FrobeniusMorphism::single_op(FrobeniusOperation::Counit(true));
+        let exp_counit_spider: FrobeniusMorphism<_,> = FrobeniusOperation::Counit(true).into();
         assert!(exp_counit_spider == counit_spider);
 
         let comul_spider: FrobeniusMorphism<bool, ()> = special_frobenius_morphism(1, 2, false);
-        let exp_comul_spider =
-            FrobeniusMorphism::single_op(FrobeniusOperation::Comultiplication(false));
+        let exp_comul_spider: FrobeniusMorphism<_,> =
+            FrobeniusOperation::Comultiplication(false).into();
         assert!(exp_comul_spider == comul_spider);
 
         #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -787,24 +772,22 @@ mod test {
             BLUE,
         }
         let mul_spider: FrobeniusMorphism<COLOR, ()> = special_frobenius_morphism(2, 1, COLOR::RED);
-        let exp_mul_spider =
-            FrobeniusMorphism::single_op(FrobeniusOperation::Multiplication(COLOR::RED));
+        let exp_mul_spider: FrobeniusMorphism<_,> = FrobeniusOperation::Multiplication(COLOR::RED).into();
         assert!(exp_mul_spider == mul_spider);
-        let exp_mul_spider =
-            FrobeniusMorphism::single_op(FrobeniusOperation::Multiplication(COLOR::GREEN));
+        let exp_mul_spider: FrobeniusMorphism<_,> = FrobeniusOperation::Multiplication(COLOR::GREEN).into();
         assert!(exp_mul_spider != mul_spider);
 
         let unit_spider: FrobeniusMorphism<COLOR, ()> =
             special_frobenius_morphism(0, 1, COLOR::BLUE);
-        let exp_unit_spider = FrobeniusMorphism::single_op(FrobeniusOperation::Unit(COLOR::BLUE));
+        let exp_unit_spider: FrobeniusMorphism<_,_> = FrobeniusOperation::Unit(COLOR::BLUE).into();
         assert!(exp_unit_spider == unit_spider);
 
         let id_spider: FrobeniusMorphism<COLOR, ()> =
             special_frobenius_morphism(1, 1, COLOR::GREEN);
-        let exp_id_spider =
-            FrobeniusMorphism::single_op(FrobeniusOperation::Identity(COLOR::GREEN));
+        let exp_id_spider: FrobeniusMorphism<_,> =
+            FrobeniusOperation::Identity(COLOR::GREEN).into();
         assert!(exp_id_spider == id_spider);
-        let exp_id_spider = FrobeniusMorphism::single_op(FrobeniusOperation::Identity(COLOR::BLUE));
+        let exp_id_spider: FrobeniusMorphism<_,_> = FrobeniusOperation::Identity(COLOR::BLUE).into();
         assert!(exp_id_spider != id_spider);
     }
 

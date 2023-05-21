@@ -55,7 +55,7 @@ fn main() {
 
     println!("{:?}", Dot::new(&graph));
     let counit_spider: FrobeniusMorphism<(), ()> = special_frobenius_morphism(1, 0, ());
-    let exp_counit_spider = FrobeniusMorphism::single_op(FrobeniusOperation::Counit(()));
+    let exp_counit_spider:  FrobeniusMorphism<_,_> = FrobeniusOperation::Counit(()).into();
     assert!(exp_counit_spider == counit_spider);
     assert_eq!(counit_spider.domain(), vec![()]);
     assert_eq!(counit_spider.codomain(), vec![]);
