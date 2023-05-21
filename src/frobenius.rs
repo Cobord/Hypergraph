@@ -27,23 +27,17 @@ where
     fn source_size(&self) -> usize {
         match self {
             Self::Unit(_) => 0,
-            Self::Multiplication(_) => 2,
-            Self::Comultiplication(_) => 1,
-            Self::Counit(_) => 1,
-            Self::Identity(_) => 1,
-            Self::SymmetricBraiding(_, _) => 2,
+            Self::Multiplication(_) | Self::SymmetricBraiding(_, _) => 2,
+            Self::Comultiplication(_) | Self::Counit(_) | Self::Identity(_) => 1,
             Self::UnSpecifiedBox(_, srcs, _) => srcs.len(),
         }
     }
 
     fn target_size(&self) -> usize {
         match self {
-            Self::Unit(_) => 1,
-            Self::Multiplication(_) => 1,
-            Self::Comultiplication(_) => 2,
+            Self::Unit(_) | Self::Multiplication(_) | Self::Identity(_) => 1,
+            Self::Comultiplication(_) | Self::SymmetricBraiding(_, _) => 2,
             Self::Counit(_) => 0,
-            Self::Identity(_) => 1,
-            Self::SymmetricBraiding(_, _) => 2,
             Self::UnSpecifiedBox(_, _, tgts) => tgts.len(),
         }
     }
@@ -76,7 +70,7 @@ where
     where
         F: Fn(BlackBoxLabel) -> BlackBoxLabel,
     {
-        let new_self = match self {
+        *self = match self {
             Self::Unit(z) => Self::Counit(*z),
             Self::Multiplication(z) => Self::Comultiplication(*z),
             Self::Comultiplication(z) => Self::Multiplication(*z),
@@ -87,7 +81,6 @@ where
                 Self::UnSpecifiedBox(black_box_changer(*label), tgts.clone(), srcs.clone())
             }
         };
-        *self = new_self;
     }
 }
 
@@ -226,6 +219,18 @@ where
 #[derive(Clone, PartialEq, Eq)]
 pub struct FrobeniusMorphism<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Copy> {
     layers: Vec<FrobeniusLayer<Lambda, BlackBoxLabel>>,
+}
+
+impl<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Copy>
+    From<FrobeniusOperation<Lambda, BlackBoxLabel>> for FrobeniusMorphism<Lambda, BlackBoxLabel>
+{
+    fn from(op: FrobeniusOperation<Lambda, BlackBoxLabel>) -> Self {
+        let mut answer_layer = FrobeniusLayer::new();
+        answer_layer.append_block(op);
+        let mut answer = FrobeniusMorphism::new();
+        let _ = answer.append_layer(answer_layer);
+        answer
+    }
 }
 
 impl<Lambda, BlackBoxLabel> FrobeniusMorphism<Lambda, BlackBoxLabel>
@@ -482,10 +487,9 @@ where
                     }
                 }
                 if p_remaining.len() % 2 == 0 {
-                    let cur_block = Self::single_op(FrobeniusOperation::Identity(
-                        types_now[p_remaining.len() - 1],
-                    ));
-                    second_layer.monoidal(cur_block);
+                    second_layer.monoidal(
+                        FrobeniusOperation::Identity(types_now[p_remaining.len() - 1]).into(),
+                    );
                 }
                 first_layer.compose(second_layer).unwrap();
                 let remaining = Self::from_permutation(p_remaining, &types_now, true);
@@ -510,11 +514,11 @@ pub fn special_frobenius_morphism<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq +
     wire_type: Lambda,
 ) -> FrobeniusMorphism<Lambda, BlackBoxLabel> {
     match (m, n) {
-        (2, 1) => FrobeniusMorphism::single_op(FrobeniusOperation::Multiplication(wire_type)),
-        (1, 2) => FrobeniusMorphism::single_op(FrobeniusOperation::Comultiplication(wire_type)),
-        (1, 0) => FrobeniusMorphism::single_op(FrobeniusOperation::Counit(wire_type)),
-        (0, 1) => FrobeniusMorphism::single_op(FrobeniusOperation::Unit(wire_type)),
-        (1, 1) => FrobeniusMorphism::single_op(FrobeniusOperation::Identity(wire_type)),
+        (2, 1) => FrobeniusOperation::Multiplication(wire_type).into(),
+        (1, 2) => FrobeniusOperation::Comultiplication(wire_type).into(),
+        (1, 0) => FrobeniusOperation::Counit(wire_type).into(),
+        (0, 1) => FrobeniusOperation::Unit(wire_type).into(),
+        (1, 1) => FrobeniusOperation::Identity(wire_type).into(),
         _ => {
             if m < n {
                 let mut x = special_frobenius_morphism(n, m, wire_type);
@@ -528,18 +532,12 @@ pub fn special_frobenius_morphism<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq +
             } else if m % 2 == 0 {
                 let mut answer = special_frobenius_morphism(m / 2, 1, wire_type);
                 answer.monoidal(answer.clone());
-                let _ = answer.compose(FrobeniusMorphism::single_op(
-                    FrobeniusOperation::Multiplication(wire_type),
-                ));
+                let _ = answer.compose(FrobeniusOperation::Multiplication(wire_type).into());
                 answer
             } else {
                 let mut answer = special_frobenius_morphism(m - 1, 1, wire_type);
-                answer.monoidal(FrobeniusMorphism::single_op(FrobeniusOperation::Identity(
-                    wire_type,
-                )));
-                let _ = answer.compose(FrobeniusMorphism::single_op(
-                    FrobeniusOperation::Multiplication(wire_type),
-                ));
+                answer.monoidal(FrobeniusOperation::Identity(wire_type).into());
+                let _ = answer.compose(FrobeniusOperation::Multiplication(wire_type).into());
                 answer
             }
         }
