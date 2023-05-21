@@ -27,14 +27,7 @@ where
 }
 
 pub fn represents_id(arr: &[usize]) -> bool {
-    let mut is_arr_id = true;
-    for (arr_idx, tgt_idx) in arr.iter().enumerate() {
-        if arr_idx != *tgt_idx {
-            is_arr_id = false;
-            break;
-        }
-    }
-    is_arr_id
+    arr.iter().enumerate().all(|(arr_idx, tgt_idx)| arr_idx == *tgt_idx)
 }
 
 pub fn to_vec_01<A>(me: Option<A>) -> Vec<A> {
