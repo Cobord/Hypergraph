@@ -381,11 +381,7 @@ where
         // inverses placed so that from(p1);from(p2) = from(p1;p2)
         //  left ; is cospan composition
         //  right ; is composition of permutation functions
-        let p_underlying = if types_as_on_domain {
-            p.inv()
-        } else {
-            p
-        }.permute(&id_temp);
+        let p_underlying = if types_as_on_domain { p.inv() } else { p }.permute(&id_temp);
         if types_as_on_domain {
             Self {
                 left: (0..num_types).collect(),

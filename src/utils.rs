@@ -15,11 +15,7 @@ where
     }
 }
 
-pub fn either_f<T, U, V, F, G>(x: Either<T, U>, f1: F, f2: G) -> V
-where
-    F: Fn(T) -> V,
-    G: Fn(U) -> V,
-{
+pub fn either_f<T, U, V, G>(x: Either<T, U>, f1: impl Fn(T) -> V, f2: impl Fn(U) -> V) -> V {
     match x {
         Left(t) => f1(t),
         Right(u) => f2(u),
@@ -27,7 +23,9 @@ where
 }
 
 pub fn represents_id(arr: &[usize]) -> bool {
-    arr.iter().enumerate().all(|(arr_idx, tgt_idx)| arr_idx == *tgt_idx)
+    arr.iter()
+        .enumerate()
+        .all(|(arr_idx, tgt_idx)| arr_idx == *tgt_idx)
 }
 
 pub fn to_vec_01<A>(me: Option<A>) -> Vec<A> {

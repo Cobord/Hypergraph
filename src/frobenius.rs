@@ -782,7 +782,8 @@ mod test {
 
         let id_spider: FrobeniusMorphism<COLOR, ()> =
             special_frobenius_morphism(1, 1, COLOR::GREEN);
-        let exp_id_spider: FrobeniusMorphism<_, _> = FrobeniusOperation::Identity(COLOR::GREEN).into();
+        let exp_id_spider: FrobeniusMorphism<_, _> =
+            FrobeniusOperation::Identity(COLOR::GREEN).into();
         assert!(exp_id_spider == id_spider);
         let exp_id_spider: FrobeniusMorphism<_, _> =
             FrobeniusOperation::Identity(COLOR::BLUE).into();
