@@ -57,8 +57,8 @@ where
     {
         assert_eq!(types.len(), prenames.len());
         let underlying_cospan = Cospan::<Lambda>::identity(&types.to_vec());
-        let left_names = prenames.iter().map(|pre| prename_to_name(*pre).0).collect();
-        let right_names = prenames.iter().map(|pre| prename_to_name(*pre).1).collect();
+        let (left_names, right_names) = prenames.iter().map(|x| prename_to_name(*x)).unzip();
+
         Self {
             underlying_cospan,
             left_names,

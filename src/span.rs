@@ -154,10 +154,7 @@ where
         Self::new(
             self.codomain(),
             self.domain(),
-            self.middle
-                .iter()
-                .map(|(z, w)| (*w, *z))
-                .collect::<Vec<(usize, usize)>>(),
+            self.middle.iter().map(|(z, w)| (*w, *z)).collect(),
         )
     }
 }
