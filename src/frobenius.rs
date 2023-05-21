@@ -114,8 +114,7 @@ where
 
     #[allow(dead_code)]
     fn source_idces(&self) -> Vec<usize> {
-        let my_source_size = self.source_size();
-        (0..my_source_size)
+        (0..self.source_size())
             .map(|z| z + self.source_side_placement)
             .collect()
     }
@@ -126,8 +125,7 @@ where
 
     #[allow(dead_code)]
     fn target_idces(&self) -> Vec<usize> {
-        let my_target_size = self.target_size();
-        (0..my_target_size)
+        (0..self.target_size())
             .map(|z| z + self.target_side_placement)
             .collect()
     }
@@ -167,8 +165,8 @@ where
     where
         F: Fn(BlackBoxLabel) -> BlackBoxLabel,
     {
-        for block_num in 0..self.blocks.len() {
-            self.blocks[block_num].hflip(black_box_changer);
+        for block in self.blocks.iter_mut() {
+            block.hflip(black_box_changer);
         }
         let temp = self.left_type.clone();
         self.left_type = self.right_type.clone();
