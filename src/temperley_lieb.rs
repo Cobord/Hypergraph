@@ -36,7 +36,7 @@ impl PerfectMatching {
         assert_eq!(cur_seen.len(), max_expected);
         let pair_iter = pair_prime.iter().copied();
         let mut ret_val = Self {
-            pairs: Vec::from_iter(pair_iter),
+            pairs: pair_iter.collect(),
         };
         ret_val.canonicalize();
         ret_val

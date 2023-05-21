@@ -19,9 +19,9 @@ impl InOut {
     #[allow(dead_code)]
     pub fn flipped(self) -> Self {
         match self {
-            InOut::In => InOut::Out,
-            InOut::Out => InOut::In,
-            InOut::Undirected => InOut::Undirected,
+            Self::In => Self::Out,
+            Self::Out => Self::In,
+            Self::Undirected => Self::Undirected,
         }
     }
 }
