@@ -180,12 +180,11 @@ where
         let target_side_placement = self.right_type.len();
         self.left_type.extend(op.source_types());
         self.right_type.extend(op.target_types());
-        let my_op = FrobeniusBlock::<Lambda, BlackBoxLabel>::new(
+        self.blocks.push(FrobeniusBlock::new(
             op,
             source_side_placement,
             target_side_placement,
-        );
-        self.blocks.push(my_op);
+        ));
     }
 }
 
@@ -197,8 +196,7 @@ where
     fn identity(on_type: &Vec<Lambda>) -> Self {
         let mut answer = FrobeniusLayer::new();
         for cur_type in on_type {
-            let op = FrobeniusOperation::Identity(*cur_type);
-            answer.append_block(op);
+            answer.append_block(FrobeniusOperation::Identity(*cur_type));
         }
         answer
     }
