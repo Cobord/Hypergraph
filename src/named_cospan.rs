@@ -81,31 +81,29 @@ where
         assert_eq!(types.len(), prenames.len());
         let underlying_cospan =
             Cospan::<Lambda>::from_permutation(p.clone(), types, types_as_on_domain);
-        if types_as_on_domain {
-            let left_names = prenames.iter().map(|pre| prename_to_name(*pre).0).collect();
-            let right_names = p
-                .inv()
-                .permute(prenames)
-                .iter()
-                .map(|pre| prename_to_name(*pre).1)
-                .collect();
-            Self {
-                underlying_cospan,
-                left_names,
-                right_names,
-            }
+        let (left_names, right_names) = if types_as_on_domain {
+            (
+                prenames.iter().map(|pre| prename_to_name(*pre).0).collect(),
+                p.inv()
+                    .permute(prenames)
+                    .iter()
+                    .map(|pre| prename_to_name(*pre).1)
+                    .collect(),
+            )
         } else {
-            let left_names = p
-                .permute(prenames)
-                .iter()
-                .map(|pre| prename_to_name(*pre).0)
-                .collect();
-            let right_names = prenames.iter().map(|pre| prename_to_name(*pre).1).collect();
-            Self {
-                underlying_cospan,
-                left_names,
-                right_names,
-            }
+            (
+                p.permute(prenames)
+                    .iter()
+                    .map(|pre| prename_to_name(*pre).0)
+                    .collect(),
+                prenames.iter().map(|pre| prename_to_name(*pre).1).collect(),
+            )
+        };
+
+        Self {
+            underlying_cospan,
+            left_names,
+            right_names,
         }
     }
 

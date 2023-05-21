@@ -197,7 +197,7 @@ where
         F: Fn(Lambda) -> Mu,
         Mu: Sized + Eq + Copy + Debug,
     {
-        Cospan::<Mu>::new(
+        Cospan::new(
             self.left.clone(),
             self.right.clone(),
             self.middle.iter().map(|l| f(*l)).collect(),
