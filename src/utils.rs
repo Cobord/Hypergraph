@@ -15,7 +15,7 @@ where
     }
 }
 
-pub fn either_f<T, U, V, G>(x: Either<T, U>, f1: impl Fn(T) -> V, f2: impl Fn(U) -> V) -> V {
+pub fn either_f<T, U, V>(x: Either<T, U>, f1: impl Fn(T) -> V, f2: impl Fn(U) -> V) -> V {
     match x {
         Left(t) => f1(t),
         Right(u) => f2(u),
@@ -32,13 +32,6 @@ pub fn to_vec_01<A>(me: Option<A>) -> Vec<A> {
     match me {
         None => vec![],
         Some(z) => vec![z],
-    }
-}
-
-pub fn keep_left<T: Copy, U>(me: &Either<T, U>) -> Option<T> {
-    match me {
-        Left(z) => Some(*z),
-        Right(_) => None,
     }
 }
 

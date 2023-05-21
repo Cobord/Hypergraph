@@ -5,7 +5,7 @@ use crate::category::Composable;
 use crate::monoidal::Monoidal;
 use crate::named_cospan::NamedCospan;
 use crate::symmetric_monoidal::SymmetricMonoidalMorphism;
-use crate::utils::{keep_left, necessary_permutation, remove_multiple};
+use crate::utils::{necessary_permutation, remove_multiple};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 #[allow(dead_code)]
@@ -111,7 +111,7 @@ where
             &self.0, pred_left, |_| false, false
         )
         .iter()
-        .filter_map(keep_left)
+        .filter_map(|x| x.left())
         .collect();
 
         let mut self_inner_interface_unaffected = self.0.domain();
