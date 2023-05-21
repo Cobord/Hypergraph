@@ -303,9 +303,8 @@ where
         Mu: Sized + Eq + Copy + Debug,
         RightPortName: Clone,
     {
-        let new_underlying = self.underlying_cospan.change_lambda(f);
-        NamedCospan::<Mu, LeftPortName, RightPortName> {
-            underlying_cospan: new_underlying,
+        NamedCospan {
+            underlying_cospan: self.underlying_cospan.change_lambda(f),
             left_names: self.left_names.clone(),
             right_names: self.right_names.clone(),
         }
@@ -369,9 +368,9 @@ where
     }
 
     fn compose(&self, other: &Self) -> Result<Self, String> {
-        let new_underlying = self.underlying_cospan.compose(&other.underlying_cospan)?;
+        let underlying_cospan = self.underlying_cospan.compose(&other.underlying_cospan)?;
         Ok(Self {
-            underlying_cospan: new_underlying,
+            underlying_cospan,
             left_names: self.left_names.clone(),
             right_names: other.right_names.clone(),
         })
@@ -522,16 +521,16 @@ mod test {
             let prod = p1.clone() * p2.clone();
             let cospan_p1 = NamedCospan::from_permutation_extra_data(
                 p1,
-                &(0..my_n).map(|_| ()).collect::<Vec<()>>(),
+                &(0..my_n).map(|_| ()).collect(),
                 types_as_on_source,
                 &(0..my_n).map(|z| z).collect::<Vec<usize>>(),
                 |_| ((), ()),
             );
             let cospan_p2 = NamedCospan::from_permutation_extra_data(
                 p2,
-                &(0..my_n).map(|_| ()).collect::<Vec<()>>(),
+                &(0..my_n).map(|_| ()).collect(),
                 types_as_on_source,
-                &(0..my_n).map(|z| z).collect::<Vec<usize>>(),
+                &(0..my_n).map(|z| z).collect(),
                 |_| ((), ()),
             );
             let cospan_prod = cospan_p1.compose(&cospan_p2);
@@ -539,7 +538,7 @@ mod test {
                 Ok(real_res) => {
                     let expected_res = NamedCospan::from_permutation_extra_data(
                         prod,
-                        &(0..my_n).map(|_| ()).collect::<Vec<()>>(),
+                        &(0..my_n).map(|_| ()).collect(),
                         types_as_on_source,
                         &(0..my_n).map(|z| z).collect::<Vec<usize>>(),
                         |_| ((), ()),
