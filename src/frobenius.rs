@@ -753,11 +753,11 @@ mod test {
     fn basic_typed_spiders() {
         use super::{special_frobenius_morphism, FrobeniusMorphism, FrobeniusOperation};
         let counit_spider: FrobeniusMorphism<bool, ()> = special_frobenius_morphism(1, 0, true);
-        let exp_counit_spider: FrobeniusMorphism<_> = FrobeniusOperation::Counit(true).into();
+        let exp_counit_spider: FrobeniusMorphism<_, _> = FrobeniusOperation::Counit(true).into();
         assert!(exp_counit_spider == counit_spider);
 
         let comul_spider: FrobeniusMorphism<bool, ()> = special_frobenius_morphism(1, 2, false);
-        let exp_comul_spider: FrobeniusMorphism<_> =
+        let exp_comul_spider: FrobeniusMorphism<_, _> =
             FrobeniusOperation::Comultiplication(false).into();
         assert!(exp_comul_spider == comul_spider);
 
@@ -768,10 +768,10 @@ mod test {
             BLUE,
         }
         let mul_spider: FrobeniusMorphism<COLOR, ()> = special_frobenius_morphism(2, 1, COLOR::RED);
-        let exp_mul_spider: FrobeniusMorphism<_> =
+        let exp_mul_spider: FrobeniusMorphism<_, _> =
             FrobeniusOperation::Multiplication(COLOR::RED).into();
         assert!(exp_mul_spider == mul_spider);
-        let exp_mul_spider: FrobeniusMorphism<_> =
+        let exp_mul_spider: FrobeniusMorphism<_, _> =
             FrobeniusOperation::Multiplication(COLOR::GREEN).into();
         assert!(exp_mul_spider != mul_spider);
 
@@ -782,7 +782,7 @@ mod test {
 
         let id_spider: FrobeniusMorphism<COLOR, ()> =
             special_frobenius_morphism(1, 1, COLOR::GREEN);
-        let exp_id_spider: FrobeniusMorphism<_> = FrobeniusOperation::Identity(COLOR::GREEN).into();
+        let exp_id_spider: FrobeniusMorphism<_, _> = FrobeniusOperation::Identity(COLOR::GREEN).into();
         assert!(exp_id_spider == id_spider);
         let exp_id_spider: FrobeniusMorphism<_, _> =
             FrobeniusOperation::Identity(COLOR::BLUE).into();

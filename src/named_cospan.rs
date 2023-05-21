@@ -521,16 +521,16 @@ mod test {
             let prod = p1.clone() * p2.clone();
             let cospan_p1 = NamedCospan::from_permutation_extra_data(
                 p1,
-                &(0..my_n).map(|_| ()).collect(),
+                &(0..my_n).map(|_| ()).collect::<Vec<_>>(),
                 types_as_on_source,
                 &(0..my_n).map(|z| z).collect::<Vec<usize>>(),
                 |_| ((), ()),
             );
             let cospan_p2 = NamedCospan::from_permutation_extra_data(
                 p2,
-                &(0..my_n).map(|_| ()).collect(),
+                &(0..my_n).map(|_| ()).collect::<Vec<_>>(),
                 types_as_on_source,
-                &(0..my_n).map(|z| z).collect(),
+                &(0..my_n).map(|z| z).collect::<Vec<_>>(),
                 |_| ((), ()),
             );
             let cospan_prod = cospan_p1.compose(&cospan_p2);
@@ -538,7 +538,7 @@ mod test {
                 Ok(real_res) => {
                     let expected_res = NamedCospan::from_permutation_extra_data(
                         prod,
-                        &(0..my_n).map(|_| ()).collect(),
+                        &(0..my_n).map(|_| ()).collect::<Vec<_>>(),
                         types_as_on_source,
                         &(0..my_n).map(|z| z).collect::<Vec<usize>>(),
                         |_| ((), ()),
