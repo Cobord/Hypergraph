@@ -27,17 +27,17 @@ where
     fn source_size(&self) -> usize {
         match self {
             Self::Unit(_) => 0,
-            Self::Multiplication(_) | Self::SymmetricBraiding(_, _) => 2,
             Self::Comultiplication(_) | Self::Counit(_) | Self::Identity(_) => 1,
+            Self::Multiplication(_) | Self::SymmetricBraiding(_, _) => 2,
             Self::UnSpecifiedBox(_, srcs, _) => srcs.len(),
         }
     }
 
     fn target_size(&self) -> usize {
         match self {
+            Self::Counit(_) => 0,
             Self::Unit(_) | Self::Multiplication(_) | Self::Identity(_) => 1,
             Self::Comultiplication(_) | Self::SymmetricBraiding(_, _) => 2,
-            Self::Counit(_) => 0,
             Self::UnSpecifiedBox(_, _, tgts) => tgts.len(),
         }
     }
@@ -46,9 +46,7 @@ where
         match self {
             Self::Unit(_) => vec![],
             Self::Multiplication(z) => vec![*z, *z],
-            Self::Comultiplication(z) => vec![*z],
-            Self::Counit(z) => vec![*z],
-            Self::Identity(z) => vec![*z],
+            Self::Comultiplication(z) | Self::Counit(z) | Self::Identity(z) => vec![*z],
             Self::SymmetricBraiding(z, w) => vec![*z, *w],
             Self::UnSpecifiedBox(_, srcs, _) => srcs.clone(),
         }
@@ -56,11 +54,9 @@ where
 
     fn target_types(&self) -> Vec<Lambda> {
         match self {
-            Self::Unit(z) => vec![*z],
-            Self::Multiplication(z) => vec![*z],
+            Self::Unit(z) | Self::Identity(z) | Self::Multiplication(z) => vec![*z],
             Self::Comultiplication(z) => vec![*z, *z],
             Self::Counit(_) => vec![],
-            Self::Identity(z) => vec![*z],
             Self::SymmetricBraiding(z, w) => vec![*w, *z],
             Self::UnSpecifiedBox(_, _, tgts) => tgts.clone(),
         }
@@ -247,18 +243,13 @@ where
         &mut self,
         next_layer: FrobeniusLayer<Lambda, BlackBoxLabel>,
     ) -> Result<(), String> {
-        match self.layers.pop() {
-            None => {
-                self.layers.push(next_layer);
+        if let Some(v) = self.layers.pop() {
+            if v.right_type != next_layer.left_type {
+                return Err("type mismatch in frobenius morphims composition".to_string());
             }
-            Some(v) => {
-                if v.right_type != next_layer.left_type {
-                    return Err("type mismatch in frobenius morphims composition".to_string());
-                }
-                self.layers.push(v);
-                self.layers.push(next_layer);
-            }
+            self.layers.push(v);
         }
+        self.layers.push(next_layer);
         Ok(())
     }
 
