@@ -592,7 +592,7 @@ pub trait Frobenius<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Copy>:
     where
         F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Result<Self, String>,
     {
-        let answer = match single_step {
+        Ok(match single_step {
             FrobeniusOperation::Unit(z) => Self::interpret_unit(*z),
             FrobeniusOperation::Counit(z) => Self::interpret_counit(*z),
             FrobeniusOperation::Multiplication(z) => Self::interpret_multiplication(*z),
@@ -603,8 +603,7 @@ pub trait Frobenius<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Copy>:
                 Self::from_permutation(transposition, &[*z1, *z2], true)
             }
             FrobeniusOperation::UnSpecifiedBox(bbl, z1, z2) => black_box_interpreter(bbl, z1, z2)?,
-        };
-        Ok(answer)
+        })
     }
 
     fn interpret<F>(

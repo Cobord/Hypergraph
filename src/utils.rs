@@ -4,14 +4,16 @@ use rand::distributions::Uniform;
 use rand::prelude::Distribution;
 use std::fmt::Debug;
 
-pub fn bimap<T, U, V, W, F, G>(x: Either<T, U>, f1: F, f2: G) -> Either<V, W>
-where
-    F: Fn(T) -> V,
-    G: Fn(U) -> W,
-{
-    match x {
-        Left(t) => Left(f1(t)),
-        Right(u) => Right(f2(u)),
+pub trait EitherExt<T, U> {
+    fn bimap<V, W>(self, f1: impl Fn(T) -> V, f2: impl Fn(U) -> W) -> impl EitherExt<V, W>;
+}
+
+impl<T, U> EitherExt<T, U> for Either<T, U> {
+    fn bimap<V, W>(self, f1: impl Fn(T) -> V, f2: impl Fn(U) -> W) -> Either<V, W> {
+        match self {
+            Left(t) => Left(f1(t)),
+            Right(u) => Right(f2(u)),
+        }
     }
 }
 
@@ -62,16 +64,12 @@ pub fn necessary_permutation<T: Eq>(side_1: &[T], side_2: &[T]) -> Result<Permut
     }
     let mut trial_perm = Vec::<usize>::with_capacity(n1);
     for cur in side_1 {
-        let pos_in_side_2 = side_2.iter().position(|t| *t == *cur);
-        match pos_in_side_2 {
-            None => {
-                return Err("No permutation can take side 1 to side 2 \
-                because an item in side 1 was not in side 2"
-                    .to_string());
-            }
-            Some(idx) => {
-                trial_perm.push(idx);
-            }
+        if let Some(idx) = side_2.iter().position(|t| *t == *cur) {
+            trial_perm.push(idx);
+        } else {
+            return Err("No permutation can take side 1 to side 2 \
+            because an item in side 1 was not in side 2"
+                .to_string());
         }
     }
     Permutation::try_from(trial_perm)

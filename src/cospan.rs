@@ -10,7 +10,7 @@ use crate::category::{Composable, HasIdentity};
 use crate::finset::FinSetMap;
 use crate::monoidal::{GenericMonoidalInterpretable, Monoidal, MonoidalMorphism};
 use crate::symmetric_monoidal::SymmetricMonoidalMorphism;
-use crate::utils::{bimap, in_place_permute, represents_id};
+use crate::utils::{in_place_permute, represents_id, EitherExt};
 
 type LeftIndex = usize;
 type RightIndex = usize;
@@ -84,7 +84,7 @@ where
         &mut self,
         new_arrow: Either<MiddleIndex, MiddleIndex>,
     ) -> Either<LeftIndex, RightIndex> {
-        self.add_boundary_node(bimap(new_arrow, |z| Left(z), |z| Left(z)))
+        self.add_boundary_node(new_arrow.bimap(|z| Left(z), |z| Left(z)))
     }
 
     #[allow(dead_code)]
@@ -92,7 +92,7 @@ where
         &mut self,
         new_arrow: Either<Lambda, Lambda>,
     ) -> Either<LeftIndex, RightIndex> {
-        self.add_boundary_node(bimap(new_arrow, |z| Right(z), |z| Right(z)))
+        self.add_boundary_node(new_arrow.bimap(|z| Right(z), |z| Right(z)))
     }
 
     pub fn add_boundary_node(

@@ -103,16 +103,11 @@ where
         IntraCircle: Copy,
     {
         let pred_left = |z: (InOut, InterCircle, IntraCircle)| z.1 == which_circle;
-        let found_nodes: Vec<usize> = NamedCospan::<
-            Lambda,
-            (InOut, InterCircle, IntraCircle),
-            (InOut, IntraCircle),
-        >::find_nodes_by_name_predicate(
-            &self.0, pred_left, |_| false, false
-        )
-        .iter()
-        .filter_map(|x| x.left())
-        .collect();
+        let found_nodes: Vec<_> =
+            NamedCospan::find_nodes_by_name_predicate(&self.0, pred_left, |_| false, false)
+                .iter()
+                .filter_map(|x| x.left())
+                .collect();
 
         let mut self_inner_interface_unaffected = self.0.domain();
         remove_multiple(&mut self_inner_interface_unaffected, found_nodes.clone());
