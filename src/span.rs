@@ -174,19 +174,23 @@ where
     }
 }
 
+pub fn dim_check<Lambda: Eq + Debug>(l: &[Lambda], r: &[Lambda]) -> Result<(), String> {
+    if l.len() != r.len() {
+        return Err("Mismatch in cardinalities of common interface".to_string());
+    }
+    let Some((w1,w2)) = l.iter().zip(r.iter()).find(|(a, b)| a != b) else { return Ok(())};
+    return Err(format!(
+        "Mismatch in labels of common interface. At some index there was {:?} vs {:?}",
+        w1, w2
+    ));
+}
+
 impl<Lambda> Composable<Vec<Lambda>> for Span<Lambda>
 where
     Lambda: Sized + Eq + Copy + Debug,
 {
     fn composable(&self, other: &Self) -> Result<(), String> {
-        if self.right.len() != other.left.len() {
-            return Err("Mismatch in cardinalities of common interface".to_string());
-        }
-        let Some((w1,w2)) = self.right.iter().zip(other.left.iter()).find(|(a, b)| a != b ) else { return Ok(())};
-        return Err(format!(
-            "Mismatch in labels of common interface. At some index there was {:?} vs {:?}",
-            w1, w2
-        ));
+        dim_check(&self.right, &other.left)
     }
 
     fn compose(&self, other: &Self) -> Result<Self, String> {

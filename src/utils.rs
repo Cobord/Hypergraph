@@ -87,7 +87,7 @@ fn perm_decompose(p: &Permutation) -> Vec<(usize, usize)> {
         return vec![];
     }
     let mut seen = vec![false; p.len()];
-    let mut answer: Vec<(usize, usize)> = Vec::with_capacity(p.len() - 1);
+    let mut answer = Vec::with_capacity(p.len() - 1);
     for i in 0..p.len() {
         if !seen[i] {
             seen[i] = true;
@@ -134,22 +134,21 @@ pub fn test_asserter<T, U, F>(
     F: Fn(&T, &T) -> bool,
     T: Debug + PartialEq,
 {
-    match (observed, expected) {
-        (Ok(real_observed), Ok(real_expected)) => {
-            assert!(aux_test(&real_observed, &real_expected));
-            assert!(
-                PartialEq::eq(&real_observed, &real_expected),
-                "{:?} vs {:?} when checking {:?}",
-                real_observed,
-                real_expected,
-                equation_str
-            );
-        }
-        _ => panic!(
+    let (Ok(real_observed), Ok(real_expected)) = (observed, expected) else {
+        panic!(
             "Error on one of observed/expected sides when checking {:?}",
             equation_str
-        ),
-    }
+        )
+    };
+
+    assert!(aux_test(&real_observed, &real_expected));
+    assert!(
+        real_observed == real_expected,
+        "{:?} vs {:?} when checking {:?}",
+        real_observed,
+        real_expected,
+        equation_str
+    );
 }
 
 #[macro_export]

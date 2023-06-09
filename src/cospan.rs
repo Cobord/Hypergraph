@@ -71,12 +71,13 @@ where
     }
 
     #[allow(dead_code)]
-    pub fn left_to_middle(&self) -> Vec<MiddleIndex> {
-        self.left.clone()
+    pub fn left_to_middle(&self) -> &[MiddleIndex] {
+        &self.left
     }
+
     #[allow(dead_code)]
-    pub fn right_to_middle(&self) -> Vec<MiddleIndex> {
-        self.right.clone()
+    pub fn right_to_middle(&self) -> &[MiddleIndex] {
+        &self.right
     }
 
     #[allow(dead_code)]
@@ -218,20 +219,20 @@ where
         F: Fn(Lambda) -> (T, U),
     {
         let mut graph = Graph::<T, U>::new();
-        let mut all_middle_nodes: Vec<NodeIndex<DefaultIx>> = Vec::with_capacity(self.middle.len());
+        let mut all_middle_nodes = Vec::with_capacity(self.middle.len());
         for cur_mid in &self.middle {
             let (node_dec, _) = lambda_decorator(*cur_mid);
             let cur_mid_node: NodeIndex<DefaultIx> = graph.add_node(node_dec);
             all_middle_nodes.push(cur_mid_node);
         }
-        let mut all_left_nodes: Vec<NodeIndex<DefaultIx>> = Vec::with_capacity(self.left.len());
+        let mut all_left_nodes = Vec::with_capacity(self.left.len());
         for cur_left_target in &self.left {
             let (node_dec, edge_dec) = lambda_decorator(self.middle[*cur_left_target]);
             let cur_left_node: NodeIndex<DefaultIx> = graph.add_node(node_dec);
             all_left_nodes.push(cur_left_node);
             graph.add_edge(cur_left_node, all_middle_nodes[*cur_left_target], edge_dec);
         }
-        let mut all_right_nodes: Vec<NodeIndex<DefaultIx>> = Vec::with_capacity(self.left.len());
+        let mut all_right_nodes = Vec::with_capacity(self.left.len());
         for cur_right_target in &self.right {
             let (node_dec, edge_dec) = lambda_decorator(self.middle[*cur_right_target]);
             let cur_right_node: NodeIndex<DefaultIx> = graph.add_node(node_dec);
