@@ -64,13 +64,12 @@ pub fn necessary_permutation<T: Eq>(side_1: &[T], side_2: &[T]) -> Result<Permut
     }
     let mut trial_perm = Vec::<usize>::with_capacity(n1);
     for cur in side_1 {
-        if let Some(idx) = side_2.iter().position(|t| *t == *cur) {
-            trial_perm.push(idx);
-        } else {
+        let Some(idx) = side_2.iter().position(|t| *t == *cur) else {
             return Err("No permutation can take side 1 to side 2 \
             because an item in side 1 was not in side 2"
                 .to_string());
-        }
+        };
+        trial_perm.push(idx);
     }
     Permutation::try_from(trial_perm)
         .map_err(|_| {

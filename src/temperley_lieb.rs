@@ -398,21 +398,18 @@ where
         let mut ret_val = Vec::with_capacity(n - 1);
         for i in 0..(n - 1) {
             let mut e_i_pairs = Vec::with_capacity(2 * n);
-            for j in 0..n {
+            e_i_pairs.extend((0..n).map(|j| {
                 if j == i {
-                    e_i_pairs.push((i, i + 1));
+                    (i, i + 1)
                 } else if j == i + 1 {
-                    e_i_pairs.push((i + n, i + 1 + n));
+                    (i + n, i + 1 + n)
                 } else {
-                    e_i_pairs.push((j, j + n));
+                    (j, j + n)
                 }
-            }
+            }));
             let e_i_matching = PerfectMatching::new(&e_i_pairs);
             let cur_e_i = Self {
-                my_diagram: LinearCombination::<T, (usize, PerfectMatching)>::singleton((
-                    0,
-                    e_i_matching,
-                )),
+                my_diagram: LinearCombination::singleton((0, e_i_matching)),
                 source: n,
                 target: n,
                 is_def_tl: true,
@@ -452,11 +449,7 @@ where
     }
 
     pub fn delta_polynomial(coeffs: &[T]) -> Self {
-        let zeroth_coeff = if coeffs.is_empty() {
-            T::zero()
-        } else {
-            coeffs[0]
-        };
+        let zeroth_coeff = *coeffs.first().unwrap_or(&T::zero());
         let empty_matching = PerfectMatching { pairs: vec![] };
         let mut my_diagram =
             LinearCombination::<T, (usize, PerfectMatching)>::singleton((0, empty_matching));
