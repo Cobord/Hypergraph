@@ -234,7 +234,7 @@ pub struct BrauerMorphism<T>
 where
     T: Add<Output = T> + Zero + One + Copy,
 {
-    my_diagram: LinearCombination<T, (usize, PerfectMatching)>,
+    diagram: LinearCombination<T, (usize, PerfectMatching)>,
     source: usize,
     target: usize,
     is_def_tl: bool,
@@ -245,9 +245,7 @@ where
     T: Add<Output = T> + Zero + One + Copy + Eq,
 {
     fn eq(&self, other: &Self) -> bool {
-        self.my_diagram == other.my_diagram
-            && self.source == other.source
-            && self.target == other.target
+        self.diagram == other.diagram && self.source == other.source && self.target == other.target
     }
 }
 
@@ -257,7 +255,7 @@ where
 {
     fn clone(&self) -> Self {
         Self {
-            my_diagram: self.my_diagram.clone(),
+            diagram: self.diagram.clone(),
             source: self.source,
             target: self.target,
             is_def_tl: self.is_def_tl,
@@ -271,7 +269,7 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BrauerMorphism")
-            .field("my_diagram", &self.my_diagram)
+            .field("diagram", &self.diagram)
             .field("source", &self.source)
             .field("target", &self.target)
             .field("is_def_tl", &self.is_def_tl)
@@ -289,10 +287,7 @@ where
             .collect::<Vec<(usize, usize)>>();
         let my_perfect_matching = PerfectMatching::new(&my_matching);
         Self {
-            my_diagram: LinearCombination::<T, (usize, PerfectMatching)>::singleton((
-                0,
-                my_perfect_matching,
-            )),
+            diagram: LinearCombination::singleton((0, my_perfect_matching)),
             source: *on_this,
             target: *on_this,
             is_def_tl: true,
@@ -306,20 +301,18 @@ where
 {
     fn compose(&self, other: &Self) -> Result<Self, String> {
         self.composable(other)?;
-        let extended_diagram_self =
-            inj_linearly_extend(&self.my_diagram, |(delta_pow, diagram)| {
-                ExtendedPerfectMatching((self.domain(), self.codomain(), delta_pow, diagram))
-            });
-        let extended_diagram_other =
-            inj_linearly_extend(&other.my_diagram, |(delta_pow, diagram)| {
-                ExtendedPerfectMatching((other.domain(), other.codomain(), delta_pow, diagram))
-            });
+        let extended_diagram_self = inj_linearly_extend(&self.diagram, |(delta_pow, diagram)| {
+            ExtendedPerfectMatching((self.domain(), self.codomain(), delta_pow, diagram))
+        });
+        let extended_diagram_other = inj_linearly_extend(&other.diagram, |(delta_pow, diagram)| {
+            ExtendedPerfectMatching((other.domain(), other.codomain(), delta_pow, diagram))
+        });
         let extended_diagram_product = extended_diagram_self * extended_diagram_other;
         let diagram_product = linearly_extend(&extended_diagram_product, |extended| {
             (extended.0 .2, extended.0 .3)
         });
         Ok(Self {
-            my_diagram: diagram_product,
+            diagram: diagram_product,
             source: self.domain(),
             target: other.codomain(),
             is_def_tl: self.is_def_tl && other.is_def_tl,
@@ -368,9 +361,9 @@ where
                     .collect::<Vec<(usize, usize)>>(),
             )
         };
-        self.my_diagram = linear_combine(
-            self.my_diagram.clone(),
-            other.my_diagram,
+        self.diagram = linear_combine(
+            self.diagram.clone(),
+            other.diagram,
             |(delta_pow1, matching_1), (delta_pow2, matching2)| {
                 let mut new_matching = shift_idx(matching_1, old_domain, other_domain);
                 let mut other_shifted = shift_idx(matching2, 0, old_domain);
@@ -408,7 +401,7 @@ where
             }));
             let e_i_matching = PerfectMatching::new(&e_i_pairs);
             let cur_e_i = Self {
-                my_diagram: LinearCombination::singleton((0, e_i_matching)),
+                diagram: LinearCombination::singleton((0, e_i_matching)),
                 source: n,
                 target: n,
                 is_def_tl: true,
@@ -435,7 +428,7 @@ where
 
             let e_i_matching = PerfectMatching::new(&e_i_pairs);
             ret_val.push(Self {
-                my_diagram: LinearCombination::singleton((0, e_i_matching)),
+                diagram: LinearCombination::singleton((0, e_i_matching)),
                 source: n,
                 target: n,
                 is_def_tl: false,
@@ -447,18 +440,16 @@ where
     pub fn delta_polynomial(coeffs: &[T]) -> Self {
         let zeroth_coeff = *coeffs.first().unwrap_or(&T::zero());
         let empty_matching = PerfectMatching { pairs: vec![] };
-        let mut my_diagram =
-            LinearCombination::<T, (usize, PerfectMatching)>::singleton((0, empty_matching));
-        my_diagram *= zeroth_coeff;
+        let mut diagram = LinearCombination::singleton((0, empty_matching));
+        diagram *= zeroth_coeff;
         for (idx, cur_coeff) in coeffs.iter().enumerate().skip(1) {
             let empty_matching = PerfectMatching { pairs: vec![] };
-            let mut cur_diagram =
-                LinearCombination::<T, (usize, PerfectMatching)>::singleton((idx, empty_matching));
+            let mut cur_diagram = LinearCombination::singleton((idx, empty_matching));
             cur_diagram *= *cur_coeff;
-            my_diagram += cur_diagram;
+            diagram += cur_diagram;
         }
         Self {
-            my_diagram,
+            diagram,
             source: 0,
             target: 0,
             is_def_tl: true,
@@ -476,10 +467,10 @@ where
                 matching.flip_upside_down(self.source, self.target),
             )
         };
-        let mut my_diagram = inj_linearly_extend(&self.my_diagram, flip_upside_down);
-        my_diagram.change_coeffs(num_dagger);
+        let mut diagram = inj_linearly_extend(&self.diagram, flip_upside_down);
+        diagram.change_coeffs(num_dagger);
         Self {
-            my_diagram,
+            diagram,
             source: self.target,
             target: self.source,
             is_def_tl: self.is_def_tl,
@@ -493,7 +484,7 @@ where
         }
         let is_non_crossing =
             |(_, p): &(usize, PerfectMatching)| p.non_crossing(self.source, self.target);
-        self.is_def_tl = self.my_diagram.all_terms_satisfy(is_non_crossing);
+        self.is_def_tl = self.diagram.all_terms_satisfy(is_non_crossing);
     }
 }
 
@@ -501,7 +492,7 @@ fn simplify<T>(me: &mut BrauerMorphism<T>)
 where
     T: Add<Output = T> + Zero + One + Copy + AddAssign + Mul<Output = T> + MulAssign + Eq,
 {
-    me.my_diagram.simplify();
+    me.diagram.simplify();
 }
 
 mod test {
