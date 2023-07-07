@@ -157,11 +157,11 @@ where
     V: Eq + Hash,
     F: Fn(T, U) -> V,
 {
-    let mut ret_val = LinearCombination::<Coeffs, V>(HashMap::new());
+    let mut ret_val = LinearCombination(HashMap::new());
     for (k1, c_k1) in me.0 {
         for (k2, c_k2) in &rhs.0 {
-            ret_val += LinearCombination::<Coeffs, V>::singleton(combiner(k1.clone(), k2.clone()))
-                * (c_k1 * (*c_k2));
+            ret_val +=
+                LinearCombination::singleton(combiner(k1.clone(), k2.clone())) * (c_k1 * (*c_k2));
         }
     }
     ret_val
@@ -218,7 +218,7 @@ where
             "The function called injection should have been injective"
         );
     }
-    LinearCombination::<Coeffs, Target2>(new_map)
+    LinearCombination(new_map)
 }
 
 pub fn linearly_extend<Coeffs: Copy, Target: Eq + Hash + Clone, Target2: Eq + Hash, F>(
@@ -238,21 +238,21 @@ where
             new_map.insert(new_key, *v);
         }
     }
-    LinearCombination::<Coeffs, Target2>(new_map)
+    LinearCombination(new_map)
 }
 
 mod test {
 
     #[test]
     fn adding() {
-        use super::{simplify, LinearCombination};
+        use super::LinearCombination;
         let one_a = LinearCombination::<i32, String>::singleton("a".to_string());
         let two_b = LinearCombination::<i32, String>::singleton("b".to_string()) * 2;
         let one_a_plus_two_b = one_a.clone() + two_b.clone();
         let two_b_plus_one_a = two_b + one_a;
         assert_eq!(one_a_plus_two_b, two_b_plus_one_a);
         let mut zeroed = one_a_plus_two_b - two_b_plus_one_a;
-        simplify(&mut zeroed);
+        zeroed.simplify();
         assert!(zeroed.0.is_empty());
     }
 }
