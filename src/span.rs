@@ -179,10 +179,10 @@ pub fn dim_check<Lambda: Eq + Debug>(l: &[Lambda], r: &[Lambda]) -> Result<(), S
         return Err("Mismatch in cardinalities of common interface".to_string());
     }
     let Some((w1,w2)) = l.iter().zip(r.iter()).find(|(a, b)| a != b) else { return Ok(())};
-    return Err(format!(
+    Err(format!(
         "Mismatch in labels of common interface. At some index there was {:?} vs {:?}",
         w1, w2
-    ));
+    ))
 }
 
 impl<Lambda> Composable<Vec<Lambda>> for Span<Lambda>

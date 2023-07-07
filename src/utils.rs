@@ -124,6 +124,20 @@ pub fn rand_perm(n: usize, max_depth: usize) -> Permutation {
     answer
 }
 
+pub trait ResultExt<T, E> {
+    fn zip<U>(self, other: Result<U, E>) -> Result<(T, U), E>;
+}
+
+impl<T, E> ResultExt<T, E> for Result<T, E> {
+    // combines the values to tuple
+    fn zip<U>(self, other: Result<U, E>) -> Result<(T, U), E> {
+        match (self, other) {
+            (Ok(a), Ok(b)) => Ok((a, b)),
+            (Err(e), _) | (_, Err(e)) => Err(e),
+        }
+    }
+}
+
 #[allow(dead_code)]
 pub fn test_asserter<T, U, F>(
     observed: Result<T, U>,
@@ -134,7 +148,7 @@ pub fn test_asserter<T, U, F>(
     F: Fn(&T, &T) -> bool,
     T: Debug + PartialEq,
 {
-    let (Ok(real_observed), Ok(real_expected)) = (observed, expected) else {
+    let Ok((real_observed, real_expected)) = observed.zip(expected) else {
         panic!(
             "Error on one of observed/expected sides when checking {:?}",
             equation_str
