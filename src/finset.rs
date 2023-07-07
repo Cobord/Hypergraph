@@ -32,12 +32,11 @@ impl Monoidal for FinSetMorphism {
 
 impl Composable<usize> for FinSetMorphism {
     fn compose(&self, other: &Self) -> Result<Self, String> {
-        if Self::composable(self, other).is_err() {
-            let self_codomain = self.codomain();
-            let other_domain = other.domain();
+        if self.composable(other).is_err() {
             return Err(format!(
                 "Not composable. The codomain of self was {}. The domain of other was {}",
-                self_codomain, other_domain
+                self.codomain(),
+                other.domain()
             ));
         }
         let other_codomain = other.codomain();
@@ -91,12 +90,11 @@ impl Monoidal for OrderPresSurj {
 
 impl Composable<usize> for OrderPresSurj {
     fn compose(&self, other: &Self) -> Result<Self, String> {
-        if Self::composable(self, other).is_err() {
-            let self_codomain = self.codomain();
-            let other_domain = other.domain();
+        if self.composable(other).is_err() {
             return Err(format!(
                 "Not composable. The codomain of self was {}. The domain of other was {}",
-                self_codomain, other_domain
+                self.codomain(),
+                other.domain()
             ));
         }
         let my_codomain = other.codomain();
@@ -185,7 +183,7 @@ impl Composable<usize> for OrderPresInj {
         let ord_self = self.to_ordinary();
         let ord_other = other.to_ordinary();
         let composite = ord_self.compose(&ord_other)?;
-        OrderPresInj::try_from(composite).map_err(|_| "???".to_string())
+        Self::try_from(composite).map_err(|_| "???".to_string())
     }
 
     fn domain(&self) -> usize {
@@ -442,12 +440,11 @@ impl Monoidal for Decomposition {
 
 impl Composable<usize> for Decomposition {
     fn compose(&self, other: &Self) -> Result<Self, String> {
-        if Self::composable(self, other).is_err() {
-            let self_codomain = self.codomain();
-            let other_domain = other.domain();
+        if self.composable(other).is_err() {
             return Err(format!(
                 "Not composable. The codomain of self was {}. The domain of other was {}",
-                self_codomain, other_domain
+                self.codomain(),
+                other.domain()
             ));
         }
         let other_codomain = other.codomain();
