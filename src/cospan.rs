@@ -2,8 +2,7 @@ use either::Either::{self, Left, Right};
 use log::warn;
 use permutations::Permutation;
 use petgraph::{prelude::Graph, stable_graph::DefaultIx, stable_graph::NodeIndex};
-use std::collections::HashMap;
-use std::fmt::Debug;
+use std::{collections::HashMap, fmt::Debug};
 use union_find::{UnionBySize, UnionFind};
 
 use crate::category::{Composable, HasIdentity};
@@ -100,34 +99,35 @@ where
         &mut self,
         new_arrow: Either<MiddleIndexOrLambda<Lambda>, MiddleIndexOrLambda<Lambda>>,
     ) -> Either<LeftIndex, RightIndex> {
-        if let Left(tgt_info) = new_arrow {
-            match tgt_info {
-                Left(tgt_idx) => {
-                    self.left.push(tgt_idx);
-                    self.is_left_id &= self.left.len() - 1 == tgt_idx;
+        match new_arrow {
+            Left(tgt_info) => {
+                match tgt_info {
+                    Left(tgt_idx) => {
+                        self.left.push(tgt_idx);
+                        self.is_left_id &= self.left.len() - 1 == tgt_idx;
+                    }
+                    Right(new_lambda) => {
+                        self.left.push(self.middle.len());
+                        self.middle.push(new_lambda);
+                        self.is_left_id &= self.left.len() == self.middle.len();
+                    }
                 }
-                Right(new_lambda) => {
-                    self.left.push(self.middle.len());
-                    self.middle.push(new_lambda);
-                    self.is_left_id &= self.left.len() == self.middle.len();
-                }
+                Left(self.left.len() - 1)
             }
-            Left(self.left.len() - 1)
-        } else if let Right(tgt_info) = new_arrow {
-            match tgt_info {
-                Left(tgt_idx) => {
-                    self.right.push(tgt_idx);
-                    self.is_right_id &= self.right.len() - 1 == tgt_idx;
+            Right(tgt_info) => {
+                match tgt_info {
+                    Left(tgt_idx) => {
+                        self.right.push(tgt_idx);
+                        self.is_right_id &= self.right.len() - 1 == tgt_idx;
+                    }
+                    Right(new_lambda) => {
+                        self.right.push(self.middle.len());
+                        self.middle.push(new_lambda);
+                        self.is_right_id &= self.right.len() == self.middle.len();
+                    }
                 }
-                Right(new_lambda) => {
-                    self.right.push(self.middle.len());
-                    self.middle.push(new_lambda);
-                    self.is_right_id &= self.right.len() == self.middle.len();
-                }
+                Right(self.right.len() - 1)
             }
-            Right(self.right.len() - 1)
-        } else {
-            unreachable!("All possibilities destructured. Unreachable");
         }
     }
 
