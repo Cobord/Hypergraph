@@ -321,7 +321,7 @@ impl TryFrom<FinSetMorphism> for OrderPresSurj {
             }
             let mut cur_i = 0;
             let mut count_of_cur_i = 0;
-            let my_max = v[v.len() - 1];
+            let my_max = *v.last().unwrap();
             let mut preimage_card_minus_1 = Vec::with_capacity(my_max);
             for cur_v in v {
                 if cur_v > cur_i {

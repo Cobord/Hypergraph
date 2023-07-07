@@ -154,7 +154,7 @@ fn layers_composable<Lambda: Eq + Copy + Debug, BoxType>(
                 return Err("Mismatch in cardinalities of common interface".to_string());
             }
         } else {
-            let self_interface = &l[l.len() - 1].right_type;
+            let self_interface = &l.last().unwrap().right_type;
             if self_interface.is_empty() {
                 return Ok(());
             } else {
@@ -162,7 +162,7 @@ fn layers_composable<Lambda: Eq + Copy + Debug, BoxType>(
             }
         }
     }
-    let self_interface = &l[l.len() - 1].right_type;
+    let self_interface = &l.last().unwrap().right_type;
     let other_interface = &r[0].left_type;
     if self_interface.len() != other_interface.len() {
         Err("Mismatch in cardinalities of common interface".to_string())

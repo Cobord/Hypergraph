@@ -323,7 +323,7 @@ where
                     return Err("Mismatch in cardinalities of common interface".to_string());
                 }
             } else {
-                let self_interface = &self.layers[self.layers.len() - 1].right_type;
+                let self_interface = &self.layers.last().unwrap().right_type;
                 if self_interface.is_empty() {
                     return Ok(());
                 } else {
@@ -331,7 +331,7 @@ where
                 }
             }
         }
-        let self_interface = &self.layers[self.layers.len() - 1].right_type;
+        let self_interface = &self.layers.last().unwrap().right_type;
         let other_interface = &other.layers[0].left_type;
         if self_interface.len() != other_interface.len() {
             Err("Mismatch in cardinalities of common interface".to_string())

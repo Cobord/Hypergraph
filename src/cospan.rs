@@ -301,7 +301,7 @@ where
                 other.middle.len(),
                 other.is_left_id,
             )?;
-        let mut composition = Cospan::<Lambda>::new(
+        let mut composition = Self::new(
             Vec::with_capacity(self.left.len()),
             Vec::with_capacity(other.right.len()),
             Vec::with_capacity(pushout_target),
