@@ -349,11 +349,11 @@ impl<Lambda> MonoidalMorphism<Vec<Lambda>> for Rel<Lambda> where Lambda: Sized +
 impl<Lambda> GenericMonoidalInterpretable<Lambda> for Rel<Lambda> where Lambda: Eq + Copy + Debug {}
 
 impl<Lambda: Eq + Sized + Debug + Copy> Rel<Lambda> {
-    fn new(x: Span<Lambda>, do_check: bool) -> Rel<Lambda> {
+    fn new(x: Span<Lambda>, do_check: bool) -> Self {
         if do_check {
             assert!(x.is_jointly_injective());
         }
-        Rel::<Lambda>(x)
+        Self(x)
     }
 
     fn subsumes(&self, other: &Rel<Lambda>) -> bool {
@@ -452,29 +452,14 @@ impl<Lambda: Eq + Sized + Debug + Copy> Rel<Lambda> {
 
     #[allow(dead_code)]
     fn is_equivalence_rel(&self) -> bool {
-        if !self.is_homogeneous() {
-            return false;
-        }
-        if !self.is_reflexive() {
-            return false;
-        }
-        if !self.is_symmetric() {
-            return false;
-        }
-        self.is_transitive()
+        self.is_homogeneous() && self.is_reflexive() && self.is_symmetric() && self.is_transitive()
     }
 
     #[allow(dead_code)]
     fn is_partial_order(&self) -> bool {
-        if !self.is_homogeneous() {
-            return false;
-        }
-        if !self.is_reflexive() {
-            return false;
-        }
-        if !self.is_antisymmetric() {
-            return false;
-        }
-        self.is_transitive()
+        self.is_homogeneous()
+            && self.is_reflexive()
+            && self.is_antisymmetric()
+            && self.is_transitive()
     }
 }

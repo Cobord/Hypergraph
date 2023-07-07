@@ -436,10 +436,7 @@ where
 
             let e_i_matching = PerfectMatching::new(&e_i_pairs);
             ret_val.push(Self {
-                my_diagram: LinearCombination::<T, (usize, PerfectMatching)>::singleton((
-                    0,
-                    e_i_matching,
-                )),
+                my_diagram: LinearCombination::singleton((0, e_i_matching)),
                 source: n,
                 target: n,
                 is_def_tl: false,
