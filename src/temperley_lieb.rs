@@ -424,17 +424,18 @@ where
         let mut ret_val = Vec::with_capacity(n);
         for i in 0..(n - 1) {
             let mut e_i_pairs = Vec::with_capacity(2 * n);
-            for j in 0..n {
+            e_i_pairs.extend((0..n).map(|j| {
                 if j == i {
-                    e_i_pairs.push((i, i + n + 1));
+                    (i, i + n + 1)
                 } else if j == i + 1 {
-                    e_i_pairs.push((i + 1, i + n));
+                    (i + 1, i + n)
                 } else {
-                    e_i_pairs.push((j, j + n));
+                    (j, j + n)
                 }
-            }
+            }));
+
             let e_i_matching = PerfectMatching::new(&e_i_pairs);
-            let cur_e_i = Self {
+            ret_val.push(Self {
                 my_diagram: LinearCombination::<T, (usize, PerfectMatching)>::singleton((
                     0,
                     e_i_matching,
@@ -442,8 +443,7 @@ where
                 source: n,
                 target: n,
                 is_def_tl: false,
-            };
-            ret_val.push(cur_e_i);
+            });
         }
         ret_val
     }
