@@ -77,8 +77,7 @@ where
         F: Fn(T) -> (LeftPortName, RightPortName),
     {
         assert_eq!(types.len(), prenames.len());
-        let underlying_cospan =
-            Cospan::<Lambda>::from_permutation(p.clone(), types, types_as_on_domain);
+        let underlying_cospan = Cospan::from_permutation(p.clone(), types, types_as_on_domain);
         let (left_names, right_names) = if types_as_on_domain {
             (
                 prenames.iter().map(|pre| prename_to_name(*pre).0).collect(),
@@ -367,9 +366,8 @@ where
     }
 
     fn compose(&self, other: &Self) -> Result<Self, String> {
-        let underlying_cospan = self.underlying_cospan.compose(&other.underlying_cospan)?;
         Ok(Self {
-            underlying_cospan,
+            underlying_cospan: self.underlying_cospan.compose(&other.underlying_cospan)?,
             left_names: self.left_names.clone(),
             right_names: other.right_names.clone(),
         })
