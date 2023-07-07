@@ -34,9 +34,8 @@ where
         left_names: Vec<LeftPortName>,
         right_names: Vec<RightPortName>,
     ) -> Self {
-        let underlying_cospan = Cospan::<Lambda>::new(left, right, middle);
         Self {
-            underlying_cospan,
+            underlying_cospan: Cospan::new(left, right, middle),
             left_names,
             right_names,
         }
@@ -56,11 +55,10 @@ where
         T: Copy,
     {
         assert_eq!(types.len(), prenames.len());
-        let underlying_cospan = Cospan::<Lambda>::identity(&types.to_vec());
         let (left_names, right_names) = prenames.iter().map(|x| prename_to_name(*x)).unzip();
 
         Self {
-            underlying_cospan,
+            underlying_cospan: Cospan::identity(&types.to_vec()),
             left_names,
             right_names,
         }
