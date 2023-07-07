@@ -360,19 +360,17 @@ where
     }
 
     fn domain(&self) -> Vec<Lambda> {
-        if self.layers.is_empty() {
-            vec![]
-        } else {
-            self.layers[0].left_type.clone()
-        }
+        self.layers
+            .first()
+            .map(|x| x.left_type.clone())
+            .unwrap_or_default()
     }
 
     fn codomain(&self) -> Vec<Lambda> {
-        if self.layers.is_empty() {
-            vec![]
-        } else {
-            self.layers[self.layers.len() - 1].right_type.clone()
-        }
+        self.layers
+            .last()
+            .map(|x| x.right_type.clone())
+            .unwrap_or_default()
     }
 }
 
