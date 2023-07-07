@@ -44,12 +44,12 @@ impl Composable<usize> for FinSetMorphism {
             .map(|s| other.0[self.0[s]])
             .collect::<Vec<usize>>();
         let pos_max = argmax(&composite);
-        if let Some(max_val) = pos_max.map(|z| composite[z]) {
-            let leftover_needed = max(other_codomain - max_val - 1, 0);
-            Ok((composite, leftover_needed))
+        let ret = if let Some(max_val) = pos_max.map(|z| composite[z]) {
+            (other_codomain - max_val - 1).max(0)
         } else {
-            Ok((composite, other_codomain))
-        }
+            other_codomain
+        };
+        Ok((composite, ret))
     }
 
     fn domain(&self) -> usize {

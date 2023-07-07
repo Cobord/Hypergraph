@@ -174,11 +174,18 @@ where
     }
 }
 
-pub fn dim_check<Lambda: Eq + Debug>(l: &[Lambda], r: &[Lambda]) -> Result<(), String> {
+pub fn dim_check<
+    Lambda: Eq + Debug,
+    L: ExactSizeIterator + Iterator<Item = Lambda>,
+    R: ExactSizeIterator + Iterator<Item = Lambda>,
+>(
+    l: L,
+    r: R,
+) -> Result<(), String> {
     if l.len() != r.len() {
         return Err("Mismatch in cardinalities of common interface".to_string());
     }
-    let Some((w1,w2)) = l.iter().zip(r.iter()).find(|(a, b)| a != b) else { return Ok(())};
+    let Some((w1,w2)) = l.zip(r).find(|(a, b)| a != b) else { return Ok(())};
     Err(format!(
         "Mismatch in labels of common interface. At some index there was {:?} vs {:?}",
         w1, w2
@@ -190,7 +197,7 @@ where
     Lambda: Sized + Eq + Copy + Debug,
 {
     fn composable(&self, other: &Self) -> Result<(), String> {
-        dim_check(&self.right, &other.left)
+        dim_check(self.right.iter(), other.left.iter())
     }
 
     fn compose(&self, other: &Self) -> Result<Self, String> {

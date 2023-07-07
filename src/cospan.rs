@@ -286,31 +286,8 @@ where
     fn composable(&self, other: &Self) -> Result<(), String> {
         let mut self_interface = self.right.iter().map(|mid| self.middle[*mid]);
         let mut other_interface = other.left.iter().map(|mid| other.middle[*mid]);
-        let mut to_continue = true;
-        while to_continue {
-            let current_self = self_interface.next();
-            let current_other = other_interface.next();
-            match (current_self, current_other) {
-                (None, None) => {
-                    to_continue = false;
-                }
-                (Some(_), None) => {
-                    return Err("Mismatch in cardinalities of common interface".to_string());
-                }
-                (None, Some(_)) => {
-                    return Err("Mismatch in cardinalities of common interface".to_string());
-                }
-                (Some(w1), Some(w2)) => {
-                    if w1 != w2 {
-                        return Err(format!(
-                            "Mismatch in labels of common interface. At some index there was {:?} vs {:?}",
-                            w1, w2
-                        ));
-                    }
-                }
-            }
-        }
-        Ok(())
+
+        crate::span::dim_check(self_interface, other_interface)
     }
 
     fn compose(&self, other: &Self) -> Result<Self, String> {
