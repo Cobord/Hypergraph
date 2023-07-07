@@ -6,7 +6,7 @@ use permutations::Permutation;
 use crate::category::{Composable, HasIdentity};
 use crate::monoidal::{Monoidal, MonoidalMorphism};
 use crate::symmetric_monoidal::SymmetricMonoidalDiscreteMorphism;
-use crate::utils::position_max;
+use crate::utils::argmax;
 
 pub type FinSetMap = Vec<usize>;
 pub type FinSetMorphism = (Vec<usize>, usize);
@@ -44,7 +44,7 @@ impl Composable<usize> for FinSetMorphism {
         let composite = (0..self.domain())
             .map(|s| other.0[self.0[s]])
             .collect::<Vec<usize>>();
-        let pos_max = position_max(&composite);
+        let pos_max = argmax(&composite);
         if let Some(max_val) = pos_max.map(|z| composite[z]) {
             let leftover_needed = max(other_codomain - max_val - 1, 0);
             Ok((composite, leftover_needed))
@@ -58,7 +58,7 @@ impl Composable<usize> for FinSetMorphism {
     }
 
     fn codomain(&self) -> usize {
-        let pos_max = position_max(&self.0);
+        let pos_max = argmax(&self.0);
         if let Some(max_val) = pos_max.map(|z| self.0[z]) {
             max_val + self.1 + 1
         } else {
@@ -261,7 +261,7 @@ where
 }
 
 fn is_surjective(v: &[usize]) -> bool {
-    let pos_max = position_max(v);
+    let pos_max = argmax(v);
     if let Some(max_val) = pos_max.map(|z| v[z]) {
         if v.len() < max_val + 1 {
             return false;
@@ -278,7 +278,7 @@ fn is_surjective(v: &[usize]) -> bool {
 }
 
 fn is_injective(v: &[usize]) -> bool {
-    let pos_max = position_max(v);
+    let pos_max = argmax(v);
     if let Some(max_val) = pos_max.map(|z| v[z]) {
         if v.len() > max_val + 1 {
             return false;
@@ -454,12 +454,12 @@ impl Composable<usize> for Decomposition {
         let ord_self = self.to_ordinary();
         let ord_other = other.to_ordinary();
         let composite = ord_self.compose(&ord_other)?;
-        let pos_max = position_max(&composite.0);
+        let pos_max = argmax(&composite.0);
         if let Some(max_val) = pos_max.map(|z| composite.0[z]) {
             let leftover_needed = max(other_codomain - max_val - 1, 0);
-            Decomposition::try_from((composite.0, leftover_needed)).map_err(|_| "???".to_string())
+            Self::try_from((composite.0, leftover_needed)).map_err(|_| "???".to_string())
         } else {
-            Decomposition::try_from(composite).map_err(|_| "???".to_string())
+            Self::try_from(composite).map_err(|_| "???".to_string())
         }
         //todo test
     }
@@ -513,7 +513,7 @@ impl Decomposition {
         let map_part = (0..self.domain())
             .map(|z| self.apply(z))
             .collect::<FinSetMap>();
-        let pos_max = position_max(&map_part);
+        let pos_max = argmax(&map_part);
         if let Some(max_val) = pos_max.map(|z| map_part[z]) {
             let leftover_needed = max(wanted_codomain - max_val - 1, 0);
             (map_part, leftover_needed)

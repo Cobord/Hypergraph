@@ -204,6 +204,7 @@ where
                 None => {
                     let index_in_right: Option<RightIndex> =
                         self.right_names.iter().position(|r| right_pred(*r));
+
                     to_vec_01(index_in_right.map(Right))
                 }
                 Some(z) => {

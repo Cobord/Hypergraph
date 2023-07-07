@@ -65,7 +65,7 @@ where
         my_type: Lambda,
         new_name: Either<(InOut, InterCircle, IntraCircle), (InOut, IntraCircle)>,
     ) {
-        let _loc = self.0.add_boundary_node_unknown_target(my_type, new_name);
+        let _ = self.0.add_boundary_node_unknown_target(my_type, new_name);
     }
 
     #[allow(dead_code)]

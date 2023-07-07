@@ -37,7 +37,7 @@ pub fn to_vec_01<A>(me: Option<A>) -> Vec<A> {
     }
 }
 
-pub fn position_max<T: Ord>(slice: &[T]) -> Option<usize> {
+pub fn argmax<T: Ord>(slice: &[T]) -> Option<usize> {
     slice
         .iter()
         .enumerate()
