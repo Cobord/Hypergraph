@@ -127,8 +127,7 @@ where
         let mut ret_val = Self(HashMap::new());
         for (k1, c_k1) in self.0 {
             for (k2, c_k2) in &rhs.0 {
-                ret_val += LinearCombination::<Coeffs, Target>::singleton(k1.clone() * k2.clone())
-                    * (c_k1 * (*c_k2));
+                ret_val += Self::singleton(k1.clone() * k2.clone()) * (c_k1 * (*c_k2));
             }
         }
         ret_val
@@ -192,12 +191,7 @@ where
     where
         F: Fn(&Target) -> bool,
     {
-        for (term, _) in self.0.iter() {
-            if !is_non_crossing(term) {
-                return false;
-            }
-        }
-        true
+        self.0.keys().all(is_non_crossing)
     }
 }
 
@@ -205,7 +199,7 @@ pub fn simplify<Coeffs: Copy, Target: Eq + Hash>(me: &mut LinearCombination<Coef
 where
     Coeffs: Zero + Eq,
 {
-    me.0.retain(|_, v| *v != Coeffs::zero());
+    me.0.retain(|_, v| !v.is_zero());
 }
 
 pub fn inj_linearly_extend<Coeffs: Copy, Target: Eq + Hash + Clone, Target2: Eq + Hash, F>(
