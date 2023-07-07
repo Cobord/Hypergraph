@@ -41,6 +41,10 @@ where
         }
     }
 
+    pub fn empty() -> Self {
+        Self::new(vec![], vec![], vec![], vec![], vec![])
+    }
+
     pub fn left_names(&self) -> &Vec<LeftPortName> {
         &self.left_names
     }

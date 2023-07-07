@@ -5,11 +5,13 @@ use petgraph::{prelude::Graph, stable_graph::DefaultIx, stable_graph::NodeIndex}
 use std::{collections::HashMap, fmt::Debug};
 use union_find::{UnionBySize, UnionFind};
 
-use crate::category::{Composable, HasIdentity};
-use crate::finset::FinSetMap;
-use crate::monoidal::{GenericMonoidalInterpretable, Monoidal, MonoidalMorphism};
-use crate::symmetric_monoidal::SymmetricMonoidalMorphism;
-use crate::utils::{in_place_permute, represents_id, EitherExt};
+use crate::{
+    category::{Composable, HasIdentity},
+    finset::FinSetMap,
+    monoidal::{GenericMonoidalInterpretable, Monoidal, MonoidalMorphism},
+    symmetric_monoidal::SymmetricMonoidalMorphism,
+    utils::{in_place_permute, represents_id, EitherExt},
+};
 
 type LeftIndex = usize;
 type RightIndex = usize;
@@ -67,6 +69,10 @@ where
         };
         answer.assert_valid(false);
         answer
+    }
+
+    pub fn empty() -> Self {
+        Self::new(vec![], vec![], vec![])
     }
 
     #[allow(dead_code)]
@@ -307,11 +313,10 @@ where
             Vec::with_capacity(pushout_target),
         );
         for repr in representative {
-            let lambda_assign = match repr {
+            composition.add_middle(match repr {
                 Left(z) => self.middle[z],
                 Right(z) => other.middle[z],
-            };
-            composition.add_middle(lambda_assign);
+            });
         }
         for target_in_self_middle in &self.left {
             let target_in_pushout = left_to_pushout[*target_in_self_middle];
@@ -479,7 +484,7 @@ mod test {
     #[test]
     fn empty_cospan() {
         use super::Cospan;
-        let empty_cospan = Cospan::<u32>::new(vec![], vec![], vec![]);
+        let empty_cospan = Cospan::<u32>::empty();
         assert!(empty_cospan.left.len() == 0);
         assert!(empty_cospan.right.len() == 0);
         assert!(empty_cospan.middle.len() == 0);
@@ -489,7 +494,7 @@ mod test {
     fn left_only_cospan() {
         use super::Cospan;
         use either::{Left, Right};
-        let mut my_cospan = Cospan::<u32>::new(vec![], vec![], vec![]);
+        let mut my_cospan = Cospan::<u32>::empty();
         my_cospan.add_boundary_node(Left(Right(1)));
         my_cospan.add_boundary_node(Left(Right(2)));
         my_cospan.add_boundary_node(Left(Right(3)));
@@ -506,7 +511,7 @@ mod test {
         use super::Cospan;
         use either::{Left, Right};
         use petgraph::Graph;
-        let mut my_cospan = Cospan::<bool>::new(vec![], vec![], vec![]);
+        let mut my_cospan = Cospan::<bool>::empty();
         my_cospan.add_boundary_node(Right(Right(false)));
         my_cospan.add_boundary_node(Right(Right(true)));
         my_cospan.add_middle(true);

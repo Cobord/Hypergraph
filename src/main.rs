@@ -26,8 +26,7 @@ mod linear_combination;
 mod temperley_lieb;
 
 fn main() {
-    let mut x =
-        NamedCospan::<u32, &'static str, &'static str>::new(vec![], vec![], vec![], vec![], vec![]);
+    let mut x = NamedCospan::<u32, &'static str, &'static str>::empty();
     x.add_boundary_node_unknown_target(0, Right("out1"));
     x.add_boundary_node_known_target(0, Right("out2"));
     x.add_boundary_node_known_target(0, Left("in1"));
