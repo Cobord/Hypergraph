@@ -40,9 +40,7 @@ impl Composable<usize> for FinSetMorphism {
             ));
         }
         let other_codomain = other.codomain();
-        let composite = (0..self.domain())
-            .map(|s| other.0[self.0[s]])
-            .collect::<Vec<usize>>();
+        let composite: Vec<_> = (0..self.domain()).map(|s| other.0[self.0[s]]).collect();
         let pos_max = argmax(&composite);
         let ret = if let Some(max_val) = pos_max.map(|z| composite[z]) {
             (other_codomain - max_val - 1).max(0)
@@ -172,12 +170,11 @@ impl Monoidal for OrderPresInj {
 
 impl Composable<usize> for OrderPresInj {
     fn compose(&self, other: &Self) -> Result<Self, String> {
-        if Self::composable(self, other).is_err() {
-            let self_codomain = self.codomain();
-            let other_domain = other.domain();
+        if self.composable(other).is_err() {
             return Err(format!(
                 "Not composable. The codomain of self was {}. The domain of other was {}",
-                self_codomain, other_domain
+                self.codomain(),
+                other.domain()
             ));
         }
         let ord_self = self.to_ordinary();
@@ -277,22 +274,13 @@ fn is_surjective(v: &[usize]) -> bool {
 
 fn is_injective(v: &[usize]) -> bool {
     let pos_max = argmax(v);
-    if let Some(max_val) = pos_max.map(|z| v[z]) {
-        if v.len() > max_val + 1 {
-            return false;
-        }
-        let mut seen_elts = HashSet::with_capacity(v.len());
-        for cur_v in v {
-            if seen_elts.contains(cur_v) {
-                return false;
-            }
-            seen_elts.insert(*cur_v);
-        }
-        true
-    } else {
-        // empty set to empty set
-        true
+    // empty set to empty set
+    let Some(max_val) = pos_max.map(|z| v[z]) else { return true };
+    if v.len() > max_val + 1 {
+        return false;
     }
+    let mut uniq = HashSet::with_capacity(v.len());
+    v.iter().all(|cur| uniq.insert(cur))
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]

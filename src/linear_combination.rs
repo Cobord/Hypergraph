@@ -195,11 +195,10 @@ where
     }
 }
 
-pub fn simplify<Coeffs: Copy, Target: Eq + Hash>(me: &mut LinearCombination<Coeffs, Target>)
-where
-    Coeffs: Zero + Eq,
-{
-    me.0.retain(|_, v| !v.is_zero());
+impl<Coeffs: Copy + Zero, Target: Eq + Hash> LinearCombination<Coeffs, Target> {
+    pub fn simplify(&mut self) {
+        self.0.retain(|_, v| !v.is_zero());
+    }
 }
 
 pub fn inj_linearly_extend<Coeffs: Copy, Target: Eq + Hash + Clone, Target2: Eq + Hash, F>(

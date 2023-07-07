@@ -13,8 +13,7 @@ use petgraph::{Graph, Undirected};
 use crate::category::{Composable, HasIdentity};
 use crate::finset::is_monotonic_inc;
 use crate::linear_combination::{
-    inj_linearly_extend, linear_combine, linearly_extend, simplify as linear_simplify,
-    LinearCombination,
+    inj_linearly_extend, linear_combine, linearly_extend, LinearCombination,
 };
 use crate::monoidal::{Monoidal, MonoidalMorphism};
 
@@ -502,7 +501,7 @@ fn simplify<T>(me: &mut BrauerMorphism<T>)
 where
     T: Add<Output = T> + Zero + One + Copy + AddAssign + Mul<Output = T> + MulAssign + Eq,
 {
-    linear_simplify(&mut me.my_diagram);
+    me.my_diagram.simplify();
 }
 
 mod test {

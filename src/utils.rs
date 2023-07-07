@@ -41,7 +41,7 @@ pub fn argmax<T: Ord>(slice: &[T]) -> Option<usize> {
     slice
         .iter()
         .enumerate()
-        .max_by(|(_, value0), (_, value1)| value0.cmp(value1))
+        .max_by_key(|x| x.1)
         .map(|(idx, _)| idx)
 }
 
