@@ -406,78 +406,67 @@ where
         types: &[Lambda],
         types_as_on_domain: bool,
     ) -> Self {
-        if types_as_on_domain {
-            if p == Permutation::identity(p.len()) {
-                Self::identity(&types.to_vec())
-            } else {
-                let mut types_now = types.to_vec();
-                let mut p_remaining = p.clone();
-                let mut first_layer = Self::new();
-                for idx in (0..p_remaining.len() - 1).step_by(2) {
-                    let idx_goes = p_remaining.apply(idx);
-                    let jdx_goes = p_remaining.apply(idx + 1);
-                    if idx_goes > jdx_goes {
-                        let cur_swap = Permutation::transposition(p_remaining.len(), idx, idx + 1);
-                        first_layer.monoidal(
-                            FrobeniusOperation::SymmetricBraiding(
-                                types_now[idx],
-                                types_now[idx + 1],
-                            )
-                            .into(),
-                        );
-                        in_place_permute(&mut types_now, &cur_swap);
-                        p_remaining = cur_swap * p_remaining;
-                    } else {
-                        first_layer.monoidal(FrobeniusOperation::Identity(types_now[idx]).into());
-                        first_layer
-                            .monoidal(FrobeniusOperation::Identity(types_now[idx + 1]).into());
-                    }
-                }
-                if p_remaining.len() % 2 == 1 {
-                    first_layer.monoidal(
-                        FrobeniusOperation::Identity(types_now[p_remaining.len() - 1]).into(),
-                    );
-                }
-                let mut second_layer: Self = FrobeniusOperation::Identity(types_now[0]).into();
-                for idx in (1..p_remaining.len() - 1).step_by(2) {
-                    let idx_goes = p_remaining.apply(idx);
-                    let jdx_goes = p_remaining.apply(idx + 1);
-                    if idx_goes > jdx_goes {
-                        let cur_swap = Permutation::transposition(p_remaining.len(), idx, idx + 1);
-                        second_layer.monoidal(
-                            FrobeniusOperation::SymmetricBraiding(
-                                types_now[idx],
-                                types_now[idx + 1],
-                            )
-                            .into(),
-                        );
-                        in_place_permute(&mut types_now, &cur_swap);
-                        p_remaining = cur_swap * p_remaining;
-                    } else {
-                        second_layer.monoidal(FrobeniusOperation::Identity(types_now[idx]).into());
-                        second_layer
-                            .monoidal(FrobeniusOperation::Identity(types_now[idx + 1]).into());
-                    }
-                }
-                if p_remaining.len() % 2 == 0 {
-                    second_layer.monoidal(
-                        FrobeniusOperation::Identity(types_now[p_remaining.len() - 1]).into(),
-                    );
-                }
-                first_layer.compose(second_layer).unwrap();
-                let remaining = Self::from_permutation(p_remaining, &types_now, true);
-                first_layer.compose(remaining).unwrap();
-                assert_eq!(first_layer.domain(), types);
-                let mut types_after_all_p = types.to_vec();
-                in_place_permute(&mut types_after_all_p, &p.inv());
-                assert_eq!(first_layer.codomain(), types_after_all_p);
-                first_layer
-            }
-        } else {
+        if !types_as_on_domain {
             let mut answer = Self::from_permutation(p.inv(), types, true);
             answer.hflip(&identity);
-            answer
+            return answer;
         }
+
+        if p == Permutation::identity(p.len()) {
+            return Self::identity(&types.to_vec());
+        }
+        let mut types_now = types.to_vec();
+        let mut p_remaining = p.clone();
+        let mut first_layer = Self::new();
+        for idx in (0..p_remaining.len() - 1).step_by(2) {
+            let idx_goes = p_remaining.apply(idx);
+            let jdx_goes = p_remaining.apply(idx + 1);
+            if idx_goes > jdx_goes {
+                let cur_swap = Permutation::transposition(p_remaining.len(), idx, idx + 1);
+                first_layer.monoidal(
+                    FrobeniusOperation::SymmetricBraiding(types_now[idx], types_now[idx + 1])
+                        .into(),
+                );
+                in_place_permute(&mut types_now, &cur_swap);
+                p_remaining = cur_swap * p_remaining;
+            } else {
+                first_layer.monoidal(FrobeniusOperation::Identity(types_now[idx]).into());
+                first_layer.monoidal(FrobeniusOperation::Identity(types_now[idx + 1]).into());
+            }
+        }
+        if p_remaining.len() % 2 == 1 {
+            first_layer
+                .monoidal(FrobeniusOperation::Identity(types_now[p_remaining.len() - 1]).into());
+        }
+        let mut second_layer: Self = FrobeniusOperation::Identity(types_now[0]).into();
+        for idx in (1..p_remaining.len() - 1).step_by(2) {
+            let idx_goes = p_remaining.apply(idx);
+            let jdx_goes = p_remaining.apply(idx + 1);
+            if idx_goes > jdx_goes {
+                let cur_swap = Permutation::transposition(p_remaining.len(), idx, idx + 1);
+                second_layer.monoidal(
+                    FrobeniusOperation::SymmetricBraiding(types_now[idx], types_now[idx + 1])
+                        .into(),
+                );
+                in_place_permute(&mut types_now, &cur_swap);
+                p_remaining = cur_swap * p_remaining;
+            } else {
+                second_layer.monoidal(FrobeniusOperation::Identity(types_now[idx]).into());
+                second_layer.monoidal(FrobeniusOperation::Identity(types_now[idx + 1]).into());
+            }
+        }
+        if p_remaining.len() % 2 == 0 {
+            second_layer
+                .monoidal(FrobeniusOperation::Identity(types_now[p_remaining.len() - 1]).into());
+        }
+        first_layer.compose(second_layer).unwrap();
+        let remaining = Self::from_permutation(p_remaining, &types_now, true);
+        first_layer.compose(remaining).unwrap();
+        assert_eq!(first_layer.domain(), types);
+        let mut types_after_all_p = types.to_vec();
+        in_place_permute(&mut types_after_all_p, &p.inv());
+        assert_eq!(first_layer.codomain(), types_after_all_p);
+        first_layer
     }
 }
 

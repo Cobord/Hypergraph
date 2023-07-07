@@ -284,8 +284,8 @@ where
     Lambda: Eq + Sized + Copy + Debug,
 {
     fn composable(&self, other: &Self) -> Result<(), String> {
-        let mut self_interface = self.right.iter().map(|mid| self.middle[*mid]);
-        let mut other_interface = other.left.iter().map(|mid| other.middle[*mid]);
+        let self_interface = self.right.iter().map(|mid| self.middle[*mid]);
+        let other_interface = other.left.iter().map(|mid| other.middle[*mid]);
 
         crate::span::dim_check(self_interface, other_interface)
     }
