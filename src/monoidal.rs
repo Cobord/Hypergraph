@@ -139,49 +139,56 @@ where
     }
 }
 
+fn layers_composable<Lambda: Eq + Copy + Debug, BoxType>(
+    l: &[GenericMonoidalMorphismLayer<BoxType, Lambda>],
+    r: &[GenericMonoidalMorphismLayer<BoxType, Lambda>],
+) -> Result<(), String> {
+    if l.is_empty() || r.is_empty() {
+        if l.is_empty() && r.is_empty() {
+            return Ok(());
+        } else if l.is_empty() {
+            let other_interface = &r[0].left_type;
+            if other_interface.is_empty() {
+                return Ok(());
+            } else {
+                return Err("Mismatch in cardinalities of common interface".to_string());
+            }
+        } else {
+            let self_interface = &l[l.len() - 1].right_type;
+            if self_interface.is_empty() {
+                return Ok(());
+            } else {
+                return Err("Mismatch in cardinalities of common interface".to_string());
+            }
+        }
+    }
+    let self_interface = &l[l.len() - 1].right_type;
+    let other_interface = &r[0].left_type;
+    if self_interface.len() != other_interface.len() {
+        Err("Mismatch in cardinalities of common interface".to_string())
+    } else if self_interface != other_interface {
+        for idx in 0..self_interface.len() {
+            let w1 = self_interface[idx];
+            let w2 = other_interface[idx];
+            if w1 != w2 {
+                return Err(format!(
+                    "Mismatch in labels of common interface. At some index there was {:?} vs {:?}",
+                    w1, w2
+                ));
+            }
+        }
+        Err("Mismatch in labels of common interface at some unknown index.".to_string())
+    } else {
+        Ok(())
+    }
+}
+
 impl<Lambda, BoxType> ComposableMutating<Vec<Lambda>> for GenericMonoidalMorphism<BoxType, Lambda>
 where
     Lambda: Eq + Copy + Debug,
 {
     fn composable(&self, other: &Self) -> Result<(), String> {
-        if self.layers.is_empty() || other.layers.is_empty() {
-            if self.layers.is_empty() && other.layers.is_empty() {
-                return Ok(());
-            } else if self.layers.is_empty() {
-                let other_interface = &other.layers[0].left_type;
-                if other_interface.is_empty() {
-                    return Ok(());
-                } else {
-                    return Err("Mismatch in cardinalities of common interface".to_string());
-                }
-            } else {
-                let self_interface = &self.layers[self.layers.len() - 1].right_type;
-                if self_interface.is_empty() {
-                    return Ok(());
-                } else {
-                    return Err("Mismatch in cardinalities of common interface".to_string());
-                }
-            }
-        }
-        let self_interface = &self.layers[self.layers.len() - 1].right_type;
-        let other_interface = &other.layers[0].left_type;
-        if self_interface.len() != other_interface.len() {
-            Err("Mismatch in cardinalities of common interface".to_string())
-        } else if self_interface != other_interface {
-            for idx in 0..self_interface.len() {
-                let w1 = self_interface[idx];
-                let w2 = other_interface[idx];
-                if w1 != w2 {
-                    return Err(format!(
-                        "Mismatch in labels of common interface. At some index there was {:?} vs {:?}",
-                        w1, w2
-                    ));
-                }
-            }
-            Err("Mismatch in labels of common interface at some unknown index.".to_string())
-        } else {
-            Ok(())
-        }
+        layers_composable(&self.layers, &other.layers)
     }
 
     fn compose(&mut self, other: Self) -> Result<(), String> {
