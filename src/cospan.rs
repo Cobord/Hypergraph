@@ -538,9 +538,7 @@ mod test {
     #[test]
     fn permutatation_manual() {
         use super::Cospan;
-        let whatever_types = (0..5)
-            .map(|_| rand::random::<bool>())
-            .collect::<Vec<bool>>();
+        let whatever_types: Vec<_> = (0..5).map(|_| rand::random::<bool>()).collect();
         let mut full_types: Vec<bool> = vec![true, true];
         full_types.extend(whatever_types.clone());
         let my_cospan =

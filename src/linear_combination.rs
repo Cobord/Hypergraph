@@ -172,10 +172,7 @@ where
     Coeffs: One,
 {
     pub fn singleton(t: Target) -> Self {
-        let one_c = Coeffs::one();
-        let mut my_map = HashMap::new();
-        my_map.insert(t, one_c);
-        Self(my_map)
+        Self([(t, <_>::one())].into())
     }
 
     pub fn change_coeffs<F>(&mut self, coeff_changer: F)
