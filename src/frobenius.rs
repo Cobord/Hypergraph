@@ -730,31 +730,31 @@ mod test {
         assert!(exp_comul_spider == comul_spider);
 
         #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-        enum COLOR {
-            RED,
-            GREEN,
-            BLUE,
+        enum Color {
+            Red,
+            Green,
+            Blue,
         }
-        let mul_spider: FrobeniusMorphism<COLOR, ()> = special_frobenius_morphism(2, 1, COLOR::RED);
+        let mul_spider: FrobeniusMorphism<Color, ()> = special_frobenius_morphism(2, 1, Color::Red);
         let exp_mul_spider: FrobeniusMorphism<_, _> =
-            FrobeniusOperation::Multiplication(COLOR::RED).into();
+            FrobeniusOperation::Multiplication(Color::Red).into();
         assert!(exp_mul_spider == mul_spider);
         let exp_mul_spider: FrobeniusMorphism<_, _> =
-            FrobeniusOperation::Multiplication(COLOR::GREEN).into();
+            FrobeniusOperation::Multiplication(Color::Green).into();
         assert!(exp_mul_spider != mul_spider);
 
-        let unit_spider: FrobeniusMorphism<COLOR, ()> =
-            special_frobenius_morphism(0, 1, COLOR::BLUE);
-        let exp_unit_spider: FrobeniusMorphism<_, _> = FrobeniusOperation::Unit(COLOR::BLUE).into();
+        let unit_spider: FrobeniusMorphism<Color, ()> =
+            special_frobenius_morphism(0, 1, Color::Blue);
+        let exp_unit_spider: FrobeniusMorphism<_, _> = FrobeniusOperation::Unit(Color::Blue).into();
         assert!(exp_unit_spider == unit_spider);
 
-        let id_spider: FrobeniusMorphism<COLOR, ()> =
-            special_frobenius_morphism(1, 1, COLOR::GREEN);
+        let id_spider: FrobeniusMorphism<Color, ()> =
+            special_frobenius_morphism(1, 1, Color::Green);
         let exp_id_spider: FrobeniusMorphism<_, _> =
-            FrobeniusOperation::Identity(COLOR::GREEN).into();
+            FrobeniusOperation::Identity(Color::Green).into();
         assert!(exp_id_spider == id_spider);
         let exp_id_spider: FrobeniusMorphism<_, _> =
-            FrobeniusOperation::Identity(COLOR::BLUE).into();
+            FrobeniusOperation::Identity(Color::Blue).into();
         assert!(exp_id_spider != id_spider);
     }
 

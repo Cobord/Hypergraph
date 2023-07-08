@@ -581,20 +581,20 @@ mod test {
         use super::Cospan;
         use permutations::Permutation;
         #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-        enum COLOR {
-            RED,
-            GREEN,
-            BLUE,
+        enum Color {
+            Red,
+            Green,
+            Blue,
         }
         let type_names_on_source = true;
-        let my_cospan = Cospan::<COLOR>::from_permutation(
+        let my_cospan = Cospan::<Color>::from_permutation(
             Permutation::rotation_left(3, 1),
-            &vec![COLOR::RED, COLOR::GREEN, COLOR::BLUE],
+            &vec![Color::Red, Color::Green, Color::Blue],
             type_names_on_source,
         );
-        let my_cospan_2 = Cospan::<COLOR>::from_permutation(
+        let my_cospan_2 = Cospan::<Color>::from_permutation(
             Permutation::rotation_left(3, 2),
-            &vec![COLOR::BLUE, COLOR::RED, COLOR::GREEN],
+            &vec![Color::Blue, Color::Red, Color::Green],
             type_names_on_source,
         );
         let my_mid_interface_1 = my_cospan.codomain();
@@ -602,7 +602,7 @@ mod test {
         let comp = my_cospan.compose(&my_cospan_2);
         match comp {
             Ok(real_res) => {
-                let expected_res = Cospan::identity(&vec![COLOR::RED, COLOR::GREEN, COLOR::BLUE]);
+                let expected_res = Cospan::identity(&vec![Color::Red, Color::Green, Color::Blue]);
                 assert_eq!(expected_res.left, real_res.left);
                 assert_eq!(expected_res.right, real_res.right);
                 assert_eq!(expected_res.middle, real_res.middle);
@@ -615,14 +615,14 @@ mod test {
             }
         }
         let type_names_on_source = false;
-        let my_cospan = Cospan::<COLOR>::from_permutation(
+        let my_cospan = Cospan::<Color>::from_permutation(
             Permutation::rotation_left(3, 1),
-            &vec![COLOR::RED, COLOR::GREEN, COLOR::BLUE],
+            &vec![Color::Red, Color::Green, Color::Blue],
             type_names_on_source,
         );
-        let my_cospan_2 = Cospan::<COLOR>::from_permutation(
+        let my_cospan_2 = Cospan::<Color>::from_permutation(
             Permutation::rotation_left(3, 2),
-            &vec![COLOR::GREEN, COLOR::BLUE, COLOR::RED],
+            &vec![Color::Green, Color::Blue, Color::Red],
             type_names_on_source,
         );
         let my_mid_interface_1 = my_cospan.codomain();
@@ -630,7 +630,7 @@ mod test {
         let comp = my_cospan.compose(&my_cospan_2);
         match comp {
             Ok(real_res) => {
-                let expected_res = Cospan::identity(&vec![COLOR::GREEN, COLOR::BLUE, COLOR::RED]);
+                let expected_res = Cospan::identity(&vec![Color::Green, Color::Blue, Color::Red]);
                 assert_eq!(expected_res.left, real_res.left);
                 assert_eq!(expected_res.right, real_res.right);
                 assert_eq!(expected_res.middle, real_res.middle);

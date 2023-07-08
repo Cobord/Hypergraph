@@ -406,36 +406,36 @@ where
 
 mod test {
     #[allow(unused_imports)]
-    use crate::category::Composable;
-    #[allow(unused_imports)]
-    use crate::monoidal::{Monoidal, MonoidalMorphism};
-    #[allow(unused_imports)]
-    use crate::symmetric_monoidal::SymmetricMonoidalMorphism;
+    use crate::{
+        category::Composable,
+        monoidal::{Monoidal, MonoidalMorphism},
+        symmetric_monoidal::SymmetricMonoidalMorphism,
+    };
 
     #[test]
     fn permutatation_manual() {
         use super::NamedCospan;
         use permutations::Permutation;
         #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-        enum COLOR {
-            RED,
-            GREEN,
-            BLUE,
+        enum Color {
+            Red,
+            Green,
+            Blue,
         }
-        let full_types: Vec<COLOR> = vec![COLOR::RED, COLOR::GREEN, COLOR::BLUE];
+        let full_types: Vec<Color> = vec![Color::Red, Color::Green, Color::Blue];
         let type_names_on_source = true;
-        let my_cospan = NamedCospan::<COLOR, COLOR, COLOR>::from_permutation_extra_data(
+        let my_cospan = NamedCospan::<Color, Color, Color>::from_permutation_extra_data(
             Permutation::rotation_left(3, 1),
             &full_types,
             type_names_on_source,
             &full_types,
             |z| (z, z),
         );
-        let my_cospan_2 = NamedCospan::<COLOR, COLOR, COLOR>::from_permutation_extra_data(
+        let my_cospan_2 = NamedCospan::<Color, Color, Color>::from_permutation_extra_data(
             Permutation::rotation_left(3, 2),
-            &vec![COLOR::BLUE, COLOR::RED, COLOR::GREEN],
+            &vec![Color::Blue, Color::Red, Color::Green],
             type_names_on_source,
-            &vec![COLOR::GREEN, COLOR::BLUE, COLOR::RED],
+            &vec![Color::Green, Color::Blue, Color::Red],
             |z| (z, z),
         );
         let my_mid_interface_1 = my_cospan.codomain();
@@ -456,18 +456,18 @@ mod test {
         }
 
         let type_names_on_source = false;
-        let my_cospan = NamedCospan::<COLOR, COLOR, COLOR>::from_permutation_extra_data(
+        let my_cospan = NamedCospan::<Color, Color, Color>::from_permutation_extra_data(
             Permutation::rotation_left(3, 1),
             &full_types,
             type_names_on_source,
             &full_types,
             |z| (z, z),
         );
-        let my_cospan_2 = NamedCospan::<COLOR, COLOR, COLOR>::from_permutation_extra_data(
+        let my_cospan_2 = NamedCospan::<Color, Color, Color>::from_permutation_extra_data(
             Permutation::rotation_left(3, 2),
-            &vec![COLOR::GREEN, COLOR::BLUE, COLOR::RED],
+            &vec![Color::Green, Color::Blue, Color::Red],
             type_names_on_source,
-            &vec![COLOR::GREEN, COLOR::BLUE, COLOR::RED],
+            &vec![Color::Green, Color::Blue, Color::Red],
             |z| (z, z),
         );
         let my_mid_interface_1 = my_cospan.codomain();
@@ -476,8 +476,8 @@ mod test {
         match comp {
             Ok(real_res) => {
                 let expected_res = NamedCospan::identity(
-                    &vec![COLOR::GREEN, COLOR::BLUE, COLOR::RED],
-                    &vec![COLOR::GREEN, COLOR::BLUE, COLOR::RED],
+                    &vec![Color::Green, Color::Blue, Color::Red],
+                    &vec![Color::Green, Color::Blue, Color::Red],
                     |z| (z, z),
                 );
                 assert_eq!(expected_res.domain(), real_res.domain());
