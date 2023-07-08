@@ -229,12 +229,13 @@ where
         F: Fn(Lambda) -> (T, U),
     {
         let mut graph = Graph::<T, U>::new();
-        let mut all_middle_nodes = Vec::with_capacity(self.middle.len());
-        for cur_mid in &self.middle {
-            let (node_dec, _) = lambda_decorator(*cur_mid);
-            let cur_mid_node: NodeIndex<DefaultIx> = graph.add_node(node_dec);
-            all_middle_nodes.push(cur_mid_node);
-        }
+
+        let all_middle_nodes: Vec<_> = self
+            .middle
+            .iter()
+            .map(|mid| graph.add_node(lambda_decorator(*mid).0))
+            .collect();
+
         let mut all_left_nodes = Vec::with_capacity(self.left.len());
         for cur_left_target in &self.left {
             let (node_dec, edge_dec) = lambda_decorator(self.middle[*cur_left_target]);

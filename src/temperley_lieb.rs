@@ -151,10 +151,7 @@ impl Mul for ExtendedPerfectMatching {
         let (rhs_dom, rhs_cod, rhs_delta_pow, rhs_diagram) = rhs.0;
         assert_eq!(rhs_dom, self_cod);
         let mut g: Graph<(), (), Undirected> = Graph::new_undirected();
-        let mut node_idcs = Vec::with_capacity(self_dom + self_cod + rhs_cod);
-        for _ in 0..self_dom + self_cod + rhs_cod {
-            node_idcs.push(None);
-        }
+        let mut node_idcs = vec![None; self_dom + self_cod + rhs_cod];
         let self_pairs_copy = self_diagram.pairs.clone();
         for (p, q) in self_diagram.pairs {
             let p_loc = g.add_node(());
