@@ -256,8 +256,7 @@ fn is_injective(v: &[usize]) -> bool {
     if v.len() > max_val + 1 {
         return false;
     }
-    let mut uniq = HashSet::with_capacity(v.len());
-    v.iter().all(|cur| uniq.insert(cur))
+    crate::utils::is_unique(v)
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]

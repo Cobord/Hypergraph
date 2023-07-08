@@ -3,6 +3,11 @@ use permutations::Permutation;
 use rand::{distributions::Uniform, prelude::Distribution};
 use std::fmt::Debug;
 
+pub fn is_unique<T: Eq + std::hash::Hash>(s: &[T]) -> bool {
+    let mut uniq = std::collections::HashSet::with_capacity(s.len());
+    s.iter().all(|cur| uniq.insert(cur))
+}
+
 pub trait EitherExt<T, U> {
     fn bimap<V, W>(self, f1: impl Fn(T) -> V, f2: impl Fn(U) -> W) -> impl EitherExt<V, W>;
     fn join<V>(self, f1: impl Fn(T) -> V, f2: impl Fn(U) -> V) -> V;

@@ -141,13 +141,7 @@ where
     }
 
     pub fn is_jointly_injective(&self) -> bool {
-        let mut seen = HashSet::with_capacity(self.middle.len());
-        for cur_mid in &self.middle {
-            if !seen.insert(*cur_mid) {
-                return false;
-            }
-        }
-        true
+        crate::utils::is_unique(&self.middle)
     }
 
     pub fn dagger(&self) -> Self {
