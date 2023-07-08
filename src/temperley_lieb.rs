@@ -7,14 +7,16 @@ use std::{
 };
 
 use num::{One, Zero};
-use petgraph::algo::{connected_components, has_path_connecting, DfsSpace};
-use petgraph::{Graph, Undirected};
-
-use crate::category::{Composable, HasIdentity};
-use crate::linear_combination::{
-    inj_linearly_extend, linear_combine, linearly_extend, LinearCombination,
+use petgraph::{
+    algo::{connected_components, has_path_connecting, DfsSpace},
+    Graph, Undirected,
 };
+
 use crate::monoidal::{Monoidal, MonoidalMorphism};
+use crate::{
+    category::{Composable, HasIdentity},
+    linear_combination::{inj_linearly_extend, linear_combine, linearly_extend, LinearCombination},
+};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, PartialOrd, Ord)]
 pub struct Pair(pub usize, pub usize);
