@@ -761,9 +761,10 @@ mod test {
     #[test]
     fn permutation_automatic() {
         use super::{FrobeniusMorphism, FrobeniusOperation};
-        use crate::utils::{in_place_permute, rand_perm};
         use crate::{
-            category::ComposableMutating, symmetric_monoidal::SymmetricMonoidalMutatingMorphism,
+            category::ComposableMutating,
+            symmetric_monoidal::SymmetricMonoidalMutatingMorphism,
+            utils::{in_place_permute, rand_perm},
         };
         use rand::{distributions::Uniform, prelude::Distribution};
         let n_max = 10;
