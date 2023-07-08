@@ -33,8 +33,34 @@ impl Pair {
         f(self.0) && f(self.1)
     }
 
+    pub fn any(&self, f: impl Fn(usize) -> bool) -> bool {
+        f(self.0) || f(self.1)
+    }
+
     pub fn flip_upside_down(&self, source: usize, target: usize) -> Self {
         self.map(|v| if v < source { v + target } else { v - source })
+    }
+
+    pub fn sort(&self) -> Self {
+        Self::sorted(self.0, self.1)
+    }
+
+    pub fn sorted(x: usize, y: usize) -> Self {
+        if x < y {
+            Self(x, y)
+        } else {
+            Self(y, x)
+        }
+    }
+
+    // pub fn new(x: usize, y: usize) -> Self {
+    //     Self(x, y)
+    // }
+}
+
+impl From<(usize, usize)> for Pair {
+    fn from(value: (usize, usize)) -> Self {
+        Self(value.0, value.1)
     }
 }
 
@@ -140,17 +166,17 @@ impl PerfectMatching {
             .pairs
             .iter()
             .filter(|Pair(z, w)| (*z < source && *w >= source) || (*w < source && *z >= source))
-            .map(|Pair(z, w)| (min(*z, *w), max(*z, *w)));
+            .map(|p| p.sort());
 
         if through_lines
             .clone()
-            .any(|(a, b)| no_through_lines_idx.contains(&a) || no_through_lines_idx.contains(&b))
+            .any(|p| p.any(|x| no_through_lines_idx.contains(&x)))
         {
             return false;
         }
 
         // the induced map from the through_lines is monotonically increasing
-        through_lines.map(|(_, w)| w).is_sorted()
+        through_lines.map(|Pair(_, w)| w).is_sorted()
     }
 }
 
@@ -396,13 +422,14 @@ where
             .map(|i| {
                 let e_i_matching: PerfectMatching = (0..n)
                     .map(|j| {
-                        if j == i {
-                            Pair(i, i + 1)
+                        (if j == i {
+                            (i, i + 1)
                         } else if j == i + 1 {
-                            Pair(i + n, i + 1 + n)
+                            (i + n, i + 1 + n)
                         } else {
-                            Pair(j, j + n)
-                        }
+                            (j, j + n)
+                        })
+                        .into()
                     })
                     .collect();
                 Self {
@@ -417,28 +444,28 @@ where
 
     #[allow(dead_code)]
     pub fn symmetric_alg_gens(n: usize) -> Vec<Self> {
-        let mut ret_val = Vec::with_capacity(n);
-        for i in 0..(n - 1) {
-            let mut e_i_pairs = Vec::with_capacity(2 * n);
-            e_i_pairs.extend((0..n).map(|j| {
-                if j == i {
-                    Pair(i, i + n + 1)
-                } else if j == i + 1 {
-                    Pair(i + 1, i + n)
-                } else {
-                    Pair(j, j + n)
+        (0..(n - 1))
+            .map(|i| {
+                let e_i_matching: PerfectMatching = (0..n)
+                    .map(|j| {
+                        (if j == i {
+                            (i, i + n + 1)
+                        } else if j == i + 1 {
+                            (i + 1, i + n)
+                        } else {
+                            (j, j + n)
+                        })
+                        .into()
+                    })
+                    .collect();
+                Self {
+                    diagram: LinearCombination::singleton((0, e_i_matching)),
+                    source: n,
+                    target: n,
+                    is_def_tl: false,
                 }
-            }));
-
-            let e_i_matching = PerfectMatching::new(&e_i_pairs);
-            ret_val.push(Self {
-                diagram: LinearCombination::singleton((0, e_i_matching)),
-                source: n,
-                target: n,
-                is_def_tl: false,
-            });
-        }
-        ret_val
+            })
+            .collect()
     }
 
     pub fn delta_polynomial(coeffs: &[T]) -> Self {
@@ -518,8 +545,7 @@ mod test {
             which.join(|n| l_gens[n].clone(), |n| r_gens[n].clone())
         }
         use super::simplify;
-        use crate::category::Composable;
-        use crate::monoidal::Monoidal;
+        use crate::{category::Composable, monoidal::Monoidal};
         assert!(!prod_these.is_empty());
         let prod_these_0 = get_generator(e_i, s_i, prod_these[0]);
         let mut delta_poly = BrauerMorphism::delta_polynomial(delta_poly_coeffs);
