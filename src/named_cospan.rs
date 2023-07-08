@@ -4,11 +4,13 @@ use permutations::Permutation;
 use petgraph::{matrix_graph::NodeIndex, prelude::Graph, stable_graph::DefaultIx};
 use std::fmt::Debug;
 
-use crate::category::{Composable, HasIdentity};
-use crate::cospan::Cospan;
-use crate::monoidal::{Monoidal, MonoidalMorphism};
-use crate::symmetric_monoidal::SymmetricMonoidalMorphism;
-use crate::utils::in_place_permute;
+use crate::{
+    category::{Composable, HasIdentity},
+    cospan::Cospan,
+    monoidal::{Monoidal, MonoidalMorphism},
+    symmetric_monoidal::SymmetricMonoidalMorphism,
+    utils::in_place_permute,
+};
 
 type LeftIndex = usize;
 type RightIndex = usize;

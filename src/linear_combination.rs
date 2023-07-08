@@ -6,6 +6,7 @@ use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use num::{One, Zero};
 
 #[repr(transparent)]
+#[derive(PartialEq, Eq, Debug)]
 pub struct LinearCombination<Coeffs: Copy, Target: Eq + Hash>(HashMap<Target, Coeffs>);
 
 impl<Coeffs: Copy, Target: Eq + Hash> Clone for LinearCombination<Coeffs, Target>
@@ -14,25 +15,6 @@ where
 {
     fn clone(&self) -> Self {
         Self(self.0.clone())
-    }
-}
-
-impl<Coeffs: Copy, Target: Eq + Hash> PartialEq for LinearCombination<Coeffs, Target>
-where
-    Coeffs: Eq,
-{
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
-    }
-}
-
-impl<Coeffs: Copy, Target: Eq + Hash> Debug for LinearCombination<Coeffs, Target>
-where
-    Coeffs: Debug,
-    Target: Debug,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("LinearCombination").field(&self.0).finish()
     }
 }
 

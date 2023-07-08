@@ -1,7 +1,6 @@
 use either::Either::{self, Left, Right};
 use permutations::Permutation;
-use rand::distributions::Uniform;
-use rand::prelude::Distribution;
+use rand::{distributions::Uniform, prelude::Distribution};
 use std::fmt::Debug;
 
 pub trait EitherExt<T, U> {

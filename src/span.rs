@@ -1,12 +1,12 @@
 use either::Either::{self, Left, Right};
-use std::cmp::{max, min};
-use std::collections::HashSet;
-use std::fmt::Debug;
+use std::{collections::HashSet, fmt::Debug};
 
-use crate::category::{Composable, HasIdentity};
-use crate::monoidal::{GenericMonoidalInterpretable, Monoidal, MonoidalMorphism};
-use crate::symmetric_monoidal::SymmetricMonoidalMorphism;
-use crate::utils::{in_place_permute, represents_id};
+use crate::{
+    category::{Composable, HasIdentity},
+    monoidal::{GenericMonoidalInterpretable, Monoidal, MonoidalMorphism},
+    symmetric_monoidal::SymmetricMonoidalMorphism,
+    utils::{in_place_permute, represents_id},
+};
 
 type LeftIndex = usize;
 type RightIndex = usize;
@@ -203,7 +203,7 @@ where
     fn compose(&self, other: &Self) -> Result<Self, String> {
         self.composable(other)?;
         // could shortuct if self.is_right_id or other.is_left_id, but unnecessary
-        let max_middle = max(self.middle.len(), other.middle.len());
+        let max_middle = self.middle.len().max(other.middle.len());
         let mut answer = Self::new(
             self.left.clone(),
             other.right.clone(),
@@ -391,7 +391,7 @@ impl<Lambda: Eq + Sized + Debug + Copy> Rel<Lambda> {
         assert_eq!(self.domain(), other.domain());
         assert_eq!(self.codomain(), other.codomain());
 
-        let capacity = min(self.0.middle.len(), other.0.middle.len());
+        let capacity = self.0.middle.len().min(other.0.middle.len());
         let mut ret_val =
             Span::<Lambda>::new(self.domain(), self.codomain(), Vec::with_capacity(capacity));
 
