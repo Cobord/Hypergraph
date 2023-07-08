@@ -16,21 +16,42 @@ use crate::linear_combination::{
 };
 use crate::monoidal::{Monoidal, MonoidalMorphism};
 
-#[derive(PartialEq, Eq, Clone, Hash, Debug)]
-struct PerfectMatching {
-    pairs: Vec<(usize, usize)>,
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, PartialOrd, Ord)]
+pub struct Pair(pub usize, pub usize);
+
+impl Pair {
+    pub fn iter(&self) -> impl Iterator<Item = usize> {
+        let mut i = [self.0, self.1].into_iter();
+        std::iter::from_fn(move || i.next())
+    }
+
+    pub fn map(&self, f: impl Fn(usize) -> usize) -> Self {
+        Self(f(self.0), f(self.1))
+    }
+
+    pub fn all(&self, f: impl Fn(usize) -> bool) -> bool {
+        f(self.0) && f(self.1)
+    }
+
+    pub fn flip_upside_down(&self, source: usize, target: usize) -> Self {
+        self.map(|v| if v < source { v + target } else { v - source })
+    }
 }
 
-impl FromIterator<(usize, usize)> for PerfectMatching {
-    fn from_iter<T: IntoIterator<Item = (usize, usize)>>(pair_prime: T) -> Self {
-        let pairs: Vec<(usize, usize)> = pair_prime.into_iter().collect();
+#[derive(PartialEq, Eq, Clone, Hash, Debug)]
+struct PerfectMatching {
+    pairs: Vec<Pair>,
+}
+
+impl FromIterator<Pair> for PerfectMatching {
+    fn from_iter<T: IntoIterator<Item = Pair>>(pair_prime: T) -> Self {
+        let pairs: Vec<Pair> = pair_prime.into_iter().collect();
         let max_expected = pairs.len() * 2;
         let seen: HashSet<_> = pairs
             .iter()
             .map(|x| {
-                assert!(x.0 < max_expected);
-                assert!(x.1 < max_expected);
-                [x.0, x.1]
+                assert!(x.all(|x| x < max_expected));
+                x.iter()
             })
             .flatten()
             .collect();
@@ -43,12 +64,12 @@ impl FromIterator<(usize, usize)> for PerfectMatching {
 }
 
 impl PerfectMatching {
-    fn new(pair_prime: &[(usize, usize)]) -> Self {
+    fn new(pair_prime: &[Pair]) -> Self {
         Self::from_iter(pair_prime.iter().cloned())
     }
 
     fn canonicalize(&mut self) {
-        for (p, q) in self.pairs.iter_mut() {
+        for Pair(p, q) in self.pairs.iter_mut() {
             if *p > *q {
                 swap(p, q);
             }
@@ -57,24 +78,17 @@ impl PerfectMatching {
     }
 
     fn flip_upside_down(&self, source: usize, target: usize) -> Self {
-        let new_list = self.pairs.iter().map(|(z, w)| {
-            let new_z = if *z < source { z + target } else { z - source };
-            let new_w = if *w < source { w + target } else { w - source };
-            (new_z, new_w)
-        });
-        Self::new(&new_list.collect::<Vec<(usize, usize)>>())
+        self.pairs
+            .iter()
+            .map(|x| x.flip_upside_down(source, target))
+            .collect()
     }
 
     fn non_crossing(&self, source: usize, _target: usize) -> bool {
-        let in_between = |query, (interval1, interval2)| {
-            (query < interval1 && query > interval2) || (query < interval2 && query > interval1)
-        };
+        let in_between =
+            |query, p: Pair| (query < p.0 && query > p.1) || (query < p.1 && query > p.0);
         // the lines connecting two points both on source side
-        let source_lines = self
-            .pairs
-            .iter()
-            .filter(|(z, w)| *z < source && *w < source)
-            .cloned();
+        let source_lines = self.pairs.iter().filter(|p| p.all(|x| x < source)).cloned();
         let source_crossing_tests = source_lines.clone().combinations(2);
         for cur_item in source_crossing_tests {
             let first_block = cur_item[0];
@@ -88,8 +102,8 @@ impl PerfectMatching {
         }
         // no crossing lines can use these indices because they are blocked by a line connecting
         //      two source points
-        let mut no_through_lines_idx = HashSet::<usize>::new();
-        for (x, y) in source_lines {
+        let mut no_through_lines_idx: HashSet<usize> = HashSet::<usize>::new();
+        for Pair(x, y) in source_lines {
             for z in (1 + min(x, y))..max(x, y) {
                 no_through_lines_idx.insert(z);
             }
@@ -99,7 +113,7 @@ impl PerfectMatching {
         let target_lines = self
             .pairs
             .iter()
-            .filter(|(z, w)| *z >= source && *w >= source)
+            .filter(|Pair(z, w)| *z >= source && *w >= source)
             .cloned();
         let target_crossing_tests = target_lines.clone().combinations(2);
         for cur_item in target_crossing_tests {
@@ -115,7 +129,7 @@ impl PerfectMatching {
 
         // no crossing lines can use these indices because they are blocked by a line connecting
         // two target points
-        for (x, y) in target_lines {
+        for Pair(x, y) in target_lines {
             for z in (1 + min(x, y))..max(x, y) {
                 no_through_lines_idx.insert(z);
             }
@@ -125,8 +139,8 @@ impl PerfectMatching {
         let through_lines = self
             .pairs
             .iter()
-            .filter(|(z, w)| (*z < source && *w >= source) || (*w < source && *z >= source))
-            .map(|(z, w)| (min(*z, *w), max(*z, *w)));
+            .filter(|Pair(z, w)| (*z < source && *w >= source) || (*w < source && *z >= source))
+            .map(|Pair(z, w)| (min(*z, *w), max(*z, *w)));
 
         if through_lines
             .clone()
@@ -153,7 +167,7 @@ impl Mul for ExtendedPerfectMatching {
         let mut g: Graph<(), (), Undirected> = Graph::new_undirected();
         let mut node_idcs = vec![None; self_dom + self_cod + rhs_cod];
         let self_pairs_copy = self_diagram.pairs.clone();
-        for (p, q) in self_diagram.pairs {
+        for Pair(p, q) in self_diagram.pairs {
             let p_loc = g.add_node(());
             node_idcs[p] = Some(p_loc);
             let q_loc = g.add_node(());
@@ -168,7 +182,7 @@ impl Mul for ExtendedPerfectMatching {
             );
         }
         let rhs_pairs_copy = rhs_diagram.pairs.clone();
-        for (p, q) in rhs_diagram.pairs {
+        for Pair(p, q) in rhs_diagram.pairs {
             let p_loc = if p >= rhs_dom {
                 let p_loc_temp = g.add_node(());
                 node_idcs[p + self_dom] = Some(p_loc_temp);
@@ -205,7 +219,7 @@ impl Mul for ExtendedPerfectMatching {
                 let j_loc = node_idcs[if j < self_dom { j } else { j + self_cod }].unwrap();
                 let ij_conn = has_path_connecting(&g, i_loc, j_loc, Some(&mut workspace));
                 if ij_conn {
-                    final_matching.push((i, j));
+                    final_matching.push(Pair(i, j));
                     endpoints_done.insert(i);
                     endpoints_done.insert(j);
                     break;
@@ -275,9 +289,7 @@ where
     T: Add<Output = T> + Zero + One + Copy,
 {
     fn identity(on_this: &usize) -> Self {
-        let my_matching = (0..*on_this)
-            .map(|x| (x, x + on_this))
-            .collect::<Vec<(usize, usize)>>();
+        let my_matching: Vec<_> = (0..*on_this).map(|x| Pair(x, x + on_this)).collect();
         let my_perfect_matching = PerfectMatching::new(&my_matching);
         Self {
             diagram: LinearCombination::singleton((0, my_perfect_matching)),
@@ -338,7 +350,7 @@ where
                 &diagram
                     .pairs
                     .iter()
-                    .map(|(x, y)| {
+                    .map(|Pair(x, y)| {
                         let new_x = if *x >= if_above {
                             *x + shift_amount
                         } else {
@@ -349,9 +361,9 @@ where
                         } else {
                             *y
                         };
-                        (new_x, new_y)
+                        Pair(new_x, new_y)
                     })
-                    .collect::<Vec<(usize, usize)>>(),
+                    .collect::<Vec<_>>(),
             )
         };
         self.diagram = linear_combine(
@@ -385,11 +397,11 @@ where
                 let e_i_matching: PerfectMatching = (0..n)
                     .map(|j| {
                         if j == i {
-                            (i, i + 1)
+                            Pair(i, i + 1)
                         } else if j == i + 1 {
-                            (i + n, i + 1 + n)
+                            Pair(i + n, i + 1 + n)
                         } else {
-                            (j, j + n)
+                            Pair(j, j + n)
                         }
                     })
                     .collect();
@@ -410,11 +422,11 @@ where
             let mut e_i_pairs = Vec::with_capacity(2 * n);
             e_i_pairs.extend((0..n).map(|j| {
                 if j == i {
-                    (i, i + n + 1)
+                    Pair(i, i + n + 1)
                 } else if j == i + 1 {
-                    (i + 1, i + n)
+                    Pair(i + 1, i + n)
                 } else {
-                    (j, j + n)
+                    Pair(j, j + n)
                 }
             }));
 
