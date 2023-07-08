@@ -173,8 +173,7 @@ mod test {
     #[test]
     fn nec_permutation() {
         use crate::utils::{necessary_permutation, rand_perm};
-        use rand::distributions::Uniform;
-        use rand::prelude::Distribution;
+        use rand::{distributions::Uniform, prelude::Distribution};
         let n_max = 10;
         let between = Uniform::<usize>::from(2..n_max);
         let mut rng = rand::thread_rng();

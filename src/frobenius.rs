@@ -1,12 +1,13 @@
 use permutations::Permutation;
-use std::convert::identity;
-use std::fmt::Debug;
+use std::{convert::identity, fmt::Debug};
 
-use crate::category::{ComposableMutating, HasIdentity};
-use crate::finset::Decomposition;
-use crate::monoidal::{Monoidal, MonoidalMutatingMorphism};
-use crate::symmetric_monoidal::SymmetricMonoidalMutatingMorphism;
-use crate::utils::in_place_permute;
+use crate::{
+    category::{ComposableMutating, HasIdentity},
+    finset::Decomposition,
+    monoidal::{Monoidal, MonoidalMutatingMorphism},
+    symmetric_monoidal::SymmetricMonoidalMutatingMorphism,
+    utils::in_place_permute,
+};
 
 #[derive(PartialEq, Eq, Clone)]
 pub enum FrobeniusOperation<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy> {
@@ -188,7 +189,7 @@ where
     BlackBoxLabel: Eq + Copy,
 {
     fn identity(on_type: &Vec<Lambda>) -> Self {
-        let mut answer = FrobeniusLayer::new();
+        let mut answer = Self::new();
         for cur_type in on_type {
             answer.append_block(FrobeniusOperation::Identity(*cur_type));
         }
@@ -219,7 +220,7 @@ impl<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Copy>
     fn from(op: FrobeniusOperation<Lambda, BlackBoxLabel>) -> Self {
         let mut answer_layer = FrobeniusLayer::new();
         answer_layer.append_block(op);
-        let mut answer = FrobeniusMorphism::new();
+        let mut answer = Self::new();
         let _ = answer.append_layer(answer_layer);
         answer
     }

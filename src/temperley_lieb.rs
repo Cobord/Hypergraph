@@ -23,8 +23,7 @@ pub struct Pair(pub usize, pub usize);
 
 impl Pair {
     pub fn iter(&self) -> impl Iterator<Item = usize> {
-        let mut i = [self.0, self.1].into_iter();
-        std::iter::from_fn(move || i.next())
+        [self.0, self.1].into_iter()
     }
 
     pub fn map(&self, f: impl Fn(usize) -> usize) -> Self {
@@ -190,7 +189,7 @@ impl Mul for ExtendedPerfectMatching {
         let (self_dom, self_cod, self_delta_pow, self_diagram) = self.0;
         let (rhs_dom, rhs_cod, rhs_delta_pow, rhs_diagram) = rhs.0;
         assert_eq!(rhs_dom, self_cod);
-        let mut g: Graph<(), (), Undirected> = Graph::new_undirected();
+        let mut g = Graph::<(), (), Undirected>::new_undirected();
         let mut node_idcs = vec![None; self_dom + self_cod + rhs_cod];
         let self_pairs_copy = self_diagram.pairs.clone();
         for Pair(p, q) in self_diagram.pairs {
@@ -233,7 +232,7 @@ impl Mul for ExtendedPerfectMatching {
             );
         }
         let endpoints = self_dom + rhs_cod;
-        let mut endpoints_done: HashSet<usize> = HashSet::with_capacity(endpoints);
+        let mut endpoints_done = HashSet::<usize>::with_capacity(endpoints);
         let mut workspace = DfsSpace::new(&g);
         let mut final_matching = Vec::with_capacity(endpoints / 2);
         for i in 0..endpoints {
