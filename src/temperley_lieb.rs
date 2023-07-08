@@ -53,6 +53,10 @@ impl Pair {
         }
     }
 
+    pub fn contains(&self, x: usize) -> bool {
+        (x < self.0 && x > self.1) || (x < self.1 && x > self.0)
+    }
+
     // pub fn new(x: usize, y: usize) -> Self {
     //     Self(x, y)
     // }
@@ -111,16 +115,14 @@ impl PerfectMatching {
     }
 
     fn non_crossing(&self, source: usize, _target: usize) -> bool {
-        let in_between =
-            |query, p: Pair| (query < p.0 && query > p.1) || (query < p.1 && query > p.0);
         // the lines connecting two points both on source side
         let source_lines = self.pairs.iter().filter(|p| p.all(|x| x < source)).cloned();
         let source_crossing_tests = source_lines.clone().combinations(2);
         for cur_item in source_crossing_tests {
             let first_block = cur_item[0];
             let second_block = cur_item[1];
-            let a = in_between(second_block.0, first_block);
-            let b = in_between(second_block.1, first_block);
+            let a = first_block.contains(second_block.0);
+            let b = first_block.contains(second_block.1);
             if a != b {
                 // a pair of lines that both connected source dots, crossed
                 return false;
@@ -145,8 +147,8 @@ impl PerfectMatching {
         for cur_item in target_crossing_tests {
             let first_block = cur_item[0];
             let second_block = cur_item[1];
-            let a = in_between(second_block.0, first_block);
-            let b = in_between(second_block.1, first_block);
+            let a = first_block.contains(second_block.0);
+            let b = first_block.contains(second_block.1);
             if a != b {
                 // a pair of lines that both connected source dots, crossed
                 return false;
