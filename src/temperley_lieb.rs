@@ -12,10 +12,10 @@ use petgraph::{
     Graph, Undirected,
 };
 
-use crate::monoidal::{Monoidal, MonoidalMorphism};
 use crate::{
     category::{Composable, HasIdentity},
     linear_combination::{inj_linearly_extend, linear_combine, linearly_extend, LinearCombination},
+    monoidal::{Monoidal, MonoidalMorphism},
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, PartialOrd, Ord)]

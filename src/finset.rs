@@ -1,4 +1,5 @@
 use std::cmp::max;
+use std::io::repeat;
 use std::{collections::HashSet, error, fmt};
 
 use permutations::Permutation;
@@ -129,9 +130,7 @@ impl OrderPresSurj {
         let domain_size: usize = self.domain();
         let mut answer = Vec::with_capacity(domain_size);
         for (cur_target, v) in self.preimage_card_minus_1.iter().enumerate() {
-            for _ in 0..(v + 1) {
-                answer.push(cur_target);
-            }
+            answer.extend(std::iter::repeat(cur_target).take(v + 1));
         }
         (answer, 0)
     }
