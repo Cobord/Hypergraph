@@ -242,23 +242,19 @@ where
         let which_node_idx = match which_node {
             Left(z) => {
                 let index = self.left_names.iter().position(|r| *r == z);
-                match index {
-                    None => {
-                        warn!("Node to be deleted does not exist. No change made.");
-                        return;
-                    }
-                    Some(idx_left) => Left(idx_left),
-                }
+                let Some(idx_left) = index else {
+                    warn!("Node to be deleted does not exist. No change made.");
+                    return;
+                };
+                Left(idx_left)
             }
             Right(z) => {
                 let index = self.right_names.iter().position(|r| *r == z);
-                match index {
-                    None => {
-                        warn!("Node to be deleted does not exist. No change made.");
+                let Some(idx_right) = index else {
+                    warn!("Node to be deleted does not exist. No change made.");
                         return;
-                    }
-                    Some(idx_right) => Right(idx_right),
-                }
+                };
+                Right(idx_right)
             }
         };
         self.delete_boundary_node(which_node_idx);
