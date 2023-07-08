@@ -1,4 +1,3 @@
-use std::cmp::max;
 use std::io::repeat;
 use std::{collections::HashSet, error, fmt};
 
@@ -415,7 +414,7 @@ impl Composable<usize> for Decomposition {
         let composite = ord_self.compose(&ord_other)?;
         let pos_max = argmax(&composite.0);
         if let Some(max_val) = pos_max.map(|z| composite.0[z]) {
-            let leftover_needed = max(other_codomain - max_val - 1, 0);
+            let leftover_needed = (other_codomain - max_val - 1).max(0);
             Self::try_from((composite.0, leftover_needed)).map_err(|_| "???".to_string())
         } else {
             Self::try_from(composite).map_err(|_| "???".to_string())
@@ -469,12 +468,10 @@ impl Decomposition {
 
     fn to_ordinary(&self) -> FinSetMorphism {
         let wanted_codomain = self.codomain();
-        let map_part = (0..self.domain())
-            .map(|z| self.apply(z))
-            .collect::<FinSetMap>();
+        let map_part: FinSetMap = (0..self.domain()).map(|z| self.apply(z)).collect();
         let pos_max = argmax(&map_part);
         if let Some(max_val) = pos_max.map(|z| map_part[z]) {
-            let leftover_needed = max(wanted_codomain - max_val - 1, 0);
+            let leftover_needed = wanted_codomain - max_val - 1.max(0);
             (map_part, leftover_needed)
         } else {
             (map_part, wanted_codomain)
