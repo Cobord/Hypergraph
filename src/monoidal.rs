@@ -102,9 +102,8 @@ where
 {
     #[allow(dead_code)]
     fn identity(on_this: &Vec<Lambda>) -> Self {
-        let empty_layer = GenericMonoidalMorphismLayer::<BoxType, Lambda>::identity(on_this);
         Self {
-            layers: vec![empty_layer],
+            layers: vec![<_>::identity(on_this)],
         }
     }
 }
@@ -125,14 +124,11 @@ where
                 last_other_type = other.layers[n].right_type.clone();
                 cur_self_layer.monoidal(other.layers[n].clone());
             } else {
-                let empty_layer =
-                    GenericMonoidalMorphismLayer::<BoxType, Lambda>::identity(&last_other_type);
-                cur_self_layer.monoidal(empty_layer);
+                cur_self_layer.monoidal(<_>::identity(&last_other_type));
             }
         }
         for n in self_len..others_len {
-            let mut new_layer =
-                GenericMonoidalMorphismLayer::<BoxType, Lambda>::identity(&last_self_type);
+            let mut new_layer = GenericMonoidalMorphismLayer::identity(&last_self_type);
             new_layer.monoidal(other.layers[n].clone());
             let _ = self.append_layer(new_layer);
         }

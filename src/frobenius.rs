@@ -270,9 +270,8 @@ where
     BlackBoxLabel: Eq + Copy,
 {
     fn identity(on_this: &Vec<Lambda>) -> Self {
-        let empty_layer = FrobeniusLayer::identity(on_this);
         Self {
-            layers: vec![empty_layer],
+            layers: vec![<_>::identity(on_this)],
         }
     }
 }
@@ -293,8 +292,7 @@ where
                 last_other_type = other.layers[n].right_type.clone();
                 cur_self_layer.monoidal(other.layers[n].clone());
             } else {
-                let empty_layer = FrobeniusLayer::identity(&last_other_type);
-                cur_self_layer.monoidal(empty_layer);
+                cur_self_layer.monoidal(<_>::identity(&last_other_type));
             }
         }
         for n in self_len..others_len {
@@ -517,11 +515,7 @@ where
     BlackBoxLabel: Eq + Copy,
 {
     let (perm_part, surj_part, inj_part) = v.get_parts();
-    let mut answer = FrobeniusMorphism::<Lambda, BlackBoxLabel>::from_permutation(
-        perm_part.clone(),
-        source_types,
-        true,
-    );
+    let mut answer = FrobeniusMorphism::from_permutation(perm_part.clone(), source_types, true);
 
     let mut surj_part_frob = FrobeniusMorphism::<Lambda, BlackBoxLabel>::new();
     let mut after_perm_number = 0;

@@ -108,7 +108,7 @@ impl PerfectMatching {
         }
 
         // no crossing lines can use these indices because they are blocked by a line connecting
-        //      two target points
+        // two target points
         for (x, y) in target_lines {
             for z in (1 + min(x, y))..max(x, y) {
                 no_through_lines_idx.insert(z);
@@ -156,12 +156,11 @@ impl Mul for ExtendedPerfectMatching {
             g.add_edge(p_loc, q_loc, ());
         }
         for (idx, cur_item) in node_idcs.iter().enumerate().take(self_dom + self_cod) {
-            if cur_item.is_none() {
-                panic!(
-                    "index for {idx} unset. These were the ones in self_diagram {:?}",
-                    self_pairs_copy
-                );
-            }
+            assert!(
+                cur_item.is_some(),
+                "index for {idx} unset. These were the ones in self_diagram {:?}",
+                self_pairs_copy
+            );
         }
         let rhs_pairs_copy = rhs_diagram.pairs.clone();
         for (p, q) in rhs_diagram.pairs {
@@ -182,12 +181,11 @@ impl Mul for ExtendedPerfectMatching {
             g.add_edge(p_loc, q_loc, ());
         }
         for (idx, cur_item) in node_idcs.iter().enumerate() {
-            if cur_item.is_none() {
-                panic!(
-                    "index for {idx} unset. These were the ones in rhs {:?}",
-                    rhs_pairs_copy
-                );
-            }
+            assert!(
+                cur_item.is_some(),
+                "index for {idx} unset. These were the ones in rhs {:?}",
+                rhs_pairs_copy
+            );
         }
         let endpoints = self_dom + rhs_cod;
         let mut endpoints_done: HashSet<usize> = HashSet::with_capacity(endpoints);
@@ -197,19 +195,9 @@ impl Mul for ExtendedPerfectMatching {
             if endpoints_done.contains(&i) {
                 continue;
             }
-            let i_loc = (if i < self_dom {
-                node_idcs[i]
-            } else {
-                node_idcs[i + self_cod]
-            })
-            .unwrap();
+            let i_loc = node_idcs[if i < self_dom { i } else { i + self_cod }].unwrap();
             for j in (i + 1)..endpoints {
-                let j_loc = (if j < self_dom {
-                    node_idcs[j]
-                } else {
-                    node_idcs[j + self_cod]
-                })
-                .unwrap();
+                let j_loc = node_idcs[if j < self_dom { j } else { j + self_cod }].unwrap();
                 let ij_conn = has_path_connecting(&g, i_loc, j_loc, Some(&mut workspace));
                 if ij_conn {
                     final_matching.push((i, j));

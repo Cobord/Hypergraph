@@ -123,12 +123,11 @@ where
 
         let left_name_to_both_names =
             |left_name: (InOut, InterCircle, IntraCircle)| (left_name, (left_name.0, left_name.2));
-        let cur_identity = NamedCospan::identity(
+        internal_other.0.monoidal(NamedCospan::identity(
             &self_inner_interface_unaffected,
             &self_inner_names_unaffected,
             left_name_to_both_names,
-        );
-        internal_other.0.monoidal(cur_identity);
+        ));
 
         let p = necessary_permutation(
             internal_other.0.right_names(),
