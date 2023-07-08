@@ -1,21 +1,23 @@
-use itertools::Itertools;
-use std::{
-    collections::HashSet,
-    fmt::Debug,
-    hash::Hash,
-    ops::{Add, AddAssign, Mul, MulAssign},
-};
-
-use num::{One, Zero};
-use petgraph::{
-    algo::{connected_components, has_path_connecting, DfsSpace},
-    Graph, Undirected,
-};
-
-use crate::{
-    category::{Composable, HasIdentity},
-    linear_combination::{inj_linearly_extend, linear_combine, linearly_extend, LinearCombination},
-    monoidal::{Monoidal, MonoidalMorphism},
+use {
+    crate::{
+        category::{Composable, HasIdentity},
+        linear_combination::{
+            inj_linearly_extend, linear_combine, linearly_extend, LinearCombination,
+        },
+        monoidal::{Monoidal, MonoidalMorphism},
+    },
+    itertools::Itertools,
+    num::{One, Zero},
+    petgraph::{
+        algo::{connected_components, has_path_connecting, DfsSpace},
+        Graph, Undirected,
+    },
+    std::{
+        collections::HashSet,
+        fmt::Debug,
+        hash::Hash,
+        ops::{Add, AddAssign, Mul, MulAssign},
+    },
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, PartialOrd, Ord)]
@@ -105,6 +107,7 @@ impl PerfectMatching {
                 std::mem::swap(p, q);
             }
         }
+
         self.pairs.sort();
     }
 
@@ -131,10 +134,10 @@ impl PerfectMatching {
         }
         // no crossing lines can use these indices because they are blocked by a line connecting
         //      two source points
-        let mut no_through_lines_idx: HashSet<usize> = HashSet::<usize>::new();
-        for Pair(x, y) in source_lines {
-            no_through_lines_idx.extend((1 + x.min(y))..x.max(y));
-        }
+        let mut no_through_lines_idx: HashSet<_> = source_lines
+            .map(|Pair(x, y)| (1 + x.min(y))..x.max(y))
+            .flatten()
+            .collect();
 
         // the lines connecting two points both on target side
         let target_lines = self
@@ -156,9 +159,12 @@ impl PerfectMatching {
 
         // no crossing lines can use these indices because they are blocked by a line connecting
         // two target points
-        for Pair(x, y) in target_lines {
-            no_through_lines_idx.extend((1 + x.min(y))..x.max(y));
-        }
+
+        no_through_lines_idx.extend(
+            target_lines
+                .map(|Pair(x, y)| (1 + x.min(y))..x.max(y))
+                .flatten(),
+        );
 
         // now check that those crossing lines don't use those indices that were stated to be forbidden
         let through_lines = self
