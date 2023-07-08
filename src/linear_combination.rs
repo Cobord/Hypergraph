@@ -42,7 +42,7 @@ where
 {
     type Output = Self;
 
-    fn add(self, rhs: Self) -> Self::Output {
+    fn add(self, rhs: Self) -> Self {
         let mut new_map = self.0;
         for (k, v) in rhs.0.into_iter() {
             new_map
@@ -74,7 +74,7 @@ where
 {
     type Output = Self;
 
-    fn sub(self, rhs: Self) -> Self::Output {
+    fn sub(self, rhs: Self) -> Self {
         let mut new_map = self.0;
         for (k, v) in rhs.0.into_iter() {
             new_map
@@ -92,7 +92,7 @@ where
 {
     type Output = Self;
 
-    fn neg(self) -> Self::Output {
+    fn neg(self) -> Self {
         let mut new_map = self.0;
         for (_, val) in new_map.iter_mut() {
             *val = -*val;
@@ -107,7 +107,7 @@ where
 {
     type Output = Self;
 
-    fn mul(self, rhs: Coeffs) -> Self::Output {
+    fn mul(self, rhs: Coeffs) -> Self {
         let mut new_map = self.0;
         for (_, val) in new_map.iter_mut() {
             *val *= rhs;
@@ -123,7 +123,7 @@ where
 {
     type Output = Self;
 
-    fn mul(self, rhs: Self) -> Self::Output {
+    fn mul(self, rhs: Self) -> Self {
         let mut ret_val = Self(HashMap::new());
         for (k1, c_k1) in self.0 {
             for (k2, c_k2) in &rhs.0 {
@@ -243,8 +243,8 @@ mod test {
     #[test]
     fn adding() {
         use super::LinearCombination;
-        let one_a = LinearCombination::<i32, String>::singleton("a".to_string());
-        let two_b = LinearCombination::<i32, String>::singleton("b".to_string()) * 2;
+        let one_a = LinearCombination::singleton("a".to_string());
+        let two_b = LinearCombination::singleton("b".to_string()) * 2;
         let one_a_plus_two_b = one_a.clone() + two_b.clone();
         let two_b_plus_one_a = two_b + one_a;
         assert_eq!(one_a_plus_two_b, two_b_plus_one_a);

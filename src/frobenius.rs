@@ -660,8 +660,8 @@ mod test {
             let m = between.sample(&mut rng);
             let n = between.sample(&mut rng);
             let rand_spider: FrobeniusMorphism<(), ()> = special_frobenius_morphism(m, n, ());
-            let exp_source_type: Vec<()> = (0..m).map(|_| ()).collect();
-            let exp_target_type: Vec<()> = (0..n).map(|_| ()).collect();
+            let exp_source_type = vec![(); m];
+            let exp_target_type = vec![(); n];
             assert_eq!(exp_source_type, rand_spider.domain());
             assert_eq!(exp_target_type, rand_spider.codomain());
         }
@@ -671,8 +671,8 @@ mod test {
             let m = between.sample(&mut rng);
             let n = between.sample(&mut rng);
             let rand_spider: FrobeniusMorphism<(), ()> = special_frobenius_morphism(m, n, ());
-            let exp_source_type: Vec<()> = (0..m).map(|_| ()).collect();
-            let exp_target_type: Vec<()> = (0..n).map(|_| ()).collect();
+            let exp_source_type = vec![(); m];
+            let exp_target_type = vec![(); n];
             assert_eq!(exp_source_type, rand_spider.domain());
             assert_eq!(exp_target_type, rand_spider.codomain());
             assert!(
