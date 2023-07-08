@@ -132,9 +132,7 @@ impl PerfectMatching {
         //      two source points
         let mut no_through_lines_idx: HashSet<usize> = HashSet::<usize>::new();
         for Pair(x, y) in source_lines {
-            for z in (1 + x.min(y))..x.max(y) {
-                no_through_lines_idx.insert(z);
-            }
+            no_through_lines_idx.extend((1 + x.min(y))..x.max(y));
         }
 
         // the lines connecting two points both on target side
@@ -158,9 +156,7 @@ impl PerfectMatching {
         // no crossing lines can use these indices because they are blocked by a line connecting
         // two target points
         for Pair(x, y) in target_lines {
-            for z in (1 + x.min(y))..x.max(y) {
-                no_through_lines_idx.insert(z);
-            }
+            no_through_lines_idx.extend((1 + x.min(y))..x.max(y));
         }
 
         // now check that those crossing lines don't use those indices that were stated to be forbidden
