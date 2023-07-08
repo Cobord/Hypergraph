@@ -277,7 +277,7 @@ impl fmt::Display for TryFromSurjError {
 
 impl TryFrom<FinSetMorphism> for OrderPresSurj {
     type Error = TryFromSurjError;
-    fn try_from(v_mor: FinSetMorphism) -> Result<OrderPresSurj, TryFromSurjError> {
+    fn try_from(v_mor: FinSetMorphism) -> Result<Self, Self::Error> {
         if v_mor.1 > 0 {
             return Err(TryFromSurjError);
         }
@@ -286,7 +286,7 @@ impl TryFrom<FinSetMorphism> for OrderPresSurj {
             return Err(TryFromSurjError);
         }
         if v.is_empty() {
-            return Ok(OrderPresSurj {
+            return Ok(Self {
                 preimage_card_minus_1: vec![],
             });
         }
@@ -325,43 +325,42 @@ impl fmt::Display for TryFromInjError {
 
 impl TryFrom<FinSetMorphism> for OrderPresInj {
     type Error = TryFromInjError;
-    fn try_from(v_mor: FinSetMorphism) -> Result<OrderPresInj, TryFromInjError> {
+    fn try_from(v_mor: FinSetMorphism) -> Result<Self, Self::Error> {
         let v = v_mor.0;
-        if v.iter().is_sorted() && is_injective(&v) {
-            if v.is_empty() {
-                return Ok(OrderPresInj {
-                    counts_iden_unit_alternating: vec![],
-                });
-            }
-            let mut previous_entry_plus_1 = 0;
-            let mut cur_consecutive = 0;
-            let mut counts_iden_unit_alternating = Vec::with_capacity(1 + v.len() * 2);
-            for cur_v in v {
-                if cur_v == previous_entry_plus_1 {
-                    cur_consecutive += 1;
-                } else {
-                    counts_iden_unit_alternating.push(cur_consecutive);
-                    counts_iden_unit_alternating.push(cur_v - previous_entry_plus_1);
-                    cur_consecutive = 1;
-                }
-                previous_entry_plus_1 = cur_v + 1;
-            }
-            if cur_consecutive > 0 {
+        if !v.iter().is_sorted() || !is_injective(&v) {
+            return Err(TryFromInjError);
+        }
+        if v.is_empty() {
+            return Ok(Self {
+                counts_iden_unit_alternating: vec![],
+            });
+        }
+        let mut previous_entry_plus_1 = 0;
+        let mut cur_consecutive = 0;
+        let mut counts_iden_unit_alternating = Vec::with_capacity(1 + v.len() * 2);
+        for cur_v in v {
+            if cur_v == previous_entry_plus_1 {
+                cur_consecutive += 1;
+            } else {
                 counts_iden_unit_alternating.push(cur_consecutive);
-                if v_mor.1 > 0 {
-                    counts_iden_unit_alternating.push(v_mor.1);
-                }
-            } else if v_mor.1 > 0 {
-                counts_iden_unit_alternating.push(0);
+                counts_iden_unit_alternating.push(cur_v - previous_entry_plus_1);
+                cur_consecutive = 1;
+            }
+            previous_entry_plus_1 = cur_v + 1;
+        }
+        if cur_consecutive > 0 {
+            counts_iden_unit_alternating.push(cur_consecutive);
+            if v_mor.1 > 0 {
                 counts_iden_unit_alternating.push(v_mor.1);
             }
-            counts_iden_unit_alternating.shrink_to_fit();
-            Ok(OrderPresInj {
-                counts_iden_unit_alternating,
-            })
-        } else {
-            Err(TryFromInjError)
+        } else if v_mor.1 > 0 {
+            counts_iden_unit_alternating.push(0);
+            counts_iden_unit_alternating.push(v_mor.1);
         }
+        counts_iden_unit_alternating.shrink_to_fit();
+        Ok(Self {
+            counts_iden_unit_alternating,
+        })
     }
 }
 impl error::Error for TryFromInjError {}
