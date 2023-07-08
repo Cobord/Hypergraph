@@ -819,8 +819,7 @@ mod test {
     fn decomposition_automatic() {
         use super::{from_decomposition, FrobeniusMorphism};
         use crate::finset::Decomposition;
-        use rand::distributions::Uniform;
-        use rand::prelude::Distribution;
+        use rand::{distributions::Uniform, prelude::Distribution};
         let in_max = 20;
         let out_max = 20;
         let mut rng = rand::thread_rng();
@@ -829,7 +828,7 @@ mod test {
         let between = Uniform::<usize>::from(2..out_max);
         let out_ = between.sample(&mut rng);
         let cur_test = (0..in_)
-            .map(|_| Uniform::<usize>::from(0..my_out).sample(&mut rng))
+            .map(|_| Uniform::<usize>::from(0..out_).sample(&mut rng))
             .collect::<Vec<usize>>();
         let domain_types = (0..in_)
             .map(|idx| cur_test[idx] + 100)
