@@ -6,6 +6,7 @@ use std::fmt::Debug;
 
 pub trait EitherExt<T, U> {
     fn bimap<V, W>(self, f1: impl Fn(T) -> V, f2: impl Fn(U) -> W) -> impl EitherExt<V, W>;
+    fn join<V>(self, f1: impl Fn(T) -> V, f2: impl Fn(U) -> V) -> V;
 }
 
 impl<T, U> EitherExt<T, U> for Either<T, U> {
@@ -15,12 +16,12 @@ impl<T, U> EitherExt<T, U> for Either<T, U> {
             Right(u) => Right(f2(u)),
         }
     }
-}
 
-pub fn either_f<T, U, V>(x: Either<T, U>, f1: impl Fn(T) -> V, f2: impl Fn(U) -> V) -> V {
-    match x {
-        Left(t) => f1(t),
-        Right(u) => f2(u),
+    fn join<V>(self, f1: impl Fn(T) -> V, f2: impl Fn(U) -> V) -> V {
+        match self {
+            Left(t) => f1(t),
+            Right(u) => f2(u),
+        }
     }
 }
 
@@ -28,12 +29,8 @@ pub fn represents_id(arr: &[usize]) -> bool {
     (0..arr.len()).eq(arr.iter().cloned())
 }
 
-pub fn argmax<T: Ord>(slice: &[T]) -> Option<usize> {
-    slice
-        .iter()
-        .enumerate()
-        .max_by_key(|x| x.1)
-        .map(|(idx, _)| idx)
+pub fn argmax<T: Ord>(s: &[T]) -> Option<usize> {
+    s.iter().enumerate().max_by_key(|x| x.1).map(|(idx, _)| idx)
 }
 
 pub fn remove_multiple<T>(me: &mut Vec<T>, mut to_remove: Vec<usize>) {

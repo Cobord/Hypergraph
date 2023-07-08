@@ -502,8 +502,8 @@ mod test {
         delta_poly_coeffs: &[T],
     ) -> Result<BrauerMorphism<T>, String> {
         fn get_generator<T: Clone>(l_gens: &[T], r_gens: &[T], which: Either<usize, usize>) -> T {
-            use crate::utils::either_f;
-            either_f(which, |n| l_gens[n].clone(), |n| r_gens[n].clone())
+            use crate::utils::EitherExt;
+            which.join(|n| l_gens[n].clone(), |n| r_gens[n].clone())
         }
         use super::simplify;
         use crate::category::Composable;
