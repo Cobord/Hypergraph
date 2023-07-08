@@ -266,26 +266,18 @@ where
     ) {
         match name_pair {
             Left((z1, z2)) => {
-                let index = self.left_names.iter().position(|r| *r == z1);
-                match index {
-                    None => {
-                        warn!("Node to be changed does not exist. No change made.");
-                    }
-                    Some(idx_left) => {
-                        self.left_names[idx_left] = z2;
-                    }
-                }
+                let Some(idx_left) = self.left_names.iter().position(|r| *r == z1) else {
+                    warn!("Node to be changed does not exist. No change made.");
+                    return;
+                };
+                self.left_names[idx_left] = z2;
             }
             Right((z1, z2)) => {
-                let index = self.right_names.iter().position(|r| *r == z1);
-                match index {
-                    None => {
-                        warn!("Node to be changed does not exist. No change made.");
-                    }
-                    Some(idx_right) => {
-                        self.right_names[idx_right] = z2;
-                    }
-                }
+                let Some(idx_right) = self.right_names.iter().position(|r| *r == z1) else {
+                    warn!("Node to be changed does not exist. No change made.");
+                    return;
+                };
+                self.right_names[idx_right] = z2;
             }
         }
     }
