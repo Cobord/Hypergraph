@@ -1,4 +1,4 @@
-#![feature(return_position_impl_trait_in_trait)]
+#![feature(is_sorted, return_position_impl_trait_in_trait)]
 use either::Either::{Left, Right};
 use petgraph::dot::Dot;
 use union_find::{QuickUnionUf, UnionBySize};

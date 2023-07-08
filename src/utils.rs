@@ -25,9 +25,7 @@ pub fn either_f<T, U, V>(x: Either<T, U>, f1: impl Fn(T) -> V, f2: impl Fn(U) ->
 }
 
 pub fn represents_id(arr: &[usize]) -> bool {
-    arr.iter()
-        .enumerate()
-        .all(|(arr_idx, tgt_idx)| arr_idx == *tgt_idx)
+    (0..arr.len()).eq(arr.iter().cloned())
 }
 
 pub fn to_vec_01<A>(me: Option<A>) -> Vec<A> {

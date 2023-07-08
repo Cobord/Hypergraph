@@ -238,34 +238,15 @@ impl OrderPresInj {
     }
 }
 
-pub fn is_monotonic_inc<T: Ord, I>(mut my_iter: I, prev_elt: Option<T>) -> bool
-where
-    I: Iterator<Item = T>,
-{
-    let current = my_iter.next();
-    if let Some(real_current) = current {
-        if let Some(real_prev_elt) = prev_elt {
-            if real_prev_elt > real_current {
-                return false;
-            }
-        }
-        is_monotonic_inc(my_iter, Some(real_current))
-    } else {
-        true
-    }
-}
-
 fn is_surjective(v: &[usize]) -> bool {
     let pos_max = argmax(v);
     if let Some(max_val) = pos_max.map(|z| v[z]) {
         if v.len() < max_val + 1 {
             return false;
         }
-        let mut seen_elts = HashSet::new();
-        for cur_v in v {
-            seen_elts.insert(*cur_v);
-        }
-        seen_elts.len() == max_val + 1
+
+        let seen: HashSet<_> = v.iter().collect();
+        seen.len() == max_val + 1
     } else {
         // empty set to empty set
         true
@@ -301,33 +282,32 @@ impl TryFrom<FinSetMorphism> for OrderPresSurj {
             return Err(TryFromSurjError);
         }
         let v = v_mor.0;
-        if is_monotonic_inc(v.iter(), None) && is_surjective(&v) {
-            if v.is_empty() {
-                return Ok(OrderPresSurj {
-                    preimage_card_minus_1: vec![],
-                });
-            }
-            let mut cur_i = 0;
-            let mut count_of_cur_i = 0;
-            let my_max = *v.last().unwrap();
-            let mut preimage_card_minus_1 = Vec::with_capacity(my_max);
-            for cur_v in v {
-                if cur_v > cur_i {
-                    preimage_card_minus_1.push(count_of_cur_i - 1);
-                    cur_i = cur_v;
-                    count_of_cur_i = 1;
-                } else {
-                    count_of_cur_i += 1;
-                }
-            }
-            preimage_card_minus_1.push(count_of_cur_i - 1);
-            preimage_card_minus_1.shrink_to_fit();
-            Ok(OrderPresSurj {
-                preimage_card_minus_1,
-            })
-        } else {
-            Err(TryFromSurjError)
+        if !v.iter().is_sorted() || !is_surjective(&v) {
+            return Err(TryFromSurjError);
         }
+        if v.is_empty() {
+            return Ok(OrderPresSurj {
+                preimage_card_minus_1: vec![],
+            });
+        }
+        let mut cur_i = 0;
+        let mut count_of_cur_i = 0;
+        let my_max = *v.last().unwrap();
+        let mut preimage_card_minus_1 = Vec::with_capacity(my_max);
+        for cur_v in v {
+            if cur_v > cur_i {
+                preimage_card_minus_1.push(count_of_cur_i - 1);
+                cur_i = cur_v;
+                count_of_cur_i = 1;
+            } else {
+                count_of_cur_i += 1;
+            }
+        }
+        preimage_card_minus_1.push(count_of_cur_i - 1);
+        preimage_card_minus_1.shrink_to_fit();
+        Ok(Self {
+            preimage_card_minus_1,
+        })
     }
 }
 impl error::Error for TryFromSurjError {}
@@ -347,7 +327,7 @@ impl TryFrom<FinSetMorphism> for OrderPresInj {
     type Error = TryFromInjError;
     fn try_from(v_mor: FinSetMorphism) -> Result<OrderPresInj, TryFromInjError> {
         let v = v_mor.0;
-        if is_monotonic_inc(v.iter(), None) && is_injective(&v) {
+        if v.iter().is_sorted() && is_injective(&v) {
             if v.is_empty() {
                 return Ok(OrderPresInj {
                     counts_iden_unit_alternating: vec![],
@@ -531,14 +511,14 @@ impl TryFrom<FinSetMorphism> for Decomposition {
     type Error = TryFromFinSetError;
     fn try_from(v_mor: FinSetMorphism) -> Result<Decomposition, TryFromFinSetError> {
         let v = v_mor.0;
-        if is_monotonic_inc(v.iter(), None) {
+        if v.iter().is_sorted() {
             let permutation_part = Permutation::identity(v.len());
             let (epic_part, monic_part) = monotone_epi_mono_fact(v);
             let order_preserving_surjection =
                 OrderPresSurj::try_from((epic_part, 0)).map_err(|_| TryFromFinSetError)?;
             let order_preserving_injection =
                 OrderPresInj::try_from((monic_part, v_mor.1)).map_err(|_| TryFromFinSetError)?;
-            Ok(Decomposition {
+            Ok(Self {
                 permutation_part,
                 order_preserving_surjection,
                 order_preserving_injection,
@@ -551,7 +531,7 @@ impl TryFrom<FinSetMorphism> for Decomposition {
                 OrderPresSurj::try_from((epic_part, 0)).map_err(|_| TryFromFinSetError)?;
             let order_preserving_injection =
                 OrderPresInj::try_from((monic_part, v_mor.1)).map_err(|_| TryFromFinSetError)?;
-            Ok(Decomposition {
+            Ok(Self {
                 permutation_part,
                 order_preserving_surjection,
                 order_preserving_injection,
@@ -590,27 +570,6 @@ fn monotone_epi_mono_fact(v: FinSetMap) -> (FinSetMap, FinSetMap) {
 }
 
 mod test {
-
-    #[test]
-    fn monotonicity() {
-        use crate::finset::is_monotonic_inc;
-        let mut cur_test: Vec<i8> = vec![];
-        assert!(is_monotonic_inc(cur_test.iter(), None));
-        cur_test = vec![1];
-        assert!(is_monotonic_inc(cur_test.iter(), None));
-        cur_test = vec![-1];
-        assert!(is_monotonic_inc(cur_test.iter(), None));
-        cur_test = vec![-124];
-        assert!(is_monotonic_inc(cur_test.iter(), None));
-        cur_test = vec![1, 2];
-        assert!(is_monotonic_inc(cur_test.iter(), None));
-        cur_test = vec![2, 1];
-        assert!(!is_monotonic_inc(cur_test.iter(), None));
-        cur_test = vec![3, 1, 2];
-        assert!(!is_monotonic_inc(cur_test.iter(), None));
-        cur_test = vec![1, 1, 2];
-        assert!(is_monotonic_inc(cur_test.iter(), None));
-    }
 
     #[test]
     fn surjectivity() {

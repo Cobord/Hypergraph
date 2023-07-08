@@ -11,7 +11,6 @@ use petgraph::algo::{connected_components, has_path_connecting, DfsSpace};
 use petgraph::{Graph, Undirected};
 
 use crate::category::{Composable, HasIdentity};
-use crate::finset::is_monotonic_inc;
 use crate::linear_combination::{
     inj_linearly_extend, linear_combine, linearly_extend, LinearCombination,
 };
@@ -128,7 +127,7 @@ impl PerfectMatching {
         }
 
         // the induced map from the through_lines is monotonically increasing
-        is_monotonic_inc(through_lines.map(|(_, w)| w), None)
+        through_lines.map(|(_, w)| w).is_sorted()
     }
 }
 

@@ -75,6 +75,10 @@ where
         Self::new(vec![], vec![], vec![])
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.left.is_empty() && self.right.is_empty() && self.middle.is_empty()
+    }
+
     #[allow(dead_code)]
     pub fn left_to_middle(&self) -> &[MiddleIndex] {
         &self.left
@@ -485,9 +489,7 @@ mod test {
     fn empty_cospan() {
         use super::Cospan;
         let empty_cospan = Cospan::<u32>::empty();
-        assert!(empty_cospan.left.len() == 0);
-        assert!(empty_cospan.right.len() == 0);
-        assert!(empty_cospan.middle.len() == 0);
+        assert!(empty_cospan.is_empty());
     }
 
     #[test]
