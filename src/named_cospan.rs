@@ -8,7 +8,7 @@ use crate::category::{Composable, HasIdentity};
 use crate::cospan::Cospan;
 use crate::monoidal::{Monoidal, MonoidalMorphism};
 use crate::symmetric_monoidal::SymmetricMonoidalMorphism;
-use crate::utils::{in_place_permute, to_vec_01};
+use crate::utils::in_place_permute;
 
 type LeftIndex = usize;
 type RightIndex = usize;
@@ -206,7 +206,7 @@ where
                     let index_in_right: Option<RightIndex> =
                         self.right_names.iter().position(|r| right_pred(*r));
 
-                    to_vec_01(index_in_right.map(Right))
+                    index_in_right.map(Right).into_iter().collect()
                 }
                 Some(z) => {
                     vec![Left(z)]

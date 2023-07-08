@@ -505,7 +505,7 @@ impl fmt::Display for TryFromFinSetError {
 
 impl TryFrom<FinSetMorphism> for Decomposition {
     type Error = TryFromFinSetError;
-    fn try_from(v_mor: FinSetMorphism) -> Result<Decomposition, TryFromFinSetError> {
+    fn try_from(v_mor: FinSetMorphism) -> Result<Self, TryFromFinSetError> {
         let v = v_mor.0;
         if v.iter().is_sorted() {
             let permutation_part = Permutation::identity(v.len());

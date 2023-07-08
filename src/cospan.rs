@@ -352,13 +352,16 @@ where
     Lambda: Eq + Sized + Copy + Debug,
 {
     fn permute_side(&mut self, p: &Permutation, of_right_leg: bool) {
-        if of_right_leg {
-            self.is_right_id = false;
-            in_place_permute(&mut self.right, p);
-        } else {
-            self.is_left_id = false;
-            in_place_permute(&mut self.left, p);
-        }
+        in_place_permute(
+            if of_right_leg {
+                self.is_right_id = false;
+                &mut self.right
+            } else {
+                self.is_left_id = false;
+                &mut self.left
+            },
+            p,
+        );
     }
 
     fn from_permutation(p: Permutation, types: &[Lambda], types_as_on_domain: bool) -> Self {

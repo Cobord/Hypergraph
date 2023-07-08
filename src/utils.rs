@@ -28,13 +28,6 @@ pub fn represents_id(arr: &[usize]) -> bool {
     (0..arr.len()).eq(arr.iter().cloned())
 }
 
-pub fn to_vec_01<A>(me: Option<A>) -> Vec<A> {
-    match me {
-        None => vec![],
-        Some(z) => vec![z],
-    }
-}
-
 pub fn argmax<T: Ord>(slice: &[T]) -> Option<usize> {
     slice
         .iter()
