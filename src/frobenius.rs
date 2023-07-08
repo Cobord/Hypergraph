@@ -653,8 +653,7 @@ mod test {
     fn rand_spiders() {
         use super::{special_frobenius_morphism, FrobeniusMorphism};
         use crate::category::ComposableMutating;
-        use rand::distributions::Uniform;
-        use rand::prelude::Distribution;
+        use rand::{distributions::Uniform, prelude::Distribution};
         let between = Uniform::from(0..5);
         let mut rng = rand::thread_rng();
         for _ in 0..10 {
@@ -761,11 +760,11 @@ mod test {
     #[test]
     fn permutation_automatic() {
         use super::{FrobeniusMorphism, FrobeniusOperation};
-        use crate::category::ComposableMutating;
-        use crate::symmetric_monoidal::SymmetricMonoidalMutatingMorphism;
         use crate::utils::{in_place_permute, rand_perm};
-        use rand::distributions::Uniform;
-        use rand::prelude::Distribution;
+        use crate::{
+            category::ComposableMutating, symmetric_monoidal::SymmetricMonoidalMutatingMorphism,
+        };
+        use rand::{distributions::Uniform, prelude::Distribution};
         let n_max = 10;
         let between = Uniform::<usize>::from(2..n_max);
         let mut rng = rand::thread_rng();
