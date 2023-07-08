@@ -120,10 +120,12 @@ impl PerfectMatching {
             .iter()
             .filter(|(z, w)| (*z < source && *w >= source) || (*w < source && *z >= source))
             .map(|(z, w)| (min(*z, *w), max(*z, *w)));
-        for cur in through_lines.clone() {
-            if no_through_lines_idx.contains(&cur.0) || no_through_lines_idx.contains(&cur.1) {
-                return false;
-            }
+
+        if through_lines
+            .clone()
+            .any(|(a, b)| no_through_lines_idx.contains(&a) || no_through_lines_idx.contains(&b))
+        {
+            return false;
         }
 
         // the induced map from the through_lines is monotonically increasing

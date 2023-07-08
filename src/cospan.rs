@@ -242,7 +242,7 @@ where
             all_left_nodes.push(cur_left_node);
             graph.add_edge(cur_left_node, all_middle_nodes[*cur_left_target], edge_dec);
         }
-        let mut all_right_nodes = Vec::with_capacity(self.left.len());
+        let mut all_right_nodes = Vec::with_capacity(self.right.len());
         for cur_right_target in &self.right {
             let (node_dec, edge_dec) = lambda_decorator(self.middle[*cur_right_target]);
             let cur_right_node: NodeIndex<DefaultIx> = graph.add_node(node_dec);
