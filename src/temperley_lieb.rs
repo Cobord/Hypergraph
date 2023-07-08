@@ -1,10 +1,10 @@
 use itertools::Itertools;
-use std::cmp::{max, min};
-use std::collections::HashSet;
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::mem::swap;
-use std::ops::{Add, AddAssign, Mul, MulAssign};
+use std::{
+    collections::HashSet,
+    fmt::Debug,
+    hash::Hash,
+    ops::{Add, AddAssign, Mul, MulAssign},
+};
 
 use num::{One, Zero};
 use petgraph::algo::{connected_components, has_path_connecting, DfsSpace};
@@ -97,7 +97,7 @@ impl PerfectMatching {
     fn canonicalize(&mut self) {
         for Pair(p, q) in self.pairs.iter_mut() {
             if *p > *q {
-                swap(p, q);
+                std::mem::swap(p, q);
             }
         }
         self.pairs.sort();
@@ -130,7 +130,7 @@ impl PerfectMatching {
         //      two source points
         let mut no_through_lines_idx: HashSet<usize> = HashSet::<usize>::new();
         for Pair(x, y) in source_lines {
-            for z in (1 + min(x, y))..max(x, y) {
+            for z in (1 + x.min(y))..x.max(y) {
                 no_through_lines_idx.insert(z);
             }
         }
@@ -139,7 +139,7 @@ impl PerfectMatching {
         let target_lines = self
             .pairs
             .iter()
-            .filter(|Pair(z, w)| *z >= source && *w >= source)
+            .filter(|p| p.all(|x| x >= source))
             .cloned();
         let target_crossing_tests = target_lines.clone().combinations(2);
         for cur_item in target_crossing_tests {
@@ -156,7 +156,7 @@ impl PerfectMatching {
         // no crossing lines can use these indices because they are blocked by a line connecting
         // two target points
         for Pair(x, y) in target_lines {
-            for z in (1 + min(x, y))..max(x, y) {
+            for z in (1 + x.min(y))..x.max(y) {
                 no_through_lines_idx.insert(z);
             }
         }
