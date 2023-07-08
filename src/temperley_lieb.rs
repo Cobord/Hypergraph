@@ -96,6 +96,12 @@ impl FromIterator<Pair> for PerfectMatching {
     }
 }
 
+impl From<Vec<Pair>> for PerfectMatching {
+    fn from(value: Vec<Pair>) -> Self {
+        Self::from_iter(value.into_iter())
+    }
+}
+
 impl PerfectMatching {
     fn new(pair_prime: &[Pair]) -> Self {
         Self::from_iter(pair_prime.iter().cloned())
@@ -259,12 +265,7 @@ impl Mul for ExtendedPerfectMatching {
         }
         let new_delta_power =
             connected_components(&g) + self_delta_pow + rhs_delta_pow - (endpoints / 2);
-        Self((
-            self_dom,
-            rhs_cod,
-            new_delta_power,
-            PerfectMatching::new(&final_matching),
-        ))
+        Self((self_dom, rhs_cod, new_delta_power, final_matching.into()))
     }
 }
 
