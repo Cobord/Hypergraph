@@ -21,23 +21,30 @@ struct PerfectMatching {
     pairs: Vec<(usize, usize)>,
 }
 
-impl PerfectMatching {
-    fn new(pair_prime: &[(usize, usize)]) -> Self {
-        let max_expected = pair_prime.len() * 2;
-        let mut cur_seen = HashSet::with_capacity(max_expected);
-        for (p, q) in pair_prime {
-            assert!(*p < max_expected);
-            assert!(*q < max_expected);
-            cur_seen.insert(*p);
-            cur_seen.insert(*q);
-        }
-        assert_eq!(cur_seen.len(), max_expected);
-        let pair_iter = pair_prime.iter().copied();
-        let mut ret_val = Self {
-            pairs: pair_iter.collect(),
-        };
+impl FromIterator<(usize, usize)> for PerfectMatching {
+    fn from_iter<T: IntoIterator<Item = (usize, usize)>>(pair_prime: T) -> Self {
+        let pairs: Vec<(usize, usize)> = pair_prime.into_iter().collect();
+        let max_expected = pairs.len() * 2;
+        let seen: HashSet<_> = pairs
+            .iter()
+            .map(|x| {
+                assert!(x.0 < max_expected);
+                assert!(x.1 < max_expected);
+                [x.0, x.1]
+            })
+            .flatten()
+            .collect();
+        assert_eq!(seen.len(), max_expected);
+        let mut ret_val = Self { pairs };
+
         ret_val.canonicalize();
         ret_val
+    }
+}
+
+impl PerfectMatching {
+    fn new(pair_prime: &[(usize, usize)]) -> Self {
+        Self::from_iter(pair_prime.iter().cloned())
     }
 
     fn canonicalize(&mut self) {
@@ -376,28 +383,27 @@ where
 {
     #[allow(dead_code)]
     pub fn temperley_lieb_gens(n: usize) -> Vec<Self> {
-        let mut ret_val = Vec::with_capacity(n - 1);
-        for i in 0..(n - 1) {
-            let mut e_i_pairs = Vec::with_capacity(2 * n);
-            e_i_pairs.extend((0..n).map(|j| {
-                if j == i {
-                    (i, i + 1)
-                } else if j == i + 1 {
-                    (i + n, i + 1 + n)
-                } else {
-                    (j, j + n)
+        (0..n - 1)
+            .map(|i| {
+                let e_i_matching: PerfectMatching = (0..n)
+                    .map(|j| {
+                        if j == i {
+                            (i, i + 1)
+                        } else if j == i + 1 {
+                            (i + n, i + 1 + n)
+                        } else {
+                            (j, j + n)
+                        }
+                    })
+                    .collect();
+                Self {
+                    diagram: LinearCombination::singleton((0, e_i_matching)),
+                    source: n,
+                    target: n,
+                    is_def_tl: true,
                 }
-            }));
-            let e_i_matching = PerfectMatching::new(&e_i_pairs);
-            let cur_e_i = Self {
-                diagram: LinearCombination::singleton((0, e_i_matching)),
-                source: n,
-                target: n,
-                is_def_tl: true,
-            };
-            ret_val.push(cur_e_i);
-        }
-        ret_val
+            })
+            .collect()
     }
 
     #[allow(dead_code)]
