@@ -321,10 +321,10 @@ where
     T: Add<Output = T> + Zero + One + Copy,
 {
     fn identity(on_this: &usize) -> Self {
-        let my_matching: Vec<_> = (0..*on_this).map(|x| Pair(x, x + on_this)).collect();
-        let my_perfect_matching = PerfectMatching::new(&my_matching);
+        let matching: Vec<_> = (0..*on_this).map(|x| Pair(x, x + on_this)).collect();
+        let perfect_matching = PerfectMatching::new(&matching);
         Self {
-            diagram: LinearCombination::singleton((0, my_perfect_matching)),
+            diagram: LinearCombination::singleton((0, perfect_matching)),
             source: *on_this,
             target: *on_this,
             is_def_tl: true,
@@ -690,7 +690,7 @@ mod test {
         let n = 7;
         let s_i = BrauerMorphism::<Complex<i32>>::symmetric_alg_gens(n);
         let one_poly_coeffs = [Complex::<i32>::one()];
-        let my_identity = BrauerMorphism::<Complex<i32>>::identity(&n);
+        let identity = BrauerMorphism::<Complex<i32>>::identity(&n);
         for idx in 0..n - 1 {
             assert!(!s_i[idx].is_def_tl);
             let s_i_dag = s_i[idx].dagger(|z| z.conj());
@@ -703,7 +703,7 @@ mod test {
             let s_is_i = s_i[idx].compose(&s_i[idx]);
             test_asserter(
                 s_is_i,
-                Ok(my_identity.clone()),
+                Ok(identity.clone()),
                 |j, k| !j.is_def_tl && k.is_def_tl,
                 "s_i s_i = 1",
             );

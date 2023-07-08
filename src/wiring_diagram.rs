@@ -62,10 +62,10 @@ where
     #[allow(dead_code)]
     pub fn add_boundary_node_unconnected(
         &mut self,
-        my_type: Lambda,
+        type_: Lambda,
         new_name: Either<(InOut, InterCircle, IntraCircle), (InOut, IntraCircle)>,
     ) {
-        let _ = self.0.add_boundary_node_unknown_target(my_type, new_name);
+        let _ = self.0.add_boundary_node_unknown_target(type_, new_name);
     }
 
     #[allow(dead_code)]

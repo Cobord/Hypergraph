@@ -825,16 +825,16 @@ mod test {
         let out_max = 20;
         let mut rng = rand::thread_rng();
         let between = Uniform::<usize>::from(2..in_max);
-        let my_in = between.sample(&mut rng);
+        let in_ = between.sample(&mut rng);
         let between = Uniform::<usize>::from(2..out_max);
-        let my_out = between.sample(&mut rng);
-        let cur_test = (0..my_in)
+        let out_ = between.sample(&mut rng);
+        let cur_test = (0..in_)
             .map(|_| Uniform::<usize>::from(0..my_out).sample(&mut rng))
             .collect::<Vec<usize>>();
-        let domain_types = (0..my_in)
+        let domain_types = (0..in_)
             .map(|idx| cur_test[idx] + 100)
             .collect::<Vec<usize>>();
-        let mut codomain_types = (0..my_out).map(|idx| idx + 40).collect::<Vec<usize>>();
+        let mut codomain_types = (0..out_).map(|idx| idx + 40).collect::<Vec<usize>>();
         for (idx, idx_goes) in cur_test.iter().enumerate() {
             codomain_types[*idx_goes] = domain_types[idx];
         }

@@ -96,10 +96,10 @@ impl Composable<usize> for OrderPresSurj {
                 other.domain()
             ));
         }
-        let my_codomain = other.codomain();
-        let mut answer = Vec::with_capacity(my_codomain);
+        let codomain = other.codomain();
+        let mut answer = Vec::with_capacity(codomain);
         let mut self_idx = 0;
-        for idx in 0..my_codomain {
+        for idx in 0..codomain {
             let how_many_mid = other.preimage_card_minus_1[idx] + 1;
             let preimage_card_cur: usize = self.preimage_card_minus_1
                 [self_idx..self_idx + how_many_mid]
@@ -287,8 +287,8 @@ impl TryFrom<FinSetMorphism> for OrderPresSurj {
         }
         let mut cur_i = 0;
         let mut count_of_cur_i = 0;
-        let my_max = *v.last().unwrap();
-        let mut preimage_card_minus_1 = Vec::with_capacity(my_max);
+        let max = *v.last().unwrap();
+        let mut preimage_card_minus_1 = Vec::with_capacity(max);
         for cur_v in v {
             if cur_v > cur_i {
                 preimage_card_minus_1.push(count_of_cur_i - 1);
@@ -449,12 +449,12 @@ impl SymmetricMonoidalDiscreteMorphism<usize> for Decomposition {
         }
     }
 
-    fn from_permutation(p: Permutation, my_type: usize, _: bool) -> Self {
-        assert_eq!(p.len(), my_type);
+    fn from_permutation(p: Permutation, type_: usize, _: bool) -> Self {
+        assert_eq!(p.len(), type_);
         let _answer = Self {
             permutation_part: p,
-            order_preserving_injection: OrderPresInj::identity(&my_type),
-            order_preserving_surjection: OrderPresSurj::identity(&my_type),
+            order_preserving_injection: OrderPresInj::identity(&type_),
+            order_preserving_surjection: OrderPresSurj::identity(&type_),
         };
         todo!("might be p.inv() instead")
     }

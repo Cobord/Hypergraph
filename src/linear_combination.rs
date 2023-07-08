@@ -202,7 +202,7 @@ where
 
 pub fn linearly_extend<Coeffs: Copy, Target: Eq + Hash + Clone, Target2: Eq + Hash, F>(
     me: &LinearCombination<Coeffs, Target>,
-    my_f: F,
+    f: F,
 ) -> LinearCombination<Coeffs, Target2>
 where
     F: Fn(Target) -> Target2,
@@ -210,7 +210,7 @@ where
 {
     let mut new_map = HashMap::with_capacity(me.0.len());
     for (k, v) in me.0.iter() {
-        let new_key = my_f(k.clone());
+        let new_key = f(k.clone());
         if let Some(old_val) = new_map.get(&new_key) {
             new_map.insert(new_key, *old_val + *v);
         } else {

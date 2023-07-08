@@ -178,11 +178,11 @@ mod test {
         let between = Uniform::<usize>::from(2..n_max);
         let mut rng = rand::thread_rng();
         for _ in 0..10 {
-            let my_n = between.sample(&mut rng);
-            let my_set = (0..my_n).map(|i| format!("{}", i)).collect::<Vec<String>>();
-            let p1 = rand_perm(my_n, my_n * my_n / 4);
-            let permuted_set = p1.permute(&my_set);
-            let found_perm = necessary_permutation(&my_set, &permuted_set);
+            let n = between.sample(&mut rng);
+            let set = (0..n).map(|i| format!("{}", i)).collect::<Vec<String>>();
+            let p1 = rand_perm(n, n * n / 4);
+            let permuted_set = p1.permute(&set);
+            let found_perm = necessary_permutation(&set, &permuted_set);
             assert_eq!(found_perm, Ok(p1));
         }
     }
@@ -197,13 +197,13 @@ mod test {
         let between = Uniform::<usize>::from(2..n_max);
         let mut rng = rand::thread_rng();
         for _ in 0..10 {
-            let my_n = between.sample(&mut rng);
-            let p1 = rand_perm(my_n, my_n * my_n / 4);
+            let n = between.sample(&mut rng);
+            let p1 = rand_perm(n, n * n / 4);
             let cycle_prod = perm_decompose(&p1);
             let obs_p1 = cycle_prod
                 .iter()
-                .fold(Permutation::identity(my_n), |acc, (p, q)| {
-                    Permutation::transposition(my_n, *p, *q) * acc
+                .fold(Permutation::identity(n), |acc, (p, q)| {
+                    Permutation::transposition(n, *p, *q) * acc
                 });
             assert_eq!(p1, obs_p1);
         }
@@ -218,15 +218,15 @@ mod test {
         let between = Uniform::<usize>::from(2..n_max);
         let mut rng = rand::thread_rng();
         for _ in 0..10 {
-            let my_n = between.sample(&mut rng);
-            let mut my_set = (0..my_n).map(|i| format!("{}", i)).collect::<Vec<String>>();
-            let p1 = rand_perm(my_n, my_n * my_n / 4);
-            in_place_permute(&mut my_set, &p1);
-            for (idx, cur) in my_set.iter().enumerate() {
+            let n = between.sample(&mut rng);
+            let mut set = (0..n).map(|i| format!("{}", i)).collect::<Vec<String>>();
+            let p1 = rand_perm(n, n * n / 4);
+            in_place_permute(&mut set, &p1);
+            for (idx, cur) in set.iter().enumerate() {
                 assert_eq!(*cur, format!("{}", p1.apply(idx)));
             }
-            in_place_permute(&mut my_set, &p1.inv());
-            for (idx, cur) in my_set.iter().enumerate() {
+            in_place_permute(&mut set, &p1.inv());
+            for (idx, cur) in set.iter().enumerate() {
                 assert_eq!(*cur, format!("{}", idx));
             }
         }

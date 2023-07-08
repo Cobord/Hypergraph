@@ -170,8 +170,8 @@ where
         if mid_for_node_1 == mid_for_node_2 {
             return;
         }
-        let my_type = self.middle[mid_for_node_1];
-        if my_type != self.middle[mid_for_node_2] {
+        let type_ = self.middle[mid_for_node_1];
+        if type_ != self.middle[mid_for_node_2] {
             warn!("Incompatible types. No change made.");
             return;
         }
@@ -500,16 +500,16 @@ mod test {
     fn left_only_cospan() {
         use super::Cospan;
         use either::{Left, Right};
-        let mut my_cospan = Cospan::<u32>::empty();
-        my_cospan.add_boundary_node(Left(Right(1)));
-        my_cospan.add_boundary_node(Left(Right(2)));
-        my_cospan.add_boundary_node(Left(Right(3)));
-        my_cospan.add_boundary_node(Left(Left(1)));
-        assert_eq!(my_cospan.left.len(), 4);
-        assert_eq!(my_cospan.right.len(), 0);
-        assert_eq!(my_cospan.middle.len(), 3);
-        assert_eq!(my_cospan.left, vec![0, 1, 2, 1]);
-        assert_eq!(my_cospan.middle, vec![1, 2, 3]);
+        let mut cospan = Cospan::<u32>::empty();
+        cospan.add_boundary_node(Left(Right(1)));
+        cospan.add_boundary_node(Left(Right(2)));
+        cospan.add_boundary_node(Left(Right(3)));
+        cospan.add_boundary_node(Left(Left(1)));
+        assert_eq!(cospan.left.len(), 4);
+        assert_eq!(cospan.right.len(), 0);
+        assert_eq!(cospan.middle.len(), 3);
+        assert_eq!(cospan.left, vec![0, 1, 2, 1]);
+        assert_eq!(cospan.middle, vec![1, 2, 3]);
     }
 
     #[test]
@@ -517,31 +517,31 @@ mod test {
         use super::Cospan;
         use either::{Left, Right};
         use petgraph::Graph;
-        let mut my_cospan = Cospan::<bool>::empty();
-        my_cospan.add_boundary_node(Right(Right(false)));
-        my_cospan.add_boundary_node(Right(Right(true)));
-        my_cospan.add_middle(true);
-        my_cospan.add_boundary_node(Right(Right(true)));
-        my_cospan.add_boundary_node(Right(Right(false)));
-        my_cospan.add_boundary_node(Right(Left(4)));
-        my_cospan.add_middle(true);
-        my_cospan.add_boundary_node(Right(Right(true)));
-        my_cospan.add_boundary_node(Left(Left(1)));
-        my_cospan.add_boundary_node(Left(Left(2)));
-        my_cospan.add_boundary_node(Left(Left(3)));
-        my_cospan.add_boundary_node(Left(Left(3)));
-        my_cospan.add_boundary_node(Left(Left(1)));
-        my_cospan.add_boundary_node(Left(Left(2)));
-        my_cospan.add_boundary_node(Left(Left(5)));
-        my_cospan.add_boundary_node(Left(Left(3)));
-        my_cospan.add_boundary_node(Left(Left(6)));
-        let (_, _, _, _g): (_, _, _, Graph<bool, ()>) = my_cospan.to_graph(|z| (z, ()));
-        assert_eq!(my_cospan.right.len(), 6);
-        assert_eq!(my_cospan.right, vec![0, 1, 3, 4, 4, 6]);
-        assert_eq!(my_cospan.left.len(), 9);
-        assert_eq!(my_cospan.left, vec![1, 2, 3, 3, 1, 2, 5, 3, 6]);
+        let mut cospan = Cospan::<bool>::empty();
+        cospan.add_boundary_node(Right(Right(false)));
+        cospan.add_boundary_node(Right(Right(true)));
+        cospan.add_middle(true);
+        cospan.add_boundary_node(Right(Right(true)));
+        cospan.add_boundary_node(Right(Right(false)));
+        cospan.add_boundary_node(Right(Left(4)));
+        cospan.add_middle(true);
+        cospan.add_boundary_node(Right(Right(true)));
+        cospan.add_boundary_node(Left(Left(1)));
+        cospan.add_boundary_node(Left(Left(2)));
+        cospan.add_boundary_node(Left(Left(3)));
+        cospan.add_boundary_node(Left(Left(3)));
+        cospan.add_boundary_node(Left(Left(1)));
+        cospan.add_boundary_node(Left(Left(2)));
+        cospan.add_boundary_node(Left(Left(5)));
+        cospan.add_boundary_node(Left(Left(3)));
+        cospan.add_boundary_node(Left(Left(6)));
+        let (_, _, _, _g): (_, _, _, Graph<bool, ()>) = cospan.to_graph(|z| (z, ()));
+        assert_eq!(cospan.right.len(), 6);
+        assert_eq!(cospan.right, vec![0, 1, 3, 4, 4, 6]);
+        assert_eq!(cospan.left.len(), 9);
+        assert_eq!(cospan.left, vec![1, 2, 3, 3, 1, 2, 5, 3, 6]);
         assert_eq!(
-            my_cospan.middle,
+            cospan.middle,
             vec![false, true, true, true, false, true, true]
         );
     }
@@ -552,16 +552,15 @@ mod test {
         let whatever_types: Vec<_> = (0..5).map(|_| rand::random::<bool>()).collect();
         let mut full_types: Vec<bool> = vec![true, true];
         full_types.extend(whatever_types.clone());
-        let my_cospan =
-            Cospan::<bool>::new(vec![0, 1, 2, 3, 4, 5, 6], vec![1, 0, 2, 3], full_types);
-        assert!(my_cospan.is_left_id);
-        assert!(!my_cospan.is_right_id);
-        let my_cospan2 = Cospan::<bool>::new(
+        let cospan = Cospan::<bool>::new(vec![0, 1, 2, 3, 4, 5, 6], vec![1, 0, 2, 3], full_types);
+        assert!(cospan.is_left_id);
+        assert!(!cospan.is_right_id);
+        let cospan2 = Cospan::<bool>::new(
             vec![0, 1, 2, 3],
             vec![1, 0, 2, 3],
             vec![true, true, whatever_types[0], whatever_types[1]],
         );
-        let res = my_cospan.compose(&my_cospan2);
+        let res = cospan.compose(&cospan2);
         let mut exp_middle = vec![true, true];
         exp_middle.extend(whatever_types.clone());
         match res {
@@ -587,19 +586,19 @@ mod test {
             Blue,
         }
         let type_names_on_source = true;
-        let my_cospan = Cospan::<Color>::from_permutation(
+        let cospan = Cospan::<Color>::from_permutation(
             Permutation::rotation_left(3, 1),
             &vec![Color::Red, Color::Green, Color::Blue],
             type_names_on_source,
         );
-        let my_cospan_2 = Cospan::<Color>::from_permutation(
+        let cospan_2 = Cospan::<Color>::from_permutation(
             Permutation::rotation_left(3, 2),
             &vec![Color::Blue, Color::Red, Color::Green],
             type_names_on_source,
         );
-        let my_mid_interface_1 = my_cospan.codomain();
-        let my_mid_interface_2 = my_cospan_2.domain();
-        let comp = my_cospan.compose(&my_cospan_2);
+        let mid_interface_1 = cospan.codomain();
+        let mid_interface_2 = cospan_2.domain();
+        let comp = cospan.compose(&cospan_2);
         match comp {
             Ok(real_res) => {
                 let expected_res = Cospan::identity(&vec![Color::Red, Color::Green, Color::Blue]);
@@ -610,24 +609,24 @@ mod test {
             Err(e) => {
                 panic!(
                     "Could not compose simple example because {:?} did not match {:?}\n{:?}",
-                    my_mid_interface_1, my_mid_interface_2, e
+                    mid_interface_1, mid_interface_2, e
                 );
             }
         }
         let type_names_on_source = false;
-        let my_cospan = Cospan::<Color>::from_permutation(
+        let cospan = Cospan::<Color>::from_permutation(
             Permutation::rotation_left(3, 1),
             &vec![Color::Red, Color::Green, Color::Blue],
             type_names_on_source,
         );
-        let my_cospan_2 = Cospan::<Color>::from_permutation(
+        let cospan_2 = Cospan::<Color>::from_permutation(
             Permutation::rotation_left(3, 2),
             &vec![Color::Green, Color::Blue, Color::Red],
             type_names_on_source,
         );
-        let my_mid_interface_1 = my_cospan.codomain();
-        let my_mid_interface_2 = my_cospan_2.domain();
-        let comp = my_cospan.compose(&my_cospan_2);
+        let mid_interface_1 = cospan.codomain();
+        let mid_interface_2 = cospan_2.domain();
+        let comp = cospan.compose(&cospan_2);
         match comp {
             Ok(real_res) => {
                 let expected_res = Cospan::identity(&vec![Color::Green, Color::Blue, Color::Red]);
@@ -638,7 +637,7 @@ mod test {
             Err(e) => {
                 panic!(
                     "Could not compose simple example because {:?} did not match {:?}\n{:?}",
-                    my_mid_interface_1, my_mid_interface_2, e
+                    mid_interface_1, mid_interface_2, e
                 );
             }
         }
@@ -653,12 +652,12 @@ mod test {
         let n_max = 10;
         let between = Uniform::<usize>::from(2..n_max);
         let mut rng = rand::thread_rng();
-        let my_n = between.sample(&mut rng);
+        let n = between.sample(&mut rng);
         let types_as_on_source = true;
-        let p1 = rand_perm(my_n, my_n * 2);
-        let p2 = rand_perm(my_n, my_n * 2);
+        let p1 = rand_perm(n, n * 2);
+        let p2 = rand_perm(n, n * 2);
         let prod = p1.clone() * p2.clone();
-        let domain_types = (0..my_n).map(|idx| idx + 100).collect::<Vec<usize>>();
+        let domain_types = (0..n).map(|idx| idx + 100).collect::<Vec<usize>>();
         let mut types_at_this_stage = domain_types.clone();
         let cospan_p1 = Cospan::from_permutation(p1.clone(), &domain_types, types_as_on_source);
         in_place_permute(&mut types_at_this_stage, &p1.inv());
@@ -681,9 +680,9 @@ mod test {
             }
         }
         let types_as_on_source = false;
-        let domain_types = (0..my_n).map(|idx| idx + 10).collect::<Vec<usize>>();
-        let p1 = rand_perm(my_n, my_n * 2);
-        let p2 = rand_perm(my_n, my_n * 2);
+        let domain_types = (0..n).map(|idx| idx + 10).collect::<Vec<usize>>();
+        let p1 = rand_perm(n, n * 2);
+        let p2 = rand_perm(n, n * 2);
         let prod = p1.clone() * p2.clone();
         let mut types_at_this_stage = domain_types.clone();
         in_place_permute(&mut types_at_this_stage, &p1.inv());

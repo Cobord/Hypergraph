@@ -426,23 +426,23 @@ mod test {
         }
         let full_types: Vec<Color> = vec![Color::Red, Color::Green, Color::Blue];
         let type_names_on_source = true;
-        let my_cospan = NamedCospan::<Color, Color, Color>::from_permutation_extra_data(
+        let cospan = NamedCospan::<Color, Color, Color>::from_permutation_extra_data(
             Permutation::rotation_left(3, 1),
             &full_types,
             type_names_on_source,
             &full_types,
             |z| (z, z),
         );
-        let my_cospan_2 = NamedCospan::<Color, Color, Color>::from_permutation_extra_data(
+        let cospan_2 = NamedCospan::<Color, Color, Color>::from_permutation_extra_data(
             Permutation::rotation_left(3, 2),
             &vec![Color::Blue, Color::Red, Color::Green],
             type_names_on_source,
             &vec![Color::Green, Color::Blue, Color::Red],
             |z| (z, z),
         );
-        let my_mid_interface_1 = my_cospan.codomain();
-        let my_mid_interface_2 = my_cospan_2.domain();
-        let comp = my_cospan.compose(&my_cospan_2);
+        let mid_interface_1 = cospan.codomain();
+        let mid_interface_2 = cospan_2.domain();
+        let comp = cospan.compose(&cospan_2);
         match comp {
             Ok(real_res) => {
                 let expected_res = NamedCospan::identity(&full_types, &full_types, |z| (z, z));
@@ -452,29 +452,29 @@ mod test {
             Err(_e) => {
                 panic!(
                     "Could not compose simple example because {:?} did not match {:?}",
-                    my_mid_interface_1, my_mid_interface_2
+                    mid_interface_1, mid_interface_2
                 );
             }
         }
 
         let type_names_on_source = false;
-        let my_cospan = NamedCospan::<Color, Color, Color>::from_permutation_extra_data(
+        let cospan = NamedCospan::<Color, Color, Color>::from_permutation_extra_data(
             Permutation::rotation_left(3, 1),
             &full_types,
             type_names_on_source,
             &full_types,
             |z| (z, z),
         );
-        let my_cospan_2 = NamedCospan::<Color, Color, Color>::from_permutation_extra_data(
+        let cospan_2 = NamedCospan::<Color, Color, Color>::from_permutation_extra_data(
             Permutation::rotation_left(3, 2),
             &vec![Color::Green, Color::Blue, Color::Red],
             type_names_on_source,
             &vec![Color::Green, Color::Blue, Color::Red],
             |z| (z, z),
         );
-        let my_mid_interface_1 = my_cospan.codomain();
-        let my_mid_interface_2 = my_cospan_2.domain();
-        let comp = my_cospan.compose(&my_cospan_2);
+        let mid_interface_1 = cospan.codomain();
+        let mid_interface_2 = cospan_2.domain();
+        let comp = cospan.compose(&cospan_2);
         match comp {
             Ok(real_res) => {
                 let expected_res = NamedCospan::identity(
@@ -488,7 +488,7 @@ mod test {
             Err(_e) => {
                 panic!(
                     "Could not compose simple example because {:?} did not match {:?}",
-                    my_mid_interface_1, my_mid_interface_2
+                    mid_interface_1, mid_interface_2
                 );
             }
         }
@@ -503,25 +503,25 @@ mod test {
         let n_max = 10;
         let between = Uniform::<usize>::from(2..n_max);
         let mut rng = rand::thread_rng();
-        let my_n = between.sample(&mut rng);
+        let n = between.sample(&mut rng);
 
         for trial_num in 0..20 {
             let types_as_on_source = trial_num % 2 == 0;
-            let p1 = rand_perm(my_n, my_n * 2);
-            let p2 = rand_perm(my_n, my_n * 2);
+            let p1 = rand_perm(n, n * 2);
+            let p2 = rand_perm(n, n * 2);
             let prod = p1.clone() * p2.clone();
             let cospan_p1 = NamedCospan::from_permutation_extra_data(
                 p1,
-                &(0..my_n).map(|_| ()).collect::<Vec<_>>(),
+                &(0..n).map(|_| ()).collect::<Vec<_>>(),
                 types_as_on_source,
-                &(0..my_n).map(|z| z).collect::<Vec<usize>>(),
+                &(0..n).map(|z| z).collect::<Vec<usize>>(),
                 |_| ((), ()),
             );
             let cospan_p2 = NamedCospan::from_permutation_extra_data(
                 p2,
-                &(0..my_n).map(|_| ()).collect::<Vec<_>>(),
+                &(0..n).map(|_| ()).collect::<Vec<_>>(),
                 types_as_on_source,
-                &(0..my_n).map(|z| z).collect::<Vec<_>>(),
+                &(0..n).map(|z| z).collect::<Vec<_>>(),
                 |_| ((), ()),
             );
             let cospan_prod = cospan_p1.compose(&cospan_p2);
@@ -529,9 +529,9 @@ mod test {
                 Ok(real_res) => {
                     let expected_res = NamedCospan::from_permutation_extra_data(
                         prod,
-                        &(0..my_n).map(|_| ()).collect::<Vec<_>>(),
+                        &(0..n).map(|_| ()).collect::<Vec<_>>(),
                         types_as_on_source,
-                        &(0..my_n).map(|z| z).collect::<Vec<usize>>(),
+                        &(0..n).map(|z| z).collect::<Vec<usize>>(),
                         |_| ((), ()),
                     );
                     assert_eq!(real_res.domain(), expected_res.domain());
