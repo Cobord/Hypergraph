@@ -542,18 +542,15 @@ where
             target_number += c;
         }
     }
-    match answer.compose(surj_part_frob) {
-        Ok(_) => {}
-        Err(_) => {
-            panic!("The provided source and target types did not line up for the given decomposed finite set map");
-        }
-    };
-    match answer.compose(inj_part_frob) {
-        Ok(_) => {}
-        Err(_) => {
-            panic!("The provided source and target types did not line up for the given decomposed finite set map");
-        }
-    };
+
+    assert!(
+        answer.compose(surj_part_frob).is_ok(),
+        "The provided source and target types did not line up for the given decomposed finite set map"
+    );
+    assert!(
+        answer.compose(inj_part_frob).is_ok(),
+        "The provided source and target types did not line up for the given decomposed finite set map"
+    );
     answer
 }
 
