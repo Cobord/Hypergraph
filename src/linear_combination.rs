@@ -9,15 +9,14 @@ use {
 };
 
 #[repr(transparent)]
-#[derive(PartialEq, Eq, Debug, Default)]
+#[derive(PartialEq, Eq, Debug, Default, Clone)]
 pub struct LinearCombination<Coeffs: Copy, Target: Eq + Hash>(HashMap<Target, Coeffs>);
 
-impl<Coeffs: Copy, Target: Eq + Hash> Clone for LinearCombination<Coeffs, Target>
-where
-    Target: Clone,
+impl<Coeffs: Copy, Target: Eq + Hash> FromIterator<(Target, Coeffs)>
+    for LinearCombination<Coeffs, Target>
 {
-    fn clone(&self) -> Self {
-        Self(self.0.clone())
+    fn from_iter<T: IntoIterator<Item = (Target, Coeffs)>>(iter: T) -> Self {
+        Self(iter.into_iter().collect())
     }
 }
 

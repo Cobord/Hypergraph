@@ -501,9 +501,9 @@ where
         if self.is_def_tl {
             return;
         }
-        let is_non_crossing =
-            |(_, p): &(usize, PerfectMatching)| p.non_crossing(self.source, self.target);
-        self.is_def_tl = self.diagram.all_terms_satisfy(is_non_crossing);
+        self.is_def_tl = self
+            .diagram
+            .all_terms_satisfy(|(_, p)| p.non_crossing(self.source, self.target));
     }
 }
 
