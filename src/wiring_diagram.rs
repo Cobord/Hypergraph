@@ -122,12 +122,10 @@ where
 
         // todo handle orientations
 
-        let left_name_to_both_names =
-            |left_name: (InOut, InterCircle, IntraCircle)| (left_name, (left_name.0, left_name.2));
         internal_other.0.monoidal(NamedCospan::identity(
             &self_inner_interface_unaffected,
             &self_inner_names_unaffected,
-            left_name_to_both_names,
+            |left_name| (left_name, (left_name.0, left_name.2)),
         ));
 
         let p = necessary_permutation(
@@ -137,7 +135,7 @@ where
                 .left_names()
                 .iter()
                 .map(|z| (z.0, z.2))
-                .collect::<Vec<(InOut, IntraCircle)>>(),
+                .collect::<Vec<_>>(),
         )?;
 
         internal_other.0.permute_side(&p, true);

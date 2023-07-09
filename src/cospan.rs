@@ -9,7 +9,10 @@ use {
     either::Either::{self, Left, Right},
     log::warn,
     permutations::Permutation,
-    petgraph::{prelude::Graph, stable_graph::DefaultIx, stable_graph::NodeIndex},
+    petgraph::{
+        prelude::Graph,
+        stable_graph::{DefaultIx, NodeIndex},
+    },
     std::{collections::HashMap, fmt::Debug},
     union_find::{UnionBySize, UnionFind},
 };

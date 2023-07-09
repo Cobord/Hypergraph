@@ -480,13 +480,9 @@ where
     where
         F: Fn(T) -> T,
     {
-        let flip_upside_down = |(delta_pow, matching): (usize, PerfectMatching)| {
-            (
-                delta_pow,
-                matching.flip_upside_down(self.source, self.target),
-            )
-        };
-        let mut diagram = self.diagram.inj_linearly_extend(flip_upside_down);
+        let mut diagram = self
+            .diagram
+            .inj_linearly_extend(|(d, m)| (d, m.flip_upside_down(self.source, self.target)));
         diagram.change_coeffs(num_dagger);
         Self {
             diagram,

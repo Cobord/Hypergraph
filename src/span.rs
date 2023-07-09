@@ -282,7 +282,7 @@ where
                 left: types.to_vec(),
                 middle: (0..types.len())
                     .map(|idx| (idx, p.apply(idx)))
-                    .collect::<Vec<_>>(),
+                    .collect(),
                 right: p.permute(types),
                 is_left_id: true,
                 is_right_id: false,
@@ -293,7 +293,7 @@ where
                 left: p.permute(types),
                 middle: (0..types.len())
                     .map(|idx| (p.apply(idx), idx))
-                    .collect::<Vec<_>>(),
+                    .collect(),
                 right: types.to_vec(),
                 is_left_id: false,
                 is_right_id: true,
