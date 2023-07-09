@@ -123,7 +123,7 @@ where
     Coeffs: MulAssign,
 {
     fn mul_assign(&mut self, rhs: Coeffs) {
-        for val in new_map.values_mut() {
+        for val in self.0.values_mut() {
             *val *= rhs;
         }
     }
@@ -163,7 +163,7 @@ where
     where
         F: Fn(Coeffs) -> Coeffs,
     {
-        for val in new_map.values_mut() {
+        for val in self.0.values_mut() {
             *val = coeff_changer(*val);
         }
     }
