@@ -129,26 +129,28 @@ where
     }
 }
 
-pub fn linear_combine<Coeffs, T, U, V, F>(
-    me: LinearCombination<Coeffs, T>,
-    rhs: LinearCombination<Coeffs, U>,
-    combiner: F,
-) -> LinearCombination<Coeffs, V>
-where
-    Coeffs: Copy + AddAssign + Mul<Output = Coeffs> + MulAssign + One,
-    T: Eq + Hash + Clone,
-    U: Eq + Hash + Clone,
-    V: Eq + Hash,
-    F: Fn(T, U) -> V,
-{
-    let mut ret_val = LinearCombination(HashMap::new());
-    for (k1, c_k1) in me.0 {
-        for (k2, c_k2) in &rhs.0 {
-            ret_val +=
-                LinearCombination::singleton(combiner(k1.clone(), k2.clone())) * (c_k1 * (*c_k2));
+impl<Coeffs: Copy, Target: Eq + Hash> LinearCombination<Coeffs, Target> {
+    pub fn linear_combine<U, V, F>(
+        &self,
+        rhs: LinearCombination<Coeffs, U>,
+        combiner: F,
+    ) -> LinearCombination<Coeffs, V>
+    where
+        Coeffs: Copy + AddAssign + Mul<Output = Coeffs> + MulAssign + One,
+        Target: Eq + Hash + Clone,
+        U: Eq + Hash + Clone,
+        V: Eq + Hash,
+        F: Fn(Target, U) -> V,
+    {
+        let mut ret_val = LinearCombination(HashMap::new());
+        for (k1, c_k1) in &self.0 {
+            for (k2, c_k2) in &rhs.0 {
+                ret_val += LinearCombination::singleton(combiner(k1.clone(), k2.clone()))
+                    * (*c_k1 * (*c_k2));
+            }
         }
+        ret_val
     }
-    ret_val
 }
 
 impl<Coeffs: Copy, Target: Eq + Hash> LinearCombination<Coeffs, Target>

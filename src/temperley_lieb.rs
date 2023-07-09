@@ -1,7 +1,7 @@
 use {
     crate::{
         category::{Composable, HasIdentity},
-        linear_combination::{linear_combine, LinearCombination},
+        linear_combination::LinearCombination,
         monoidal::{Monoidal, MonoidalMorphism},
     },
     itertools::Itertools,
@@ -380,8 +380,7 @@ where
                 .map(|p| p.map(|v| if v >= if_above { v + shift_amount } else { v }))
                 .collect()
         };
-        self.diagram = linear_combine(
-            self.diagram.clone(),
+        self.diagram = self.diagram.linear_combine(
             other.diagram,
             |(delta_pow1, matching_1), (delta_pow2, matching2)| {
                 let mut new_matching = shift_idx(matching_1, old_domain, other_domain);
