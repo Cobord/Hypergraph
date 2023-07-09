@@ -374,25 +374,11 @@ where
         let new_domain = self.domain();
         self.is_def_tl &= other.is_def_tl;
         let shift_idx = |diagram: PerfectMatching, if_above, shift_amount| {
-            PerfectMatching::new(
-                &diagram
-                    .pairs
-                    .iter()
-                    .map(|Pair(x, y)| {
-                        let new_x = if *x >= if_above {
-                            *x + shift_amount
-                        } else {
-                            *x
-                        };
-                        let new_y = if *y >= if_above {
-                            *y + shift_amount
-                        } else {
-                            *y
-                        };
-                        Pair(new_x, new_y)
-                    })
-                    .collect::<Vec<_>>(),
-            )
+            diagram
+                .pairs
+                .iter()
+                .map(|p| p.map(|v| if v >= if_above { v + shift_amount } else { v }))
+                .collect()
         };
         self.diagram = linear_combine(
             self.diagram.clone(),
