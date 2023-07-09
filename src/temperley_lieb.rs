@@ -560,20 +560,16 @@ mod test {
 
     #[test]
     fn t_l_relations() {
-        use crate::category::Composable;
-        use crate::utils::test_asserter;
+        use crate::{category::Composable, utils::test_asserter};
         use either::Either::Left;
         use num::Complex;
-        use std::cmp::PartialEq;
         let e_i = BrauerMorphism::<Complex<i32>>::temperley_lieb_gens(5);
-        let zero_complex = Complex::<i32>::zero();
-        let one_complex = Complex::<i32>::one();
-        let delta_coeffs = [zero_complex, one_complex];
+        let delta_coeffs: [Complex<i32>; 2] = [<_>::zero(), <_>::one()];
         for idx in 0..e_i.len() {
             assert!(e_i[idx].is_def_tl);
             let e_i_dag = e_i[idx].dagger(|z| z.conj());
             assert!(
-                PartialEq::eq(&e_i[idx], &e_i_dag),
+                &e_i[idx] == &e_i_dag,
                 "{:?} vs {:?} when checking self adjointness of e_i",
                 e_i[idx],
                 e_i_dag
@@ -624,10 +620,8 @@ mod test {
     #[test]
     fn wiki_example() {
         use super::{simplify, BrauerMorphism};
-        use crate::category::Composable;
-        use crate::monoidal::Monoidal;
+        use crate::{category::Composable, monoidal::Monoidal};
         use num::Complex;
-        use num::{One, Zero};
         let e_i = BrauerMorphism::<Complex<i32>>::temperley_lieb_gens(5);
         let zero_complex = Complex::<i32>::zero();
         let one_complex = Complex::<i32>::one();
@@ -665,8 +659,10 @@ mod test {
     #[test]
     fn sym_relations() {
         use super::BrauerMorphism;
-        use crate::category::{Composable, HasIdentity};
-        use crate::utils::test_asserter;
+        use crate::{
+            category::{Composable, HasIdentity},
+            utils::test_asserter,
+        };
         use either::Either::Right;
         use num::Complex;
         let n = 7;
