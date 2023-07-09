@@ -132,16 +132,16 @@ where
         new_arrow: MiddleIndexOrLambda<Lambda>,
         new_name: Either<LeftPortName, RightPortName>,
     ) -> Either<LeftIndex, RightIndex> {
-        match new_name {
+        self.underlying_cospan.add_boundary_node(match new_name {
             Left(new_name_real) => {
                 self.left_names.push(new_name_real);
-                self.underlying_cospan.add_boundary_node(Left(new_arrow))
+                Left(new_arrow)
             }
             Right(new_name_real) => {
                 self.right_names.push(new_name_real);
-                self.underlying_cospan.add_boundary_node(Right(new_arrow))
+                Right(new_arrow)
             }
-        }
+        })
     }
 
     pub fn delete_boundary_node(&mut self, which_node: Either<LeftIndex, RightIndex>) {

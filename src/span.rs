@@ -280,9 +280,7 @@ where
         if types_as_on_domain {
             let _answer = Self {
                 left: types.to_vec(),
-                middle: (0..types.len())
-                    .map(|idx| (idx, p.apply(idx)))
-                    .collect(),
+                middle: (0..types.len()).map(|idx| (idx, p.apply(idx))).collect(),
                 right: p.permute(types),
                 is_left_id: true,
                 is_right_id: false,
@@ -291,9 +289,7 @@ where
         } else {
             let _answer = Self {
                 left: p.permute(types),
-                middle: (0..types.len())
-                    .map(|idx| (p.apply(idx), idx))
-                    .collect(),
+                middle: (0..types.len()).map(|idx| (p.apply(idx), idx)).collect(),
                 right: types.to_vec(),
                 is_left_id: false,
                 is_right_id: true,
