@@ -45,12 +45,12 @@ where
             "A target for one of the right arrows was out of bounds"
         );
         if check_id {
-            let is_left_really_id = represents_id(&self.left);
+            let is_left_really_id = represents_id(self.left.iter().cloned());
             assert_eq!(
                 is_left_really_id, self.is_left_id,
                 "The identity nature of the left arrow was wrong"
             );
-            let is_right_really_id = represents_id(&self.right);
+            let is_right_really_id = represents_id(self.right.iter().cloned());
             assert_eq!(
                 is_right_really_id, self.is_right_id,
                 "The identity nature of the right arrow was wrong"
@@ -59,8 +59,8 @@ where
     }
 
     pub fn new(left: Vec<MiddleIndex>, right: Vec<MiddleIndex>, middle: Vec<Lambda>) -> Self {
-        let is_left_id = represents_id(&left);
-        let is_right_id = represents_id(&right);
+        let is_left_id = represents_id(left.iter().cloned());
+        let is_right_id = represents_id(right.iter().cloned());
         let answer = Self {
             left,
             right,

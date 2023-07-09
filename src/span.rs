@@ -53,12 +53,12 @@ where
             "There was a left and right linked by something in the span, but their lambda types didn't match"
         );
         if check_id {
-            let is_left_really_id = represents_id(&self.middle_to_left());
+            let is_left_really_id = represents_id(self.middle_to_left().into_iter());
             assert_eq!(
                 is_left_really_id, self.is_left_id,
                 "The identity nature of the left arrow was wrong"
             );
-            let is_right_really_id = represents_id(&self.middle_to_right());
+            let is_right_really_id = represents_id(self.middle_to_right().into_iter());
             assert_eq!(
                 is_right_really_id, self.is_right_id,
                 "The identity nature of the right arrow was wrong"
@@ -71,9 +71,8 @@ where
         right: Vec<Lambda>,
         middle: Vec<(LeftIndex, RightIndex)>,
     ) -> Self {
-        let is_left_id = represents_id(&middle.iter().map(|tup| tup.0).collect::<Vec<LeftIndex>>());
-        let is_right_id =
-            represents_id(&middle.iter().map(|tup| tup.1).collect::<Vec<RightIndex>>());
+        let is_left_id = represents_id(middle.iter().map(|tup| tup.0));
+        let is_right_id = represents_id(middle.iter().map(|tup| tup.1));
         let answer = Self {
             middle,
             left,

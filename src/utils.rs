@@ -31,8 +31,8 @@ impl<T, U> EitherExt<T, U> for Either<T, U> {
     }
 }
 
-pub fn represents_id(arr: &[usize]) -> bool {
-    (0..arr.len()).eq(arr.iter().cloned())
+pub fn represents_id(it: impl Iterator<Item = usize>) -> bool {
+    (0..).zip(it).all(|(l, r)| l == r)
 }
 
 pub fn argmax<T: Ord>(s: &[T]) -> Option<usize> {
