@@ -226,10 +226,9 @@ pub trait GenericMonoidalInterpretableMut<Lambda: Eq + Copy + Debug>:
     {
         let mut answer = Self::identity(&morphism.domain());
         for layer in &morphism.layers {
-            if layer.blocks.is_empty() {
+            let Some(first) = &layer.blocks.first() else {
                 return Err("???".to_string());
-            }
-            let first = &layer.blocks[0];
+            };
             let mut cur_layer = black_box_interpreter(first)?;
             for block in &layer.blocks[1..] {
                 cur_layer.monoidal(black_box_interpreter(block)?);
@@ -251,10 +250,9 @@ pub trait GenericMonoidalInterpretable<Lambda: Eq + Copy + Debug>:
     {
         let mut answer = Self::identity(&morphism.domain());
         for layer in &morphism.layers {
-            if layer.blocks.is_empty() {
+            let Some(first) = &layer.blocks.first() else {
                 return Err("???".to_string());
-            }
-            let first = &layer.blocks[0];
+            };
             let mut cur_layer = black_box_interpreter(first)?;
             for block in &layer.blocks[1..] {
                 cur_layer.monoidal(black_box_interpreter(block)?);
