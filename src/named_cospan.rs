@@ -19,7 +19,7 @@ type MiddleIndex = usize;
 type MiddleIndexOrLambda<Lambda> = Either<MiddleIndex, Lambda>;
 
 pub struct NamedCospan<Lambda: Sized + Eq + Copy + Debug, LeftPortName, RightPortName> {
-    underlying_cospan: Cospan<Lambda>,
+    cospan: Cospan<Lambda>,
     left_names: Vec<LeftPortName>,
     right_names: Vec<RightPortName>,
 }
@@ -38,7 +38,7 @@ where
         right_names: Vec<RightPortName>,
     ) -> Self {
         Self {
-            underlying_cospan: Cospan::new(left, right, middle),
+            cospan: Cospan::new(left, right, middle),
             left_names,
             right_names,
         }
@@ -65,7 +65,7 @@ where
         let (left_names, right_names) = prenames.iter().map(|x| prename_to_name(*x)).unzip();
 
         Self {
-            underlying_cospan: Cospan::identity(&types.to_vec()),
+            cospan: Cospan::identity(&types.to_vec()),
             left_names,
             right_names,
         }
@@ -84,7 +84,7 @@ where
         F: Fn(T) -> (LeftPortName, RightPortName),
     {
         assert_eq!(types.len(), prenames.len());
-        let underlying_cospan = Cospan::from_permutation(p.clone(), types, types_as_on_domain);
+        let cospan = Cospan::from_permutation(p.clone(), types, types_as_on_domain);
         let (left_names, right_names) = if types_as_on_domain {
             (
                 prenames.iter().map(|pre| prename_to_name(*pre).0).collect(),
@@ -105,7 +105,7 @@ where
         };
 
         Self {
-            underlying_cospan,
+            cospan,
             left_names,
             right_names,
         }
@@ -132,7 +132,7 @@ where
         new_arrow: MiddleIndexOrLambda<Lambda>,
         new_name: Either<LeftPortName, RightPortName>,
     ) -> Either<LeftIndex, RightIndex> {
-        self.underlying_cospan.add_boundary_node(match new_name {
+        self.cospan.add_boundary_node(match new_name {
             Left(new_name_real) => {
                 self.left_names.push(new_name_real);
                 Left(new_arrow)
@@ -153,7 +153,7 @@ where
                 self.right_names.swap_remove(z);
             }
         }
-        self.underlying_cospan.delete_boundary_node(which_node);
+        self.cospan.delete_boundary_node(which_node);
     }
 
     pub fn connect_pair(
@@ -164,8 +164,7 @@ where
         let node_1_loc = self.find_node_by_name(node_1);
         let node_2_loc = self.find_node_by_name(node_2);
         if let Some((node_1_loc_real, node_2_loc_real)) = node_1_loc.zip(node_2_loc) {
-            self.underlying_cospan
-                .connect_pair(node_1_loc_real, node_2_loc_real);
+            self.cospan.connect_pair(node_1_loc_real, node_2_loc_real);
         }
     }
 
@@ -287,7 +286,7 @@ where
 
     #[allow(dead_code)]
     pub fn add_middle(&mut self, new_middle: Lambda) {
-        self.underlying_cospan.add_middle(new_middle);
+        self.cospan.add_middle(new_middle);
     }
 
     pub fn map<F, Mu>(&self, f: F) -> NamedCospan<Mu, LeftPortName, RightPortName>
@@ -297,7 +296,7 @@ where
         RightPortName: Clone,
     {
         NamedCospan {
-            underlying_cospan: self.underlying_cospan.map(f),
+            cospan: self.cospan.map(f),
             left_names: self.left_names.clone(),
             right_names: self.right_names.clone(),
         }
@@ -320,7 +319,7 @@ where
         RightPortName: Clone,
     {
         let (left_nodes, middle_nodes, right_nodes, mut graph) =
-            self.underlying_cospan.to_graph(lambda_decorator);
+            self.cospan.to_graph(lambda_decorator);
         for (left_idx, left_node) in left_nodes.iter().enumerate() {
             let cur_left_weight = graph.node_weight_mut(*left_node).unwrap();
             let cur_left_name = Left(self.left_names[left_idx].clone());
@@ -343,7 +342,7 @@ where
     RightPortName: Eq,
 {
     fn monoidal(&mut self, other: Self) {
-        self.underlying_cospan.monoidal(other.underlying_cospan);
+        self.cospan.monoidal(other.cospan);
         self.left_names.extend(other.left_names);
         self.right_names.extend(other.right_names);
     }
@@ -357,23 +356,23 @@ where
     RightPortName: Eq + Clone,
 {
     fn composable(&self, other: &Self) -> Result<(), String> {
-        self.underlying_cospan.composable(&other.underlying_cospan)
+        self.cospan.composable(&other.cospan)
     }
 
     fn compose(&self, other: &Self) -> Result<Self, String> {
         Ok(Self {
-            underlying_cospan: self.underlying_cospan.compose(&other.underlying_cospan)?,
+            cospan: self.cospan.compose(&other.cospan)?,
             left_names: self.left_names.clone(),
             right_names: other.right_names.clone(),
         })
     }
 
     fn domain(&self) -> Vec<Lambda> {
-        self.underlying_cospan.domain()
+        self.cospan.domain()
     }
 
     fn codomain(&self) -> Vec<Lambda> {
-        self.underlying_cospan.codomain()
+        self.cospan.codomain()
     }
 }
 
@@ -399,7 +398,7 @@ where
         } else {
             in_place_permute(&mut self.left_names, p);
         }
-        self.underlying_cospan.permute_side(p, of_right_leg);
+        self.cospan.permute_side(p, of_right_leg);
     }
 
     fn from_permutation(_p: Permutation, _types: &[Lambda], _types_as_on_domain: bool) -> Self {
@@ -540,12 +539,12 @@ mod test {
                     assert_eq!(real_res.left_names, expected_res.left_names);
                     assert_eq!(real_res.right_names, expected_res.right_names);
                     assert_eq!(
-                        real_res.underlying_cospan.left_to_middle(),
-                        expected_res.underlying_cospan.left_to_middle()
+                        real_res.cospan.left_to_middle(),
+                        expected_res.cospan.left_to_middle()
                     );
                     assert_eq!(
-                        real_res.underlying_cospan.right_to_middle(),
-                        expected_res.underlying_cospan.right_to_middle()
+                        real_res.cospan.right_to_middle(),
+                        expected_res.cospan.right_to_middle()
                     );
                 }
                 Err(e) => {
