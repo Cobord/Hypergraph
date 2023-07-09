@@ -1,10 +1,11 @@
 use either::Either::{self, Left, Right};
 use permutations::Permutation;
 use rand::{distributions::Uniform, prelude::Distribution};
+use std::collections::HashSet;
 use std::fmt::Debug;
 
 pub fn is_unique<T: Eq + std::hash::Hash>(s: &[T]) -> bool {
-    let mut uniq = std::collections::HashSet::with_capacity(s.len());
+    let mut uniq = HashSet::with_capacity(s.len());
     s.iter().all(|cur| uniq.insert(cur))
 }
 
@@ -191,8 +192,7 @@ mod test {
     fn perm_decompose() {
         use crate::utils::{perm_decompose, rand_perm};
         use permutations::Permutation;
-        use rand::distributions::Uniform;
-        use rand::prelude::Distribution;
+        use rand::{distributions::Uniform, prelude::Distribution};
         let n_max = 10;
         let between = Uniform::<usize>::from(2..n_max);
         let mut rng = rand::thread_rng();
@@ -212,8 +212,7 @@ mod test {
     #[test]
     fn in_place_permuting() {
         use crate::utils::{in_place_permute, rand_perm};
-        use rand::distributions::Uniform;
-        use rand::prelude::Distribution;
+        use rand::{distributions::Uniform, prelude::Distribution};
         let n_max = 10;
         let between = Uniform::<usize>::from(2..n_max);
         let mut rng = rand::thread_rng();

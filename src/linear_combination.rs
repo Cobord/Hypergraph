@@ -1,12 +1,15 @@
-use std::collections::HashMap;
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
-
-use num::{One, Zero};
+use {
+    num::{One, Zero},
+    std::{
+        collections::HashMap,
+        fmt::Debug,
+        hash::Hash,
+        ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
+    },
+};
 
 #[repr(transparent)]
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Default)]
 pub struct LinearCombination<Coeffs: Copy, Target: Eq + Hash>(HashMap<Target, Coeffs>);
 
 impl<Coeffs: Copy, Target: Eq + Hash> Clone for LinearCombination<Coeffs, Target>

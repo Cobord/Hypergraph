@@ -321,10 +321,9 @@ where
     T: Add<Output = T> + Zero + One + Copy,
 {
     fn identity(on_this: &usize) -> Self {
-        let matching: Vec<_> = (0..*on_this).map(|x| Pair(x, x + on_this)).collect();
-        let perfect_matching = PerfectMatching::new(&matching);
+        let matching: PerfectMatching = (0..*on_this).map(|x| Pair(x, x + on_this)).collect();
         Self {
-            diagram: LinearCombination::singleton((0, perfect_matching)),
+            diagram: LinearCombination::singleton((0, matching)),
             source: *on_this,
             target: *on_this,
             is_def_tl: true,
