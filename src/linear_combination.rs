@@ -78,7 +78,7 @@ where
 
     fn neg(self) -> Self {
         let mut new_map = self.0;
-        for (_, val) in new_map.iter_mut() {
+        for val in new_map.values_mut() {
             *val = -*val;
         }
         Self(new_map)
@@ -93,7 +93,7 @@ where
 
     fn mul(self, rhs: Coeffs) -> Self {
         let mut new_map = self.0;
-        for (_, val) in new_map.iter_mut() {
+        for val in new_map.values_mut() {
             *val *= rhs;
         }
         Self(new_map)
@@ -123,7 +123,7 @@ where
     Coeffs: MulAssign,
 {
     fn mul_assign(&mut self, rhs: Coeffs) {
-        for (_, val) in self.0.iter_mut() {
+        for val in new_map.values_mut() {
             *val *= rhs;
         }
     }
@@ -163,7 +163,7 @@ where
     where
         F: Fn(Coeffs) -> Coeffs,
     {
-        for (_, val) in self.0.iter_mut() {
+        for val in new_map.values_mut() {
             *val = coeff_changer(*val);
         }
     }
