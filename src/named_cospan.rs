@@ -163,7 +163,7 @@ where
     ) {
         let node_1_loc = self.find_node_by_name(node_1);
         let node_2_loc = self.find_node_by_name(node_2);
-        if let (Some(node_1_loc_real), Some(node_2_loc_real)) = (node_1_loc, node_2_loc) {
+        if let Some((node_1_loc_real, node_2_loc_real)) = node_1_loc.zip(node_2_loc) {
             self.underlying_cospan
                 .connect_pair(node_1_loc_real, node_2_loc_real);
         }
