@@ -1,8 +1,9 @@
-use either::Either::{self, Left, Right};
-use permutations::Permutation;
-use rand::{distributions::Uniform, prelude::Distribution};
-use std::collections::HashSet;
-use std::fmt::Debug;
+use {
+    either::Either::{self, Left, Right},
+    permutations::Permutation,
+    rand::{distributions::Uniform, prelude::Distribution},
+    std::{collections::HashSet, fmt::Debug},
+};
 
 pub fn is_unique<T: Eq + std::hash::Hash>(s: &[T]) -> bool {
     let mut uniq = HashSet::with_capacity(s.len());

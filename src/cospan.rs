@@ -1,16 +1,17 @@
-use either::Either::{self, Left, Right};
-use log::warn;
-use permutations::Permutation;
-use petgraph::{prelude::Graph, stable_graph::DefaultIx, stable_graph::NodeIndex};
-use std::{collections::HashMap, fmt::Debug};
-use union_find::{UnionBySize, UnionFind};
-
-use crate::{
-    category::{Composable, HasIdentity},
-    finset::FinSetMap,
-    monoidal::{GenericMonoidalInterpretable, Monoidal, MonoidalMorphism},
-    symmetric_monoidal::SymmetricMonoidalMorphism,
-    utils::{in_place_permute, represents_id, EitherExt},
+use {
+    crate::{
+        category::{Composable, HasIdentity},
+        finset::FinSetMap,
+        monoidal::{GenericMonoidalInterpretable, Monoidal, MonoidalMorphism},
+        symmetric_monoidal::SymmetricMonoidalMorphism,
+        utils::{in_place_permute, represents_id, EitherExt},
+    },
+    either::Either::{self, Left, Right},
+    log::warn,
+    permutations::Permutation,
+    petgraph::{prelude::Graph, stable_graph::DefaultIx, stable_graph::NodeIndex},
+    std::{collections::HashMap, fmt::Debug},
+    union_find::{UnionBySize, UnionFind},
 };
 
 type LeftIndex = usize;

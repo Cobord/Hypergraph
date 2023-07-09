@@ -1,12 +1,13 @@
-use permutations::Permutation;
-use std::{convert::identity, fmt::Debug};
-
-use crate::{
-    category::{ComposableMutating, HasIdentity},
-    finset::Decomposition,
-    monoidal::{Monoidal, MonoidalMutatingMorphism},
-    symmetric_monoidal::SymmetricMonoidalMutatingMorphism,
-    utils::in_place_permute,
+use {
+    crate::{
+        category::{ComposableMutating, HasIdentity},
+        finset::Decomposition,
+        monoidal::{Monoidal, MonoidalMutatingMorphism},
+        symmetric_monoidal::SymmetricMonoidalMutatingMorphism,
+        utils::in_place_permute,
+    },
+    permutations::Permutation,
+    std::{convert::identity, fmt::Debug},
 };
 
 #[derive(PartialEq, Eq, Clone)]

@@ -1,5 +1,7 @@
-use crate::category::{Composable, ComposableMutating, HasIdentity};
-use std::fmt::Debug;
+use {
+    crate::category::{Composable, ComposableMutating, HasIdentity},
+    std::fmt::Debug,
+};
 
 pub trait Monoidal {
     fn monoidal(&mut self, other: Self);

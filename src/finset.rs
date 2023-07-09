@@ -1,12 +1,13 @@
-use std::io::repeat;
-use std::{collections::HashSet, error, fmt};
-
-use permutations::Permutation;
-
-use crate::category::{Composable, HasIdentity};
-use crate::monoidal::{Monoidal, MonoidalMorphism};
-use crate::symmetric_monoidal::SymmetricMonoidalDiscreteMorphism;
-use crate::utils::argmax;
+use {
+    crate::{
+        category::{Composable, HasIdentity},
+        monoidal::{Monoidal, MonoidalMorphism},
+        symmetric_monoidal::SymmetricMonoidalDiscreteMorphism,
+        utils::argmax,
+    },
+    permutations::Permutation,
+    std::{collections::HashSet, error, fmt},
+};
 
 pub type FinSetMap = Vec<usize>;
 pub type FinSetMorphism = (Vec<usize>, usize);

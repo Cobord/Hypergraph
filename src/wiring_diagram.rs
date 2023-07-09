@@ -1,12 +1,13 @@
-use either::Either;
-use std::fmt::Debug;
-
-use crate::{
-    category::Composable,
-    monoidal::Monoidal,
-    named_cospan::NamedCospan,
-    symmetric_monoidal::SymmetricMonoidalMorphism,
-    utils::{necessary_permutation, remove_multiple},
+use {
+    crate::{
+        category::Composable,
+        monoidal::Monoidal,
+        named_cospan::NamedCospan,
+        symmetric_monoidal::SymmetricMonoidalMorphism,
+        utils::{necessary_permutation, remove_multiple},
+    },
+    either::Either,
+    std::fmt::Debug,
 };
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]

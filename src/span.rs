@@ -1,11 +1,12 @@
-use either::Either::{self, Left, Right};
-use std::{collections::HashSet, fmt::Debug};
-
-use crate::{
-    category::{Composable, HasIdentity},
-    monoidal::{GenericMonoidalInterpretable, Monoidal, MonoidalMorphism},
-    symmetric_monoidal::SymmetricMonoidalMorphism,
-    utils::{in_place_permute, represents_id},
+use {
+    crate::{
+        category::{Composable, HasIdentity},
+        monoidal::{GenericMonoidalInterpretable, Monoidal, MonoidalMorphism},
+        symmetric_monoidal::SymmetricMonoidalMorphism,
+        utils::{in_place_permute, represents_id},
+    },
+    either::Either::{self, Left, Right},
+    std::{collections::HashSet, fmt::Debug},
 };
 
 type LeftIndex = usize;
