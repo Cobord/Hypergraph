@@ -1,9 +1,7 @@
 use {
     crate::{
         category::{Composable, HasIdentity},
-        linear_combination::{
-            inj_linearly_extend, linear_combine, linearly_extend, LinearCombination,
-        },
+        linear_combination::{linear_combine, LinearCombination},
         monoidal::{Monoidal, MonoidalMorphism},
     },
     itertools::Itertools,
@@ -337,16 +335,15 @@ where
 {
     fn compose(&self, other: &Self) -> Result<Self, String> {
         self.composable(other)?;
-        let extended_diagram_self = inj_linearly_extend(&self.diagram, |(delta_pow, diagram)| {
+        let extended_diagram_self = self.diagram.inj_linearly_extend(|(delta_pow, diagram)| {
             ExtendedPerfectMatching((self.domain(), self.codomain(), delta_pow, diagram))
         });
-        let extended_diagram_other = inj_linearly_extend(&other.diagram, |(delta_pow, diagram)| {
+        let extended_diagram_other = other.diagram.inj_linearly_extend(|(delta_pow, diagram)| {
             ExtendedPerfectMatching((other.domain(), other.codomain(), delta_pow, diagram))
         });
         let extended_diagram_product = extended_diagram_self * extended_diagram_other;
-        let diagram_product = linearly_extend(&extended_diagram_product, |extended| {
-            (extended.0 .2, extended.0 .3)
-        });
+        let diagram_product =
+            extended_diagram_product.linearly_extend(|extended| (extended.0 .2, extended.0 .3));
         Ok(Self {
             diagram: diagram_product,
             source: self.domain(),
@@ -503,7 +500,7 @@ where
                 matching.flip_upside_down(self.source, self.target),
             )
         };
-        let mut diagram = inj_linearly_extend(&self.diagram, flip_upside_down);
+        let mut diagram = self.diagram.inj_linearly_extend(flip_upside_down);
         diagram.change_coeffs(num_dagger);
         Self {
             diagram,

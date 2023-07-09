@@ -183,44 +183,43 @@ impl<Coeffs: Copy + Zero, Target: Eq + Hash> LinearCombination<Coeffs, Target> {
     }
 }
 
-pub fn inj_linearly_extend<Coeffs: Copy, Target: Eq + Hash + Clone, Target2: Eq + Hash, F>(
-    me: &LinearCombination<Coeffs, Target>,
-    injection: F,
-) -> LinearCombination<Coeffs, Target2>
-where
-    F: Fn(Target) -> Target2,
-{
-    let mut new_map = HashMap::with_capacity(me.0.len());
-    for (k, v) in me.0.iter() {
-        let new_key = injection(k.clone());
-        let old_val = new_map.insert(new_key, *v);
-        assert_eq!(
-            old_val.map(|_| 0),
-            None,
-            "The function called injection should have been injective"
-        );
-    }
-    LinearCombination(new_map)
-}
-
-pub fn linearly_extend<Coeffs: Copy, Target: Eq + Hash + Clone, Target2: Eq + Hash, F>(
-    me: &LinearCombination<Coeffs, Target>,
-    f: F,
-) -> LinearCombination<Coeffs, Target2>
-where
-    F: Fn(Target) -> Target2,
-    Coeffs: Add<Output = Coeffs>,
-{
-    let mut new_map = HashMap::with_capacity(me.0.len());
-    for (k, v) in me.0.iter() {
-        let new_key = f(k.clone());
-        if let Some(old_val) = new_map.get(&new_key) {
-            new_map.insert(new_key, *old_val + *v);
-        } else {
-            new_map.insert(new_key, *v);
+impl<Coeffs: Copy + Zero, Target: Clone + Eq + Hash> LinearCombination<Coeffs, Target> {
+    pub fn inj_linearly_extend<Target2: Eq + Hash, F>(
+        &self,
+        injection: F,
+    ) -> LinearCombination<Coeffs, Target2>
+    where
+        F: Fn(Target) -> Target2,
+    {
+        let mut new_map = HashMap::with_capacity(self.0.len());
+        for (k, v) in self.0.iter() {
+            let new_key = injection(k.clone());
+            let old_val = new_map.insert(new_key, *v);
+            assert_eq!(
+                old_val.map(|_| 0),
+                None,
+                "The function called injection should have been injective"
+            );
         }
+        LinearCombination(new_map)
     }
-    LinearCombination(new_map)
+
+    pub fn linearly_extend<Target2: Eq + Hash, F>(&self, f: F) -> LinearCombination<Coeffs, Target2>
+    where
+        F: Fn(Target) -> Target2,
+        Coeffs: Add<Output = Coeffs>,
+    {
+        let mut new_map = HashMap::with_capacity(self.0.len());
+        for (k, v) in self.0.iter() {
+            let new_key = f(k.clone());
+            if let Some(old_val) = new_map.get(&new_key) {
+                new_map.insert(new_key, *old_val + *v);
+            } else {
+                new_map.insert(new_key, *v);
+            }
+        }
+        LinearCombination(new_map)
+    }
 }
 
 mod test {
