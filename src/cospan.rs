@@ -487,11 +487,11 @@ where
 
 mod test {
     #[allow(unused_imports)]
-    use crate::category::{Composable, HasIdentity};
-    #[allow(unused_imports)]
-    use crate::monoidal::{Monoidal, MonoidalMorphism};
-    #[allow(unused_imports)]
-    use crate::symmetric_monoidal::SymmetricMonoidalMorphism;
+    use crate::{
+        category::{Composable, HasIdentity},
+        monoidal::{Monoidal, MonoidalMorphism},
+        symmetric_monoidal::SymmetricMonoidalMorphism,
+    };
 
     #[test]
     fn empty_cospan() {
@@ -556,7 +556,7 @@ mod test {
         let whatever_types: Vec<_> = (0..5).map(|_| rand::random::<bool>()).collect();
         let mut full_types: Vec<bool> = vec![true, true];
         full_types.extend(whatever_types.clone());
-        let cospan = Cospan::<bool>::new(vec![0, 1, 2, 3, 4, 5, 6], vec![1, 0, 2, 3], full_types);
+        let cospan = Cospan::<bool>::new((0..=6).collect(), vec![1, 0, 2, 3], full_types);
         assert!(cospan.is_left_id);
         assert!(!cospan.is_right_id);
         let cospan2 = Cospan::<bool>::new(
@@ -569,7 +569,7 @@ mod test {
         exp_middle.extend(whatever_types.clone());
         match res {
             Ok(real_res) => {
-                assert_eq!(real_res.left, vec![0, 1, 2, 3, 4, 5, 6]);
+                assert_eq!(real_res.left, (0..=6).collect::<Vec<_>>());
                 assert_eq!(real_res.right, vec![0, 1, 2, 3]);
                 assert_eq!(real_res.middle, exp_middle);
             }
@@ -651,8 +651,7 @@ mod test {
     fn permutation_automatic() {
         use super::Cospan;
         use crate::utils::{in_place_permute, rand_perm};
-        use rand::distributions::Uniform;
-        use rand::prelude::Distribution;
+        use rand::{distributions::Uniform, prelude::Distribution};
         let n_max = 10;
         let between = Uniform::<usize>::from(2..n_max);
         let mut rng = rand::thread_rng();

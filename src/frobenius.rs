@@ -286,8 +286,8 @@ where
     fn monoidal(&mut self, other: Self) {
         let self_len = self.layers.len();
         let others_len = other.layers.len();
-        let mut last_other_type: Vec<Lambda> = vec![];
-        let mut last_self_type: Vec<Lambda> = vec![];
+        let mut last_other_type: Vec<_> = vec![];
+        let mut last_self_type: Vec<_> = vec![];
         for (n, cur_self_layer) in self.layers.iter_mut().enumerate() {
             last_self_type = cur_self_layer.right_type.clone();
             if n < other.layers.len() {

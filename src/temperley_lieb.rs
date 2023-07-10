@@ -736,8 +736,7 @@ mod test {
     #[test]
     fn tangle_relations() {
         use super::BrauerMorphism;
-        use crate::category::Composable;
-        use crate::utils::test_asserter;
+        use crate::{category::Composable, utils::test_asserter};
         use either::Either::{Left, Right};
         use num::Complex;
         let n = 7;
