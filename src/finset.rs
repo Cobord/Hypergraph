@@ -502,33 +502,22 @@ impl fmt::Display for TryFromFinSetError {
 impl TryFrom<FinSetMorphism> for Decomposition {
     type Error = TryFromFinSetError;
     fn try_from(v_mor: FinSetMorphism) -> Result<Self, TryFromFinSetError> {
-        let v = v_mor.0;
-        if v.iter().is_sorted() {
-            let permutation_part = Permutation::identity(v.len());
-            let (epic_part, monic_part) = monotone_epi_mono_fact(v);
-            let order_preserving_surjection =
-                OrderPresSurj::try_from((epic_part, 0)).map_err(|_| TryFromFinSetError)?;
-            let order_preserving_injection =
-                OrderPresInj::try_from((monic_part, v_mor.1)).map_err(|_| TryFromFinSetError)?;
-            Ok(Self {
-                permutation_part,
-                order_preserving_surjection,
-                order_preserving_injection,
-            })
+        let mut v = v_mor.0;
+        let permutation_part = if v.iter().is_sorted() {
+            Permutation::identity(v.len())
         } else {
-            let mut v_clone = v;
-            let permutation_part = permutation_sort(&mut v_clone).inv();
-            let (epic_part, monic_part) = monotone_epi_mono_fact(v_clone);
-            let order_preserving_surjection =
-                OrderPresSurj::try_from((epic_part, 0)).map_err(|_| TryFromFinSetError)?;
-            let order_preserving_injection =
-                OrderPresInj::try_from((monic_part, v_mor.1)).map_err(|_| TryFromFinSetError)?;
-            Ok(Self {
-                permutation_part,
-                order_preserving_surjection,
-                order_preserving_injection,
-            })
-        }
+            permutation_sort(&mut v).inv()
+        };
+        let (epic_part, monic_part) = monotone_epi_mono_fact(v);
+        let order_preserving_surjection =
+            OrderPresSurj::try_from((epic_part, 0)).map_err(|_| TryFromFinSetError)?;
+        let order_preserving_injection =
+            OrderPresInj::try_from((monic_part, v_mor.1)).map_err(|_| TryFromFinSetError)?;
+        Ok(Self {
+            permutation_part,
+            order_preserving_surjection,
+            order_preserving_injection,
+        })
     }
 }
 impl error::Error for TryFromFinSetError {}
