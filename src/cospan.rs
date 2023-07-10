@@ -75,10 +75,12 @@ where
         answer
     }
 
+    #[allow(dead_code)]
     pub fn empty() -> Self {
         Self::new(vec![], vec![], vec![])
     }
 
+    #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         self.left.is_empty() && self.right.is_empty() && self.middle.is_empty()
     }
@@ -183,6 +185,7 @@ where
         let old_last = self.middle.len();
         let last_removed = mid_for_node_2 == old_last;
         self.left.iter_mut().for_each(|v| {
+            #[allow(clippy::needless_else)]
             if mid_for_node_2 == *v {
                 *v = mid_for_node_1;
             } else if *v == old_last && !last_removed {
@@ -191,6 +194,7 @@ where
             }
         });
         self.right.iter_mut().for_each(|v| {
+            #[allow(clippy::needless_else)]
             if mid_for_node_2 == *v {
                 *v = mid_for_node_1;
             } else if *v == old_last && !last_removed {

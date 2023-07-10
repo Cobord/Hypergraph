@@ -80,11 +80,10 @@ impl FromIterator<Pair> for PerfectMatching {
         let max_expected = pairs.len() * 2;
         let seen: HashSet<_> = pairs
             .iter()
-            .map(|x| {
+            .flat_map(|x| {
                 assert!(x.all(|x| x < max_expected));
                 x.iter()
             })
-            .flatten()
             .collect();
         assert_eq!(seen.len(), max_expected);
         let mut ret_val = Self { pairs };
@@ -96,11 +95,12 @@ impl FromIterator<Pair> for PerfectMatching {
 
 impl From<Vec<Pair>> for PerfectMatching {
     fn from(value: Vec<Pair>) -> Self {
-        Self::from_iter(value.into_iter())
+        Self::from_iter(value)
     }
 }
 
 impl PerfectMatching {
+    #[allow(dead_code)]
     fn new(pair_prime: &[Pair]) -> Self {
         Self::from_iter(pair_prime.iter().cloned())
     }
@@ -139,8 +139,7 @@ impl PerfectMatching {
         // no crossing lines can use these indices because they are blocked by a line connecting
         //      two source points
         let mut no_through_lines_idx: HashSet<_> = source_lines
-            .map(|Pair(x, y)| (1 + x.min(y))..x.max(y))
-            .flatten()
+            .flat_map(|Pair(x, y)| (1 + x.min(y))..x.max(y))
             .collect();
 
         // the lines connecting two points both on target side
@@ -164,11 +163,7 @@ impl PerfectMatching {
         // no crossing lines can use these indices because they are blocked by a line connecting
         // two target points
 
-        no_through_lines_idx.extend(
-            target_lines
-                .map(|Pair(x, y)| (1 + x.min(y))..x.max(y))
-                .flatten(),
-        );
+        no_through_lines_idx.extend(target_lines.flat_map(|Pair(x, y)| (1 + x.min(y))..x.max(y)));
 
         // now check that those crossing lines don't use those indices that were stated to be forbidden
         let through_lines = self
