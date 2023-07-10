@@ -179,7 +179,9 @@ pub fn dim_check<
     if l.len() != r.len() {
         return Err("Mismatch in cardinalities of common interface".to_string());
     }
-    let Some((w1,w2)) = l.zip(r).find(|(a, b)| a != b) else { return Ok(())};
+    let Some((w1, w2)) = l.zip(r).find(|(a, b)| a != b) else {
+        return Ok(());
+    };
     Err(format!(
         "Mismatch in labels of common interface. At some index there was {:?} vs {:?}",
         w1, w2

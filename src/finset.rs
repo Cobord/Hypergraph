@@ -240,7 +240,9 @@ impl OrderPresInj {
 fn is_surjective(v: &[usize]) -> bool {
     let pos_max = argmax(v);
     // empty set to empty set
-    let Some(max_val) = pos_max.map(|z| v[z]) else { return true };
+    let Some(max_val) = pos_max.map(|z| v[z]) else {
+        return true;
+    };
     if v.len() < max_val + 1 {
         return false;
     }
@@ -252,7 +254,9 @@ fn is_surjective(v: &[usize]) -> bool {
 fn is_injective(v: &[usize]) -> bool {
     let pos_max = argmax(v);
     // empty set to empty set
-    let Some(max_val) = pos_max.map(|z| v[z]) else { return true };
+    let Some(max_val) = pos_max.map(|z| v[z]) else {
+        return true;
+    };
     if v.len() > max_val + 1 {
         return false;
     }

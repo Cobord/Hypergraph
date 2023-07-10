@@ -254,7 +254,7 @@ where
                 let index = self.right_names.iter().position(|r| *r == z);
                 let Some(idx_right) = index else {
                     warn!("Node to be deleted does not exist. No change made.");
-                        return;
+                    return;
                 };
                 Right(idx_right)
             }
