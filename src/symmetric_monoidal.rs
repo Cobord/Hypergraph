@@ -1,6 +1,7 @@
-use permutations::Permutation;
-
-use crate::monoidal::{MonoidalMorphism, MonoidalMutatingMorphism};
+use {
+    crate::monoidal::{MonoidalMorphism, MonoidalMutatingMorphism},
+    permutations::Permutation,
+};
 
 pub trait SymmetricMonoidalMorphism<T: Eq>: MonoidalMorphism<Vec<T>> {
     fn permute_side(&mut self, p: &Permutation, of_codomain: bool);

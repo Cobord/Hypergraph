@@ -1,5 +1,7 @@
-use crate::category::{Composable, ComposableMutating, HasIdentity};
-use std::fmt::Debug;
+use {
+    crate::category::{Composable, ComposableMutating, HasIdentity},
+    std::fmt::Debug,
+};
 
 pub trait Monoidal {
     fn monoidal(&mut self, other: Self);
@@ -102,9 +104,8 @@ where
 {
     #[allow(dead_code)]
     fn identity(on_this: &Vec<Lambda>) -> Self {
-        let empty_layer = GenericMonoidalMorphismLayer::<BoxType, Lambda>::identity(on_this);
         Self {
-            layers: vec![empty_layer],
+            layers: vec![<_>::identity(on_this)],
         }
     }
 }
@@ -125,17 +126,58 @@ where
                 last_other_type = other.layers[n].right_type.clone();
                 cur_self_layer.monoidal(other.layers[n].clone());
             } else {
-                let empty_layer =
-                    GenericMonoidalMorphismLayer::<BoxType, Lambda>::identity(&last_other_type);
-                cur_self_layer.monoidal(empty_layer);
+                cur_self_layer.monoidal(<_>::identity(&last_other_type));
             }
         }
         for n in self_len..others_len {
-            let mut new_layer =
-                GenericMonoidalMorphismLayer::<BoxType, Lambda>::identity(&last_self_type);
+            let mut new_layer = GenericMonoidalMorphismLayer::identity(&last_self_type);
             new_layer.monoidal(other.layers[n].clone());
             let _ = self.append_layer(new_layer);
         }
+    }
+}
+
+fn layers_composable<Lambda: Eq + Copy + Debug, BoxType>(
+    l: &[GenericMonoidalMorphismLayer<BoxType, Lambda>],
+    r: &[GenericMonoidalMorphismLayer<BoxType, Lambda>],
+) -> Result<(), String> {
+    if l.is_empty() || r.is_empty() {
+        if l.is_empty() && r.is_empty() {
+            return Ok(());
+        } else if l.is_empty() {
+            let other_interface = &r[0].left_type;
+            if other_interface.is_empty() {
+                return Ok(());
+            } else {
+                return Err("Mismatch in cardinalities of common interface".to_string());
+            }
+        } else {
+            let self_interface = &l.last().unwrap().right_type;
+            if self_interface.is_empty() {
+                return Ok(());
+            } else {
+                return Err("Mismatch in cardinalities of common interface".to_string());
+            }
+        }
+    }
+    let self_interface = &l.last().unwrap().right_type;
+    let other_interface = &r[0].left_type;
+    if self_interface.len() != other_interface.len() {
+        Err("Mismatch in cardinalities of common interface".to_string())
+    } else if self_interface != other_interface {
+        for idx in 0..self_interface.len() {
+            let w1 = self_interface[idx];
+            let w2 = other_interface[idx];
+            if w1 != w2 {
+                return Err(format!(
+                    "Mismatch in labels of common interface. At some index there was {:?} vs {:?}",
+                    w1, w2
+                ));
+            }
+        }
+        Err("Mismatch in labels of common interface at some unknown index.".to_string())
+    } else {
+        Ok(())
     }
 }
 
@@ -144,44 +186,7 @@ where
     Lambda: Eq + Copy + Debug,
 {
     fn composable(&self, other: &Self) -> Result<(), String> {
-        if self.layers.is_empty() || other.layers.is_empty() {
-            if self.layers.is_empty() && other.layers.is_empty() {
-                return Ok(());
-            } else if self.layers.is_empty() {
-                let other_interface = &other.layers[0].left_type;
-                if other_interface.is_empty() {
-                    return Ok(());
-                } else {
-                    return Err("Mismatch in cardinalities of common interface".to_string());
-                }
-            } else {
-                let self_interface = &self.layers[self.layers.len() - 1].right_type;
-                if self_interface.is_empty() {
-                    return Ok(());
-                } else {
-                    return Err("Mismatch in cardinalities of common interface".to_string());
-                }
-            }
-        }
-        let self_interface = &self.layers[self.layers.len() - 1].right_type;
-        let other_interface = &other.layers[0].left_type;
-        if self_interface.len() != other_interface.len() {
-            Err("Mismatch in cardinalities of common interface".to_string())
-        } else if self_interface != other_interface {
-            for idx in 0..self_interface.len() {
-                let w1 = self_interface[idx];
-                let w2 = other_interface[idx];
-                if w1 != w2 {
-                    return Err(format!(
-                        "Mismatch in labels of common interface. At some index there was {:?} vs {:?}",
-                        w1, w2
-                    ));
-                }
-            }
-            Err("Mismatch in labels of common interface at some unknown index.".to_string())
-        } else {
-            Ok(())
-        }
+        layers_composable(&self.layers, &other.layers)
     }
 
     fn compose(&mut self, other: Self) -> Result<(), String> {
@@ -192,19 +197,17 @@ where
     }
 
     fn domain(&self) -> Vec<Lambda> {
-        if self.layers.is_empty() {
-            vec![]
-        } else {
-            self.layers[0].left_type.clone()
-        }
+        self.layers
+            .first()
+            .map(|x| x.left_type.clone())
+            .unwrap_or_default()
     }
 
     fn codomain(&self) -> Vec<Lambda> {
-        if self.layers.is_empty() {
-            vec![]
-        } else {
-            self.layers[self.layers.len() - 1].right_type.clone()
-        }
+        self.layers
+            .last()
+            .map(|x| x.right_type.clone())
+            .unwrap_or_default()
     }
 }
 
@@ -223,10 +226,9 @@ pub trait GenericMonoidalInterpretableMut<Lambda: Eq + Copy + Debug>:
     {
         let mut answer = Self::identity(&morphism.domain());
         for layer in &morphism.layers {
-            if layer.blocks.is_empty() {
+            let Some(first) = &layer.blocks.first() else {
                 return Err("???".to_string());
-            }
-            let first = &layer.blocks[0];
+            };
             let mut cur_layer = black_box_interpreter(first)?;
             for block in &layer.blocks[1..] {
                 cur_layer.monoidal(black_box_interpreter(block)?);
@@ -248,10 +250,9 @@ pub trait GenericMonoidalInterpretable<Lambda: Eq + Copy + Debug>:
     {
         let mut answer = Self::identity(&morphism.domain());
         for layer in &morphism.layers {
-            if layer.blocks.is_empty() {
+            let Some(first) = &layer.blocks.first() else {
                 return Err("???".to_string());
-            }
-            let first = &layer.blocks[0];
+            };
             let mut cur_layer = black_box_interpreter(first)?;
             for block in &layer.blocks[1..] {
                 cur_layer.monoidal(black_box_interpreter(block)?);

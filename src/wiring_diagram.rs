@@ -1,11 +1,14 @@
-use either::Either;
-use std::fmt::Debug;
-
-use crate::category::Composable;
-use crate::monoidal::Monoidal;
-use crate::named_cospan::NamedCospan;
-use crate::symmetric_monoidal::SymmetricMonoidalMorphism;
-use crate::utils::{keep_left, necessary_permutation, remove_multiple};
+use {
+    crate::{
+        category::Composable,
+        monoidal::Monoidal,
+        named_cospan::NamedCospan,
+        symmetric_monoidal::SymmetricMonoidalMorphism,
+        utils::{necessary_permutation, remove_multiple},
+    },
+    either::Either,
+    std::fmt::Debug,
+};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 #[allow(dead_code)]
@@ -19,9 +22,9 @@ impl InOut {
     #[allow(dead_code)]
     pub fn flipped(self) -> Self {
         match self {
-            InOut::In => InOut::Out,
-            InOut::Out => InOut::In,
-            InOut::Undirected => InOut::Undirected,
+            Self::In => Self::Out,
+            Self::Out => Self::In,
+            Self::Undirected => Self::Undirected,
         }
     }
 }
@@ -60,10 +63,10 @@ where
     #[allow(dead_code)]
     pub fn add_boundary_node_unconnected(
         &mut self,
-        my_type: Lambda,
+        type_: Lambda,
         new_name: Either<(InOut, InterCircle, IntraCircle), (InOut, IntraCircle)>,
     ) {
-        let _loc = self.0.add_boundary_node_unknown_target(my_type, new_name);
+        let _ = self.0.add_boundary_node_unknown_target(type_, new_name);
     }
 
     #[allow(dead_code)]
@@ -84,12 +87,12 @@ where
     }
 
     #[allow(dead_code)]
-    pub fn change_lambda<F, Mu>(&self, f: F) -> WiringDiagram<Mu, InterCircle, IntraCircle>
+    pub fn map<F, Mu>(&self, f: F) -> WiringDiagram<Mu, InterCircle, IntraCircle>
     where
         F: Fn(Lambda) -> Mu,
         Mu: Sized + Eq + Copy + Debug,
     {
-        WiringDiagram::<Mu, InterCircle, IntraCircle>::new(self.0.change_lambda(f))
+        WiringDiagram::new(self.0.map(f))
     }
 
     #[allow(dead_code)]
@@ -102,16 +105,14 @@ where
         InterCircle: Copy,
         IntraCircle: Copy,
     {
-        let pred_left = |z: (InOut, InterCircle, IntraCircle)| z.1 == which_circle;
-        let found_nodes: Vec<usize> = NamedCospan::<
-            Lambda,
-            (InOut, InterCircle, IntraCircle),
-            (InOut, IntraCircle),
-        >::find_nodes_by_name_predicate(
-            &self.0, pred_left, |_| false, false
+        let found_nodes: Vec<_> = NamedCospan::find_nodes_by_name_predicate(
+            &self.0,
+            |z| z.1 == which_circle,
+            |_| false,
+            false,
         )
         .iter()
-        .filter_map(keep_left)
+        .filter_map(|x| x.left())
         .collect();
 
         let mut self_inner_interface_unaffected = self.0.domain();
@@ -121,14 +122,11 @@ where
 
         // todo handle orientations
 
-        let left_name_to_both_names =
-            |left_name: (InOut, InterCircle, IntraCircle)| (left_name, (left_name.0, left_name.2));
-        let cur_identity = NamedCospan::identity(
+        internal_other.0.monoidal(NamedCospan::identity(
             &self_inner_interface_unaffected,
             &self_inner_names_unaffected,
-            left_name_to_both_names,
-        );
-        internal_other.0.monoidal(cur_identity);
+            |left_name| (left_name, (left_name.0, left_name.2)),
+        ));
 
         let p = necessary_permutation(
             internal_other.0.right_names(),
@@ -137,7 +135,7 @@ where
                 .left_names()
                 .iter()
                 .map(|z| (z.0, z.2))
-                .collect::<Vec<(InOut, IntraCircle)>>(),
+                .collect::<Vec<_>>(),
         )?;
 
         internal_other.0.permute_side(&p, true);

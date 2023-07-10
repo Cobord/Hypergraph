@@ -1,3 +1,4 @@
+#![feature(is_sorted, return_position_impl_trait_in_trait)]
 use either::Either::{Left, Right};
 use petgraph::dot::Dot;
 use union_find::{QuickUnionUf, UnionBySize};
@@ -25,8 +26,7 @@ mod linear_combination;
 mod temperley_lieb;
 
 fn main() {
-    let mut x =
-        NamedCospan::<u32, &'static str, &'static str>::new(vec![], vec![], vec![], vec![], vec![]);
+    let mut x = NamedCospan::<u32, &'static str, &'static str>::empty();
     x.add_boundary_node_unknown_target(0, Right("out1"));
     x.add_boundary_node_known_target(0, Right("out2"));
     x.add_boundary_node_known_target(0, Left("in1"));
@@ -55,7 +55,7 @@ fn main() {
 
     println!("{:?}", Dot::new(&graph));
     let counit_spider: FrobeniusMorphism<(), ()> = special_frobenius_morphism(1, 0, ());
-    let exp_counit_spider = FrobeniusMorphism::single_op(FrobeniusOperation::Counit(()));
+    let exp_counit_spider: FrobeniusMorphism<_, _> = FrobeniusOperation::Counit(()).into();
     assert!(exp_counit_spider == counit_spider);
     assert_eq!(counit_spider.domain(), vec![()]);
     assert_eq!(counit_spider.codomain(), vec![]);

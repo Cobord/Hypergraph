@@ -1,14 +1,17 @@
-use either::Either::{self, Left, Right};
-use log::warn;
-use permutations::Permutation;
-use petgraph::{matrix_graph::NodeIndex, prelude::Graph, stable_graph::DefaultIx};
-use std::fmt::Debug;
-
-use crate::category::{Composable, HasIdentity};
-use crate::cospan::Cospan;
-use crate::monoidal::{Monoidal, MonoidalMorphism};
-use crate::symmetric_monoidal::SymmetricMonoidalMorphism;
-use crate::utils::{in_place_permute, to_vec_01};
+use {
+    crate::{
+        category::{Composable, HasIdentity},
+        cospan::Cospan,
+        monoidal::{Monoidal, MonoidalMorphism},
+        symmetric_monoidal::SymmetricMonoidalMorphism,
+        utils::in_place_permute,
+    },
+    either::Either::{self, Left, Right},
+    log::warn,
+    permutations::Permutation,
+    petgraph::{matrix_graph::NodeIndex, prelude::Graph, stable_graph::DefaultIx},
+    std::fmt::Debug,
+};
 
 type LeftIndex = usize;
 type RightIndex = usize;
@@ -16,7 +19,7 @@ type MiddleIndex = usize;
 type MiddleIndexOrLambda<Lambda> = Either<MiddleIndex, Lambda>;
 
 pub struct NamedCospan<Lambda: Sized + Eq + Copy + Debug, LeftPortName, RightPortName> {
-    underlying_cospan: Cospan<Lambda>,
+    cospan: Cospan<Lambda>,
     left_names: Vec<LeftPortName>,
     right_names: Vec<RightPortName>,
 }
@@ -34,12 +37,15 @@ where
         left_names: Vec<LeftPortName>,
         right_names: Vec<RightPortName>,
     ) -> Self {
-        let underlying_cospan = Cospan::<Lambda>::new(left, right, middle);
         Self {
-            underlying_cospan,
+            cospan: Cospan::new(left, right, middle),
             left_names,
             right_names,
         }
+    }
+
+    pub fn empty() -> Self {
+        Self::new(vec![], vec![], vec![], vec![], vec![])
     }
 
     pub fn left_names(&self) -> &Vec<LeftPortName> {
@@ -56,11 +62,10 @@ where
         T: Copy,
     {
         assert_eq!(types.len(), prenames.len());
-        let underlying_cospan = Cospan::<Lambda>::identity(&types.to_vec());
-        let left_names = prenames.iter().map(|pre| prename_to_name(*pre).0).collect();
-        let right_names = prenames.iter().map(|pre| prename_to_name(*pre).1).collect();
+        let (left_names, right_names) = prenames.iter().map(|x| prename_to_name(*x)).unzip();
+
         Self {
-            underlying_cospan,
+            cospan: Cospan::identity(&types.to_vec()),
             left_names,
             right_names,
         }
@@ -79,33 +84,30 @@ where
         F: Fn(T) -> (LeftPortName, RightPortName),
     {
         assert_eq!(types.len(), prenames.len());
-        let underlying_cospan =
-            Cospan::<Lambda>::from_permutation(p.clone(), types, types_as_on_domain);
-        if types_as_on_domain {
-            let left_names = prenames.iter().map(|pre| prename_to_name(*pre).0).collect();
-            let right_names = p
-                .inv()
-                .permute(prenames)
-                .iter()
-                .map(|pre| prename_to_name(*pre).1)
-                .collect();
-            Self {
-                underlying_cospan,
-                left_names,
-                right_names,
-            }
+        let cospan = Cospan::from_permutation(p.clone(), types, types_as_on_domain);
+        let (left_names, right_names) = if types_as_on_domain {
+            (
+                prenames.iter().map(|pre| prename_to_name(*pre).0).collect(),
+                p.inv()
+                    .permute(prenames)
+                    .iter()
+                    .map(|pre| prename_to_name(*pre).1)
+                    .collect(),
+            )
         } else {
-            let left_names = p
-                .permute(prenames)
-                .iter()
-                .map(|pre| prename_to_name(*pre).0)
-                .collect();
-            let right_names = prenames.iter().map(|pre| prename_to_name(*pre).1).collect();
-            Self {
-                underlying_cospan,
-                left_names,
-                right_names,
-            }
+            (
+                p.permute(prenames)
+                    .iter()
+                    .map(|pre| prename_to_name(*pre).0)
+                    .collect(),
+                prenames.iter().map(|pre| prename_to_name(*pre).1).collect(),
+            )
+        };
+
+        Self {
+            cospan,
+            left_names,
+            right_names,
         }
     }
 
@@ -130,16 +132,16 @@ where
         new_arrow: MiddleIndexOrLambda<Lambda>,
         new_name: Either<LeftPortName, RightPortName>,
     ) -> Either<LeftIndex, RightIndex> {
-        match new_name {
+        self.cospan.add_boundary_node(match new_name {
             Left(new_name_real) => {
                 self.left_names.push(new_name_real);
-                self.underlying_cospan.add_boundary_node(Left(new_arrow))
+                Left(new_arrow)
             }
             Right(new_name_real) => {
                 self.right_names.push(new_name_real);
-                self.underlying_cospan.add_boundary_node(Right(new_arrow))
+                Right(new_arrow)
             }
-        }
+        })
     }
 
     pub fn delete_boundary_node(&mut self, which_node: Either<LeftIndex, RightIndex>) {
@@ -151,7 +153,7 @@ where
                 self.right_names.swap_remove(z);
             }
         }
-        self.underlying_cospan.delete_boundary_node(which_node);
+        self.cospan.delete_boundary_node(which_node);
     }
 
     pub fn connect_pair(
@@ -161,9 +163,8 @@ where
     ) {
         let node_1_loc = self.find_node_by_name(node_1);
         let node_2_loc = self.find_node_by_name(node_2);
-        if let (Some(node_1_loc_real), Some(node_2_loc_real)) = (node_1_loc, node_2_loc) {
-            self.underlying_cospan
-                .connect_pair(node_1_loc_real, node_2_loc_real);
+        if let Some((node_1_loc_real, node_2_loc_real)) = node_1_loc.zip(node_2_loc) {
+            self.cospan.connect_pair(node_1_loc_real, node_2_loc_real);
         }
     }
 
@@ -206,7 +207,8 @@ where
                 None => {
                     let index_in_right: Option<RightIndex> =
                         self.right_names.iter().position(|r| right_pred(*r));
-                    to_vec_01(index_in_right.map(Right))
+
+                    index_in_right.map(Right).into_iter().collect()
                 }
                 Some(z) => {
                     vec![Left(z)]
@@ -242,23 +244,19 @@ where
         let which_node_idx = match which_node {
             Left(z) => {
                 let index = self.left_names.iter().position(|r| *r == z);
-                match index {
-                    None => {
-                        warn!("Node to be deleted does not exist. No change made.");
-                        return;
-                    }
-                    Some(idx_left) => Left(idx_left),
-                }
+                let Some(idx_left) = index else {
+                    warn!("Node to be deleted does not exist. No change made.");
+                    return;
+                };
+                Left(idx_left)
             }
             Right(z) => {
                 let index = self.right_names.iter().position(|r| *r == z);
-                match index {
-                    None => {
-                        warn!("Node to be deleted does not exist. No change made.");
+                let Some(idx_right) = index else {
+                    warn!("Node to be deleted does not exist. No change made.");
                         return;
-                    }
-                    Some(idx_right) => Right(idx_right),
-                }
+                };
+                Right(idx_right)
             }
         };
         self.delete_boundary_node(which_node_idx);
@@ -270,44 +268,35 @@ where
     ) {
         match name_pair {
             Left((z1, z2)) => {
-                let index = self.left_names.iter().position(|r| *r == z1);
-                match index {
-                    None => {
-                        warn!("Node to be changed does not exist. No change made.");
-                    }
-                    Some(idx_left) => {
-                        self.left_names[idx_left] = z2;
-                    }
-                }
+                let Some(idx_left) = self.left_names.iter().position(|r| *r == z1) else {
+                    warn!("Node to be changed does not exist. No change made.");
+                    return;
+                };
+                self.left_names[idx_left] = z2;
             }
             Right((z1, z2)) => {
-                let index = self.right_names.iter().position(|r| *r == z1);
-                match index {
-                    None => {
-                        warn!("Node to be changed does not exist. No change made.");
-                    }
-                    Some(idx_right) => {
-                        self.right_names[idx_right] = z2;
-                    }
-                }
+                let Some(idx_right) = self.right_names.iter().position(|r| *r == z1) else {
+                    warn!("Node to be changed does not exist. No change made.");
+                    return;
+                };
+                self.right_names[idx_right] = z2;
             }
         }
     }
 
     #[allow(dead_code)]
     pub fn add_middle(&mut self, new_middle: Lambda) {
-        self.underlying_cospan.add_middle(new_middle);
+        self.cospan.add_middle(new_middle);
     }
 
-    pub fn change_lambda<F, Mu>(&self, f: F) -> NamedCospan<Mu, LeftPortName, RightPortName>
+    pub fn map<F, Mu>(&self, f: F) -> NamedCospan<Mu, LeftPortName, RightPortName>
     where
         F: Fn(Lambda) -> Mu,
         Mu: Sized + Eq + Copy + Debug,
         RightPortName: Clone,
     {
-        let new_underlying = self.underlying_cospan.change_lambda(f);
-        NamedCospan::<Mu, LeftPortName, RightPortName> {
-            underlying_cospan: new_underlying,
+        NamedCospan {
+            cospan: self.cospan.map(f),
             left_names: self.left_names.clone(),
             right_names: self.right_names.clone(),
         }
@@ -330,7 +319,7 @@ where
         RightPortName: Clone,
     {
         let (left_nodes, middle_nodes, right_nodes, mut graph) =
-            self.underlying_cospan.to_graph(lambda_decorator);
+            self.cospan.to_graph(lambda_decorator);
         for (left_idx, left_node) in left_nodes.iter().enumerate() {
             let cur_left_weight = graph.node_weight_mut(*left_node).unwrap();
             let cur_left_name = Left(self.left_names[left_idx].clone());
@@ -353,7 +342,7 @@ where
     RightPortName: Eq,
 {
     fn monoidal(&mut self, other: Self) {
-        self.underlying_cospan.monoidal(other.underlying_cospan);
+        self.cospan.monoidal(other.cospan);
         self.left_names.extend(other.left_names);
         self.right_names.extend(other.right_names);
     }
@@ -367,24 +356,23 @@ where
     RightPortName: Eq + Clone,
 {
     fn composable(&self, other: &Self) -> Result<(), String> {
-        self.underlying_cospan.composable(&other.underlying_cospan)
+        self.cospan.composable(&other.cospan)
     }
 
     fn compose(&self, other: &Self) -> Result<Self, String> {
-        let new_underlying = self.underlying_cospan.compose(&other.underlying_cospan)?;
         Ok(Self {
-            underlying_cospan: new_underlying,
+            cospan: self.cospan.compose(&other.cospan)?,
             left_names: self.left_names.clone(),
             right_names: other.right_names.clone(),
         })
     }
 
     fn domain(&self) -> Vec<Lambda> {
-        self.underlying_cospan.domain()
+        self.cospan.domain()
     }
 
     fn codomain(&self) -> Vec<Lambda> {
-        self.underlying_cospan.codomain()
+        self.cospan.codomain()
     }
 }
 
@@ -410,7 +398,7 @@ where
         } else {
             in_place_permute(&mut self.left_names, p);
         }
-        self.underlying_cospan.permute_side(p, of_right_leg);
+        self.cospan.permute_side(p, of_right_leg);
     }
 
     fn from_permutation(_p: Permutation, _types: &[Lambda], _types_as_on_domain: bool) -> Self {
@@ -420,41 +408,41 @@ where
 
 mod test {
     #[allow(unused_imports)]
-    use crate::category::Composable;
-    #[allow(unused_imports)]
-    use crate::monoidal::{Monoidal, MonoidalMorphism};
-    #[allow(unused_imports)]
-    use crate::symmetric_monoidal::SymmetricMonoidalMorphism;
+    use crate::{
+        category::Composable,
+        monoidal::{Monoidal, MonoidalMorphism},
+        symmetric_monoidal::SymmetricMonoidalMorphism,
+    };
 
     #[test]
     fn permutatation_manual() {
         use super::NamedCospan;
         use permutations::Permutation;
         #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-        enum COLOR {
-            RED,
-            GREEN,
-            BLUE,
+        enum Color {
+            Red,
+            Green,
+            Blue,
         }
-        let full_types: Vec<COLOR> = vec![COLOR::RED, COLOR::GREEN, COLOR::BLUE];
+        let full_types: Vec<Color> = vec![Color::Red, Color::Green, Color::Blue];
         let type_names_on_source = true;
-        let my_cospan = NamedCospan::<COLOR, COLOR, COLOR>::from_permutation_extra_data(
+        let cospan = NamedCospan::<Color, Color, Color>::from_permutation_extra_data(
             Permutation::rotation_left(3, 1),
             &full_types,
             type_names_on_source,
             &full_types,
             |z| (z, z),
         );
-        let my_cospan_2 = NamedCospan::<COLOR, COLOR, COLOR>::from_permutation_extra_data(
+        let cospan_2 = NamedCospan::<Color, Color, Color>::from_permutation_extra_data(
             Permutation::rotation_left(3, 2),
-            &vec![COLOR::BLUE, COLOR::RED, COLOR::GREEN],
+            &vec![Color::Blue, Color::Red, Color::Green],
             type_names_on_source,
-            &vec![COLOR::GREEN, COLOR::BLUE, COLOR::RED],
+            &vec![Color::Green, Color::Blue, Color::Red],
             |z| (z, z),
         );
-        let my_mid_interface_1 = my_cospan.codomain();
-        let my_mid_interface_2 = my_cospan_2.domain();
-        let comp = my_cospan.compose(&my_cospan_2);
+        let mid_interface_1 = cospan.codomain();
+        let mid_interface_2 = cospan_2.domain();
+        let comp = cospan.compose(&cospan_2);
         match comp {
             Ok(real_res) => {
                 let expected_res = NamedCospan::identity(&full_types, &full_types, |z| (z, z));
@@ -464,34 +452,34 @@ mod test {
             Err(_e) => {
                 panic!(
                     "Could not compose simple example because {:?} did not match {:?}",
-                    my_mid_interface_1, my_mid_interface_2
+                    mid_interface_1, mid_interface_2
                 );
             }
         }
 
         let type_names_on_source = false;
-        let my_cospan = NamedCospan::<COLOR, COLOR, COLOR>::from_permutation_extra_data(
+        let cospan = NamedCospan::<Color, Color, Color>::from_permutation_extra_data(
             Permutation::rotation_left(3, 1),
             &full_types,
             type_names_on_source,
             &full_types,
             |z| (z, z),
         );
-        let my_cospan_2 = NamedCospan::<COLOR, COLOR, COLOR>::from_permutation_extra_data(
+        let cospan_2 = NamedCospan::<Color, Color, Color>::from_permutation_extra_data(
             Permutation::rotation_left(3, 2),
-            &vec![COLOR::GREEN, COLOR::BLUE, COLOR::RED],
+            &vec![Color::Green, Color::Blue, Color::Red],
             type_names_on_source,
-            &vec![COLOR::GREEN, COLOR::BLUE, COLOR::RED],
+            &vec![Color::Green, Color::Blue, Color::Red],
             |z| (z, z),
         );
-        let my_mid_interface_1 = my_cospan.codomain();
-        let my_mid_interface_2 = my_cospan_2.domain();
-        let comp = my_cospan.compose(&my_cospan_2);
+        let mid_interface_1 = cospan.codomain();
+        let mid_interface_2 = cospan_2.domain();
+        let comp = cospan.compose(&cospan_2);
         match comp {
             Ok(real_res) => {
                 let expected_res = NamedCospan::identity(
-                    &vec![COLOR::GREEN, COLOR::BLUE, COLOR::RED],
-                    &vec![COLOR::GREEN, COLOR::BLUE, COLOR::RED],
+                    &vec![Color::Green, Color::Blue, Color::Red],
+                    &vec![Color::Green, Color::Blue, Color::Red],
                     |z| (z, z),
                 );
                 assert_eq!(expected_res.domain(), real_res.domain());
@@ -500,7 +488,7 @@ mod test {
             Err(_e) => {
                 panic!(
                     "Could not compose simple example because {:?} did not match {:?}",
-                    my_mid_interface_1, my_mid_interface_2
+                    mid_interface_1, mid_interface_2
                 );
             }
         }
@@ -515,25 +503,25 @@ mod test {
         let n_max = 10;
         let between = Uniform::<usize>::from(2..n_max);
         let mut rng = rand::thread_rng();
-        let my_n = between.sample(&mut rng);
+        let n = between.sample(&mut rng);
 
         for trial_num in 0..20 {
             let types_as_on_source = trial_num % 2 == 0;
-            let p1 = rand_perm(my_n, my_n * 2);
-            let p2 = rand_perm(my_n, my_n * 2);
+            let p1 = rand_perm(n, n * 2);
+            let p2 = rand_perm(n, n * 2);
             let prod = p1.clone() * p2.clone();
             let cospan_p1 = NamedCospan::from_permutation_extra_data(
                 p1,
-                &(0..my_n).map(|_| ()).collect::<Vec<()>>(),
+                &(0..n).map(|_| ()).collect::<Vec<_>>(),
                 types_as_on_source,
-                &(0..my_n).map(|z| z).collect::<Vec<usize>>(),
+                &(0..n).map(|z| z).collect::<Vec<usize>>(),
                 |_| ((), ()),
             );
             let cospan_p2 = NamedCospan::from_permutation_extra_data(
                 p2,
-                &(0..my_n).map(|_| ()).collect::<Vec<()>>(),
+                &(0..n).map(|_| ()).collect::<Vec<_>>(),
                 types_as_on_source,
-                &(0..my_n).map(|z| z).collect::<Vec<usize>>(),
+                &(0..n).map(|z| z).collect::<Vec<_>>(),
                 |_| ((), ()),
             );
             let cospan_prod = cospan_p1.compose(&cospan_p2);
@@ -541,9 +529,9 @@ mod test {
                 Ok(real_res) => {
                     let expected_res = NamedCospan::from_permutation_extra_data(
                         prod,
-                        &(0..my_n).map(|_| ()).collect::<Vec<()>>(),
+                        &(0..n).map(|_| ()).collect::<Vec<_>>(),
                         types_as_on_source,
-                        &(0..my_n).map(|z| z).collect::<Vec<usize>>(),
+                        &(0..n).map(|z| z).collect::<Vec<usize>>(),
                         |_| ((), ()),
                     );
                     assert_eq!(real_res.domain(), expected_res.domain());
@@ -551,12 +539,12 @@ mod test {
                     assert_eq!(real_res.left_names, expected_res.left_names);
                     assert_eq!(real_res.right_names, expected_res.right_names);
                     assert_eq!(
-                        real_res.underlying_cospan.left_to_middle(),
-                        expected_res.underlying_cospan.left_to_middle()
+                        real_res.cospan.left_to_middle(),
+                        expected_res.cospan.left_to_middle()
                     );
                     assert_eq!(
-                        real_res.underlying_cospan.right_to_middle(),
-                        expected_res.underlying_cospan.right_to_middle()
+                        real_res.cospan.right_to_middle(),
+                        expected_res.cospan.right_to_middle()
                     );
                 }
                 Err(e) => {

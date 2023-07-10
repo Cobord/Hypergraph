@@ -1,12 +1,13 @@
-use std::cmp::max;
-use std::{collections::HashSet, error, fmt};
-
-use permutations::Permutation;
-
-use crate::category::{Composable, HasIdentity};
-use crate::monoidal::{Monoidal, MonoidalMorphism};
-use crate::symmetric_monoidal::SymmetricMonoidalDiscreteMorphism;
-use crate::utils::position_max;
+use {
+    crate::{
+        category::{Composable, HasIdentity},
+        monoidal::{Monoidal, MonoidalMorphism},
+        symmetric_monoidal::SymmetricMonoidalDiscreteMorphism,
+        utils::argmax,
+    },
+    permutations::Permutation,
+    std::{collections::HashSet, error, fmt},
+};
 
 pub type FinSetMap = Vec<usize>;
 pub type FinSetMorphism = (Vec<usize>, usize);
@@ -32,25 +33,22 @@ impl Monoidal for FinSetMorphism {
 
 impl Composable<usize> for FinSetMorphism {
     fn compose(&self, other: &Self) -> Result<Self, String> {
-        if Self::composable(self, other).is_err() {
-            let self_codomain = self.codomain();
-            let other_domain = other.domain();
+        if self.composable(other).is_err() {
             return Err(format!(
                 "Not composable. The codomain of self was {}. The domain of other was {}",
-                self_codomain, other_domain
+                self.codomain(),
+                other.domain()
             ));
         }
         let other_codomain = other.codomain();
-        let composite = (0..self.domain())
-            .map(|s| other.0[self.0[s]])
-            .collect::<Vec<usize>>();
-        let pos_max = position_max(&composite);
-        if let Some(max_val) = pos_max.map(|z| composite[z]) {
-            let leftover_needed = max(other_codomain - max_val - 1, 0);
-            Ok((composite, leftover_needed))
+        let composite: Vec<_> = (0..self.domain()).map(|s| other.0[self.0[s]]).collect();
+        let pos_max = argmax(&composite);
+        let ret = if let Some(max_val) = pos_max.map(|z| composite[z]) {
+            (other_codomain - max_val - 1).max(0)
         } else {
-            Ok((composite, other_codomain))
-        }
+            other_codomain
+        };
+        Ok((composite, ret))
     }
 
     fn domain(&self) -> usize {
@@ -58,7 +56,7 @@ impl Composable<usize> for FinSetMorphism {
     }
 
     fn codomain(&self) -> usize {
-        let pos_max = position_max(&self.0);
+        let pos_max = argmax(&self.0);
         if let Some(max_val) = pos_max.map(|z| self.0[z]) {
             max_val + self.1 + 1
         } else {
@@ -91,18 +89,17 @@ impl Monoidal for OrderPresSurj {
 
 impl Composable<usize> for OrderPresSurj {
     fn compose(&self, other: &Self) -> Result<Self, String> {
-        if Self::composable(self, other).is_err() {
-            let self_codomain = self.codomain();
-            let other_domain = other.domain();
+        if self.composable(other).is_err() {
             return Err(format!(
                 "Not composable. The codomain of self was {}. The domain of other was {}",
-                self_codomain, other_domain
+                self.codomain(),
+                other.domain()
             ));
         }
-        let my_codomain = other.codomain();
-        let mut answer = Vec::with_capacity(my_codomain);
+        let codomain = other.codomain();
+        let mut answer = Vec::with_capacity(codomain);
         let mut self_idx = 0;
-        for idx in 0..my_codomain {
+        for idx in 0..codomain {
             let how_many_mid = other.preimage_card_minus_1[idx] + 1;
             let preimage_card_cur: usize = self.preimage_card_minus_1
                 [self_idx..self_idx + how_many_mid]
@@ -133,9 +130,7 @@ impl OrderPresSurj {
         let domain_size: usize = self.domain();
         let mut answer = Vec::with_capacity(domain_size);
         for (cur_target, v) in self.preimage_card_minus_1.iter().enumerate() {
-            for _ in 0..(v + 1) {
-                answer.push(cur_target);
-            }
+            answer.extend(std::iter::repeat(cur_target).take(v + 1));
         }
         (answer, 0)
     }
@@ -174,18 +169,17 @@ impl Monoidal for OrderPresInj {
 
 impl Composable<usize> for OrderPresInj {
     fn compose(&self, other: &Self) -> Result<Self, String> {
-        if Self::composable(self, other).is_err() {
-            let self_codomain = self.codomain();
-            let other_domain = other.domain();
+        if self.composable(other).is_err() {
             return Err(format!(
                 "Not composable. The codomain of self was {}. The domain of other was {}",
-                self_codomain, other_domain
+                self.codomain(),
+                other.domain()
             ));
         }
         let ord_self = self.to_ordinary();
         let ord_other = other.to_ordinary();
         let composite = ord_self.compose(&ord_other)?;
-        OrderPresInj::try_from(composite).map_err(|_| "???".to_string())
+        Self::try_from(composite).map_err(|_| "???".to_string())
     }
 
     fn domain(&self) -> usize {
@@ -243,58 +237,26 @@ impl OrderPresInj {
     }
 }
 
-pub fn is_monotonic_inc<T: Ord, I>(mut my_iter: I, prev_elt: Option<T>) -> bool
-where
-    I: Iterator<Item = T>,
-{
-    let current = my_iter.next();
-    if let Some(real_current) = current {
-        if let Some(real_prev_elt) = prev_elt {
-            if real_prev_elt > real_current {
-                return false;
-            }
-        }
-        is_monotonic_inc(my_iter, Some(real_current))
-    } else {
-        true
-    }
-}
-
 fn is_surjective(v: &[usize]) -> bool {
-    let pos_max = position_max(v);
-    if let Some(max_val) = pos_max.map(|z| v[z]) {
-        if v.len() < max_val + 1 {
-            return false;
-        }
-        let mut seen_elts = HashSet::new();
-        for cur_v in v {
-            seen_elts.insert(*cur_v);
-        }
-        seen_elts.len() == max_val + 1
-    } else {
-        // empty set to empty set
-        true
+    let pos_max = argmax(v);
+    // empty set to empty set
+    let Some(max_val) = pos_max.map(|z| v[z]) else { return true };
+    if v.len() < max_val + 1 {
+        return false;
     }
+
+    let seen: HashSet<_> = v.iter().collect();
+    seen.len() == max_val + 1
 }
 
 fn is_injective(v: &[usize]) -> bool {
-    let pos_max = position_max(v);
-    if let Some(max_val) = pos_max.map(|z| v[z]) {
-        if v.len() > max_val + 1 {
-            return false;
-        }
-        let mut seen_elts = HashSet::with_capacity(v.len());
-        for cur_v in v {
-            if seen_elts.contains(cur_v) {
-                return false;
-            }
-            seen_elts.insert(*cur_v);
-        }
-        true
-    } else {
-        // empty set to empty set
-        true
+    let pos_max = argmax(v);
+    // empty set to empty set
+    let Some(max_val) = pos_max.map(|z| v[z]) else { return true };
+    if v.len() > max_val + 1 {
+        return false;
     }
+    crate::utils::is_unique(v)
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -310,38 +272,37 @@ impl fmt::Display for TryFromSurjError {
 
 impl TryFrom<FinSetMorphism> for OrderPresSurj {
     type Error = TryFromSurjError;
-    fn try_from(v_mor: FinSetMorphism) -> Result<OrderPresSurj, TryFromSurjError> {
+    fn try_from(v_mor: FinSetMorphism) -> Result<Self, Self::Error> {
         if v_mor.1 > 0 {
             return Err(TryFromSurjError);
         }
         let v = v_mor.0;
-        if is_monotonic_inc(v.iter(), None) && is_surjective(&v) {
-            if v.is_empty() {
-                return Ok(OrderPresSurj {
-                    preimage_card_minus_1: vec![],
-                });
-            }
-            let mut cur_i = 0;
-            let mut count_of_cur_i = 0;
-            let my_max = v[v.len() - 1];
-            let mut preimage_card_minus_1 = Vec::with_capacity(my_max);
-            for cur_v in v {
-                if cur_v > cur_i {
-                    preimage_card_minus_1.push(count_of_cur_i - 1);
-                    cur_i = cur_v;
-                    count_of_cur_i = 1;
-                } else {
-                    count_of_cur_i += 1;
-                }
-            }
-            preimage_card_minus_1.push(count_of_cur_i - 1);
-            preimage_card_minus_1.shrink_to_fit();
-            Ok(OrderPresSurj {
-                preimage_card_minus_1,
-            })
-        } else {
-            Err(TryFromSurjError)
+        if !v.iter().is_sorted() || !is_surjective(&v) {
+            return Err(TryFromSurjError);
         }
+        if v.is_empty() {
+            return Ok(Self {
+                preimage_card_minus_1: vec![],
+            });
+        }
+        let mut cur_i = 0;
+        let mut count_of_cur_i = 0;
+        let max = *v.last().unwrap();
+        let mut preimage_card_minus_1 = Vec::with_capacity(max);
+        for cur_v in v {
+            if cur_v > cur_i {
+                preimage_card_minus_1.push(count_of_cur_i - 1);
+                cur_i = cur_v;
+                count_of_cur_i = 1;
+            } else {
+                count_of_cur_i += 1;
+            }
+        }
+        preimage_card_minus_1.push(count_of_cur_i - 1);
+        preimage_card_minus_1.shrink_to_fit();
+        Ok(Self {
+            preimage_card_minus_1,
+        })
     }
 }
 impl error::Error for TryFromSurjError {}
@@ -359,43 +320,42 @@ impl fmt::Display for TryFromInjError {
 
 impl TryFrom<FinSetMorphism> for OrderPresInj {
     type Error = TryFromInjError;
-    fn try_from(v_mor: FinSetMorphism) -> Result<OrderPresInj, TryFromInjError> {
+    fn try_from(v_mor: FinSetMorphism) -> Result<Self, Self::Error> {
         let v = v_mor.0;
-        if is_monotonic_inc(v.iter(), None) && is_injective(&v) {
-            if v.is_empty() {
-                return Ok(OrderPresInj {
-                    counts_iden_unit_alternating: vec![],
-                });
-            }
-            let mut previous_entry_plus_1 = 0;
-            let mut cur_consecutive = 0;
-            let mut counts_iden_unit_alternating = Vec::with_capacity(1 + v.len() * 2);
-            for cur_v in v {
-                if cur_v == previous_entry_plus_1 {
-                    cur_consecutive += 1;
-                } else {
-                    counts_iden_unit_alternating.push(cur_consecutive);
-                    counts_iden_unit_alternating.push(cur_v - previous_entry_plus_1);
-                    cur_consecutive = 1;
-                }
-                previous_entry_plus_1 = cur_v + 1;
-            }
-            if cur_consecutive > 0 {
+        if !v.iter().is_sorted() || !is_injective(&v) {
+            return Err(TryFromInjError);
+        }
+        if v.is_empty() {
+            return Ok(Self {
+                counts_iden_unit_alternating: vec![],
+            });
+        }
+        let mut previous_entry_plus_1 = 0;
+        let mut cur_consecutive = 0;
+        let mut counts_iden_unit_alternating = Vec::with_capacity(1 + v.len() * 2);
+        for cur_v in v {
+            if cur_v == previous_entry_plus_1 {
+                cur_consecutive += 1;
+            } else {
                 counts_iden_unit_alternating.push(cur_consecutive);
-                if v_mor.1 > 0 {
-                    counts_iden_unit_alternating.push(v_mor.1);
-                }
-            } else if v_mor.1 > 0 {
-                counts_iden_unit_alternating.push(0);
+                counts_iden_unit_alternating.push(cur_v - previous_entry_plus_1);
+                cur_consecutive = 1;
+            }
+            previous_entry_plus_1 = cur_v + 1;
+        }
+        if cur_consecutive > 0 {
+            counts_iden_unit_alternating.push(cur_consecutive);
+            if v_mor.1 > 0 {
                 counts_iden_unit_alternating.push(v_mor.1);
             }
-            counts_iden_unit_alternating.shrink_to_fit();
-            Ok(OrderPresInj {
-                counts_iden_unit_alternating,
-            })
-        } else {
-            Err(TryFromInjError)
+        } else if v_mor.1 > 0 {
+            counts_iden_unit_alternating.push(0);
+            counts_iden_unit_alternating.push(v_mor.1);
         }
+        counts_iden_unit_alternating.shrink_to_fit();
+        Ok(Self {
+            counts_iden_unit_alternating,
+        })
     }
 }
 impl error::Error for TryFromInjError {}
@@ -442,24 +402,23 @@ impl Monoidal for Decomposition {
 
 impl Composable<usize> for Decomposition {
     fn compose(&self, other: &Self) -> Result<Self, String> {
-        if Self::composable(self, other).is_err() {
-            let self_codomain = self.codomain();
-            let other_domain = other.domain();
+        if self.composable(other).is_err() {
             return Err(format!(
                 "Not composable. The codomain of self was {}. The domain of other was {}",
-                self_codomain, other_domain
+                self.codomain(),
+                other.domain()
             ));
         }
         let other_codomain = other.codomain();
         let ord_self = self.to_ordinary();
         let ord_other = other.to_ordinary();
         let composite = ord_self.compose(&ord_other)?;
-        let pos_max = position_max(&composite.0);
+        let pos_max = argmax(&composite.0);
         if let Some(max_val) = pos_max.map(|z| composite.0[z]) {
-            let leftover_needed = max(other_codomain - max_val - 1, 0);
-            Decomposition::try_from((composite.0, leftover_needed)).map_err(|_| "???".to_string())
+            let leftover_needed = (other_codomain - max_val - 1).max(0);
+            Self::try_from((composite.0, leftover_needed)).map_err(|_| "???".to_string())
         } else {
-            Decomposition::try_from(composite).map_err(|_| "???".to_string())
+            Self::try_from(composite).map_err(|_| "???".to_string())
         }
         //todo test
     }
@@ -490,12 +449,12 @@ impl SymmetricMonoidalDiscreteMorphism<usize> for Decomposition {
         }
     }
 
-    fn from_permutation(p: Permutation, my_type: usize, _: bool) -> Self {
-        assert_eq!(p.len(), my_type);
+    fn from_permutation(p: Permutation, type_: usize, _: bool) -> Self {
+        assert_eq!(p.len(), type_);
         let _answer = Self {
             permutation_part: p,
-            order_preserving_injection: OrderPresInj::identity(&my_type),
-            order_preserving_surjection: OrderPresSurj::identity(&my_type),
+            order_preserving_injection: OrderPresInj::identity(&type_),
+            order_preserving_surjection: OrderPresSurj::identity(&type_),
         };
         todo!("might be p.inv() instead")
     }
@@ -510,12 +469,10 @@ impl Decomposition {
 
     fn to_ordinary(&self) -> FinSetMorphism {
         let wanted_codomain = self.codomain();
-        let map_part = (0..self.domain())
-            .map(|z| self.apply(z))
-            .collect::<FinSetMap>();
-        let pos_max = position_max(&map_part);
+        let map_part: FinSetMap = (0..self.domain()).map(|z| self.apply(z)).collect();
+        let pos_max = argmax(&map_part);
         if let Some(max_val) = pos_max.map(|z| map_part[z]) {
-            let leftover_needed = max(wanted_codomain - max_val - 1, 0);
+            let leftover_needed = wanted_codomain - max_val - 1.max(0);
             (map_part, leftover_needed)
         } else {
             (map_part, wanted_codomain)
@@ -544,34 +501,23 @@ impl fmt::Display for TryFromFinSetError {
 
 impl TryFrom<FinSetMorphism> for Decomposition {
     type Error = TryFromFinSetError;
-    fn try_from(v_mor: FinSetMorphism) -> Result<Decomposition, TryFromFinSetError> {
-        let v = v_mor.0;
-        if is_monotonic_inc(v.iter(), None) {
-            let permutation_part = Permutation::identity(v.len());
-            let (epic_part, monic_part) = monotone_epi_mono_fact(v);
-            let order_preserving_surjection =
-                OrderPresSurj::try_from((epic_part, 0)).map_err(|_| TryFromFinSetError)?;
-            let order_preserving_injection =
-                OrderPresInj::try_from((monic_part, v_mor.1)).map_err(|_| TryFromFinSetError)?;
-            Ok(Decomposition {
-                permutation_part,
-                order_preserving_surjection,
-                order_preserving_injection,
-            })
+    fn try_from(v_mor: FinSetMorphism) -> Result<Self, TryFromFinSetError> {
+        let mut v = v_mor.0;
+        let permutation_part = if v.iter().is_sorted() {
+            Permutation::identity(v.len())
         } else {
-            let mut v_clone = v;
-            let permutation_part = permutation_sort(&mut v_clone).inv();
-            let (epic_part, monic_part) = monotone_epi_mono_fact(v_clone);
-            let order_preserving_surjection =
-                OrderPresSurj::try_from((epic_part, 0)).map_err(|_| TryFromFinSetError)?;
-            let order_preserving_injection =
-                OrderPresInj::try_from((monic_part, v_mor.1)).map_err(|_| TryFromFinSetError)?;
-            Ok(Decomposition {
-                permutation_part,
-                order_preserving_surjection,
-                order_preserving_injection,
-            })
-        }
+            permutation_sort(&mut v).inv()
+        };
+        let (epic_part, monic_part) = monotone_epi_mono_fact(v);
+        let order_preserving_surjection =
+            OrderPresSurj::try_from((epic_part, 0)).map_err(|_| TryFromFinSetError)?;
+        let order_preserving_injection =
+            OrderPresInj::try_from((monic_part, v_mor.1)).map_err(|_| TryFromFinSetError)?;
+        Ok(Self {
+            permutation_part,
+            order_preserving_surjection,
+            order_preserving_injection,
+        })
     }
 }
 impl error::Error for TryFromFinSetError {}
@@ -605,27 +551,6 @@ fn monotone_epi_mono_fact(v: FinSetMap) -> (FinSetMap, FinSetMap) {
 }
 
 mod test {
-
-    #[test]
-    fn monotonicity() {
-        use crate::finset::is_monotonic_inc;
-        let mut cur_test: Vec<i8> = vec![];
-        assert!(is_monotonic_inc(cur_test.iter(), None));
-        cur_test = vec![1];
-        assert!(is_monotonic_inc(cur_test.iter(), None));
-        cur_test = vec![-1];
-        assert!(is_monotonic_inc(cur_test.iter(), None));
-        cur_test = vec![-124];
-        assert!(is_monotonic_inc(cur_test.iter(), None));
-        cur_test = vec![1, 2];
-        assert!(is_monotonic_inc(cur_test.iter(), None));
-        cur_test = vec![2, 1];
-        assert!(!is_monotonic_inc(cur_test.iter(), None));
-        cur_test = vec![3, 1, 2];
-        assert!(!is_monotonic_inc(cur_test.iter(), None));
-        cur_test = vec![1, 1, 2];
-        assert!(is_monotonic_inc(cur_test.iter(), None));
-    }
 
     #[test]
     fn surjectivity() {

@@ -1,12 +1,13 @@
-use either::Either::{self, Left, Right};
-use std::cmp::{max, min};
-use std::collections::HashSet;
-use std::fmt::Debug;
-
-use crate::category::{Composable, HasIdentity};
-use crate::monoidal::{GenericMonoidalInterpretable, Monoidal, MonoidalMorphism};
-use crate::symmetric_monoidal::SymmetricMonoidalMorphism;
-use crate::utils::{in_place_permute, represents_id};
+use {
+    crate::{
+        category::{Composable, HasIdentity},
+        monoidal::{GenericMonoidalInterpretable, Monoidal, MonoidalMorphism},
+        symmetric_monoidal::SymmetricMonoidalMorphism,
+        utils::{in_place_permute, represents_id},
+    },
+    either::Either::{self, Left, Right},
+    std::{collections::HashSet, fmt::Debug},
+};
 
 type LeftIndex = usize;
 type RightIndex = usize;
@@ -52,12 +53,12 @@ where
             "There was a left and right linked by something in the span, but their lambda types didn't match"
         );
         if check_id {
-            let is_left_really_id = represents_id(&self.middle_to_left());
+            let is_left_really_id = represents_id(self.middle_to_left().into_iter());
             assert_eq!(
                 is_left_really_id, self.is_left_id,
                 "The identity nature of the left arrow was wrong"
             );
-            let is_right_really_id = represents_id(&self.middle_to_right());
+            let is_right_really_id = represents_id(self.middle_to_right().into_iter());
             assert_eq!(
                 is_right_really_id, self.is_right_id,
                 "The identity nature of the right arrow was wrong"
@@ -70,9 +71,8 @@ where
         right: Vec<Lambda>,
         middle: Vec<(LeftIndex, RightIndex)>,
     ) -> Self {
-        let is_left_id = represents_id(&middle.iter().map(|tup| tup.0).collect::<Vec<LeftIndex>>());
-        let is_right_id =
-            represents_id(&middle.iter().map(|tup| tup.1).collect::<Vec<RightIndex>>());
+        let is_left_id = represents_id(middle.iter().map(|tup| tup.0));
+        let is_right_id = represents_id(middle.iter().map(|tup| tup.1));
         let answer = Self {
             middle,
             left,
@@ -85,17 +85,11 @@ where
     }
 
     pub fn middle_to_left(&self) -> Vec<LeftIndex> {
-        self.middle
-            .iter()
-            .map(|tup| tup.0)
-            .collect::<Vec<LeftIndex>>()
+        self.middle.iter().map(|tup| tup.0).collect()
     }
 
     pub fn middle_to_right(&self) -> Vec<RightIndex> {
-        self.middle
-            .iter()
-            .map(|tup| tup.1)
-            .collect::<Vec<RightIndex>>()
+        self.middle.iter().map(|tup| tup.1).collect()
     }
 
     #[allow(dead_code)]
@@ -134,12 +128,12 @@ where
     }
 
     #[allow(dead_code)]
-    pub fn change_lambda<F, Mu>(&self, f: F) -> Span<Mu>
+    pub fn map<F, Mu>(&self, f: F) -> Span<Mu>
     where
         F: Fn(Lambda) -> Mu,
         Mu: Sized + Eq + Copy + Debug,
     {
-        Span::<Mu>::new(
+        Span::new(
             self.left.iter().map(|l| f(*l)).collect(),
             self.right.iter().map(|l| f(*l)).collect(),
             self.middle.clone(),
@@ -147,23 +141,14 @@ where
     }
 
     pub fn is_jointly_injective(&self) -> bool {
-        let mut seen = HashSet::with_capacity(self.middle.len());
-        for cur_mid in &self.middle {
-            if !seen.insert(*cur_mid) {
-                return false;
-            }
-        }
-        true
+        crate::utils::is_unique(&self.middle)
     }
 
     pub fn dagger(&self) -> Self {
         Self::new(
             self.codomain(),
             self.domain(),
-            self.middle
-                .iter()
-                .map(|(z, w)| (*w, *z))
-                .collect::<Vec<(usize, usize)>>(),
+            self.middle.iter().map(|(z, w)| (*w, *z)).collect(),
         )
     }
 }
@@ -174,7 +159,7 @@ where
 {
     fn identity(on_this: &Vec<Lambda>) -> Self {
         Self {
-            middle: (0..on_this.len()).map(|idx| (idx, idx)).collect::<Vec<_>>(),
+            middle: (0..on_this.len()).map(|idx| (idx, idx)).collect(),
             left: on_this.clone(),
             right: on_this.clone(),
             is_left_id: true,
@@ -183,44 +168,36 @@ where
     }
 }
 
+pub fn dim_check<
+    Lambda: Eq + Debug,
+    L: ExactSizeIterator + Iterator<Item = Lambda>,
+    R: ExactSizeIterator + Iterator<Item = Lambda>,
+>(
+    l: L,
+    r: R,
+) -> Result<(), String> {
+    if l.len() != r.len() {
+        return Err("Mismatch in cardinalities of common interface".to_string());
+    }
+    let Some((w1,w2)) = l.zip(r).find(|(a, b)| a != b) else { return Ok(())};
+    Err(format!(
+        "Mismatch in labels of common interface. At some index there was {:?} vs {:?}",
+        w1, w2
+    ))
+}
+
 impl<Lambda> Composable<Vec<Lambda>> for Span<Lambda>
 where
     Lambda: Sized + Eq + Copy + Debug,
 {
     fn composable(&self, other: &Self) -> Result<(), String> {
-        let mut self_interface = self.right.iter();
-        let mut other_interface = other.left.iter();
-        let mut to_continue = true;
-        while to_continue {
-            let current_self = self_interface.next();
-            let current_other = other_interface.next();
-            match (current_self, current_other) {
-                (None, None) => {
-                    to_continue = false;
-                }
-                (Some(_), None) => {
-                    return Err("Mismatch in cardinalities of common interface".to_string());
-                }
-                (None, Some(_)) => {
-                    return Err("Mismatch in cardinalities of common interface".to_string());
-                }
-                (Some(w1), Some(w2)) => {
-                    if w1 != w2 {
-                        return Err(format!(
-                            "Mismatch in labels of common interface. At some index there was {:?} vs {:?}",
-                            w1, w2
-                        ));
-                    }
-                }
-            }
-        }
-        Ok(())
+        dim_check(self.right.iter(), other.left.iter())
     }
 
     fn compose(&self, other: &Self) -> Result<Self, String> {
         self.composable(other)?;
         // could shortuct if self.is_right_id or other.is_left_id, but unnecessary
-        let max_middle = max(self.middle.len(), other.middle.len());
+        let max_middle = self.middle.len().max(other.middle.len());
         let mut answer = Self::new(
             self.left.clone(),
             other.right.clone(),
@@ -303,9 +280,7 @@ where
         if types_as_on_domain {
             let _answer = Self {
                 left: types.to_vec(),
-                middle: (0..types.len())
-                    .map(|idx| (idx, p.apply(idx)))
-                    .collect::<Vec<_>>(),
+                middle: (0..types.len()).map(|idx| (idx, p.apply(idx))).collect(),
                 right: p.permute(types),
                 is_left_id: true,
                 is_right_id: false,
@@ -314,9 +289,7 @@ where
         } else {
             let _answer = Self {
                 left: p.permute(types),
-                middle: (0..types.len())
-                    .map(|idx| (p.apply(idx), idx))
-                    .collect::<Vec<_>>(),
+                middle: (0..types.len()).map(|idx| (p.apply(idx), idx)).collect(),
                 right: types.to_vec(),
                 is_left_id: false,
                 is_right_id: true,
@@ -373,11 +346,11 @@ impl<Lambda> MonoidalMorphism<Vec<Lambda>> for Rel<Lambda> where Lambda: Sized +
 impl<Lambda> GenericMonoidalInterpretable<Lambda> for Rel<Lambda> where Lambda: Eq + Copy + Debug {}
 
 impl<Lambda: Eq + Sized + Debug + Copy> Rel<Lambda> {
-    fn new(x: Span<Lambda>, do_check: bool) -> Rel<Lambda> {
+    fn new(x: Span<Lambda>, do_check: bool) -> Self {
         if do_check {
             assert!(x.is_jointly_injective());
         }
-        Rel::<Lambda>(x)
+        Self(x)
     }
 
     fn subsumes(&self, other: &Rel<Lambda>) -> bool {
@@ -408,7 +381,7 @@ impl<Lambda: Eq + Sized + Debug + Copy> Rel<Lambda> {
         assert_eq!(self.domain(), other.domain());
         assert_eq!(self.codomain(), other.codomain());
 
-        let capacity = min(self.0.middle.len(), other.0.middle.len());
+        let capacity = self.0.middle.len().min(other.0.middle.len());
         let mut ret_val =
             Span::<Lambda>::new(self.domain(), self.codomain(), Vec::with_capacity(capacity));
 
@@ -476,29 +449,14 @@ impl<Lambda: Eq + Sized + Debug + Copy> Rel<Lambda> {
 
     #[allow(dead_code)]
     fn is_equivalence_rel(&self) -> bool {
-        if !self.is_homogeneous() {
-            return false;
-        }
-        if !self.is_reflexive() {
-            return false;
-        }
-        if !self.is_symmetric() {
-            return false;
-        }
-        self.is_transitive()
+        self.is_homogeneous() && self.is_reflexive() && self.is_symmetric() && self.is_transitive()
     }
 
     #[allow(dead_code)]
     fn is_partial_order(&self) -> bool {
-        if !self.is_homogeneous() {
-            return false;
-        }
-        if !self.is_reflexive() {
-            return false;
-        }
-        if !self.is_antisymmetric() {
-            return false;
-        }
-        self.is_transitive()
+        self.is_homogeneous()
+            && self.is_reflexive()
+            && self.is_antisymmetric()
+            && self.is_transitive()
     }
 }

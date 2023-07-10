@@ -1,81 +1,136 @@
-use itertools::Itertools;
-use std::cmp::{max, min};
-use std::collections::HashSet;
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::mem::swap;
-use std::ops::{Add, AddAssign, Mul, MulAssign};
-
-use num::{One, Zero};
-use petgraph::algo::{connected_components, has_path_connecting, DfsSpace};
-use petgraph::{Graph, Undirected};
-
-use crate::category::{Composable, HasIdentity};
-use crate::finset::is_monotonic_inc;
-use crate::linear_combination::{
-    inj_linearly_extend, linear_combine, linearly_extend, simplify as linear_simplify,
-    LinearCombination,
+use {
+    crate::{
+        category::{Composable, HasIdentity},
+        linear_combination::LinearCombination,
+        monoidal::{Monoidal, MonoidalMorphism},
+    },
+    itertools::Itertools,
+    num::{One, Zero},
+    petgraph::{
+        algo::{connected_components, has_path_connecting, DfsSpace},
+        Graph, Undirected,
+    },
+    std::{
+        collections::HashSet,
+        fmt::Debug,
+        hash::Hash,
+        ops::{Add, AddAssign, Mul, MulAssign},
+    },
 };
-use crate::monoidal::{Monoidal, MonoidalMorphism};
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, PartialOrd, Ord)]
+pub struct Pair(pub usize, pub usize);
+
+impl Pair {
+    pub fn iter(&self) -> impl Iterator<Item = usize> {
+        [self.0, self.1].into_iter()
+    }
+
+    pub fn map(&self, f: impl Fn(usize) -> usize) -> Self {
+        Self(f(self.0), f(self.1))
+    }
+
+    pub fn all(&self, f: impl Fn(usize) -> bool) -> bool {
+        f(self.0) && f(self.1)
+    }
+
+    pub fn any(&self, f: impl Fn(usize) -> bool) -> bool {
+        f(self.0) || f(self.1)
+    }
+
+    pub fn flip_upside_down(&self, source: usize, target: usize) -> Self {
+        self.map(|v| if v < source { v + target } else { v - source })
+    }
+
+    pub fn sort(&self) -> Self {
+        Self::sorted(self.0, self.1)
+    }
+
+    pub fn sorted(x: usize, y: usize) -> Self {
+        if x < y {
+            Self(x, y)
+        } else {
+            Self(y, x)
+        }
+    }
+
+    pub fn contains(&self, x: usize) -> bool {
+        (x < self.0 && x > self.1) || (x < self.1 && x > self.0)
+    }
+
+    // pub fn new(x: usize, y: usize) -> Self {
+    //     Self(x, y)
+    // }
+}
+
+impl From<(usize, usize)> for Pair {
+    fn from(value: (usize, usize)) -> Self {
+        Self(value.0, value.1)
+    }
+}
 
 #[derive(PartialEq, Eq, Clone, Hash, Debug)]
 struct PerfectMatching {
-    pairs: Vec<(usize, usize)>,
+    pairs: Vec<Pair>,
 }
 
-impl PerfectMatching {
-    fn new(pair_prime: &[(usize, usize)]) -> Self {
-        let max_expected = pair_prime.len() * 2;
-        let mut cur_seen = HashSet::with_capacity(max_expected);
-        for (p, q) in pair_prime {
-            assert!(*p < max_expected);
-            assert!(*q < max_expected);
-            cur_seen.insert(*p);
-            cur_seen.insert(*q);
-        }
-        assert_eq!(cur_seen.len(), max_expected);
-        let pair_iter = pair_prime.iter().copied();
-        let mut ret_val = Self {
-            pairs: Vec::from_iter(pair_iter),
-        };
+impl FromIterator<Pair> for PerfectMatching {
+    fn from_iter<T: IntoIterator<Item = Pair>>(pair_prime: T) -> Self {
+        let pairs: Vec<Pair> = pair_prime.into_iter().collect();
+        let max_expected = pairs.len() * 2;
+        let seen: HashSet<_> = pairs
+            .iter()
+            .map(|x| {
+                assert!(x.all(|x| x < max_expected));
+                x.iter()
+            })
+            .flatten()
+            .collect();
+        assert_eq!(seen.len(), max_expected);
+        let mut ret_val = Self { pairs };
+
         ret_val.canonicalize();
         ret_val
     }
+}
+
+impl From<Vec<Pair>> for PerfectMatching {
+    fn from(value: Vec<Pair>) -> Self {
+        Self::from_iter(value.into_iter())
+    }
+}
+
+impl PerfectMatching {
+    fn new(pair_prime: &[Pair]) -> Self {
+        Self::from_iter(pair_prime.iter().cloned())
+    }
 
     fn canonicalize(&mut self) {
-        for (p, q) in self.pairs.iter_mut() {
+        for Pair(p, q) in self.pairs.iter_mut() {
             if *p > *q {
-                swap(p, q);
+                std::mem::swap(p, q);
             }
         }
+
         self.pairs.sort();
     }
 
     fn flip_upside_down(&self, source: usize, target: usize) -> Self {
-        let new_list = self.pairs.iter().map(|(z, w)| {
-            let new_z = if *z < source { z + target } else { z - source };
-            let new_w = if *w < source { w + target } else { w - source };
-            (new_z, new_w)
-        });
-        Self::new(&new_list.collect::<Vec<(usize, usize)>>())
+        self.pairs
+            .iter()
+            .map(|x| x.flip_upside_down(source, target))
+            .collect()
     }
 
     fn non_crossing(&self, source: usize, _target: usize) -> bool {
-        let in_between = |query, (interval1, interval2)| {
-            (query < interval1 && query > interval2) || (query < interval2 && query > interval1)
-        };
         // the lines connecting two points both on source side
-        let source_lines = self
-            .pairs
-            .iter()
-            .filter(|(z, w)| *z < source && *w < source)
-            .cloned();
+        let source_lines = self.pairs.iter().filter(|p| p.all(|x| x < source)).cloned();
         let source_crossing_tests = source_lines.clone().combinations(2);
         for cur_item in source_crossing_tests {
             let first_block = cur_item[0];
             let second_block = cur_item[1];
-            let a = in_between(second_block.0, first_block);
-            let b = in_between(second_block.1, first_block);
+            let a = first_block.contains(second_block.0);
+            let b = first_block.contains(second_block.1);
             if a != b {
                 // a pair of lines that both connected source dots, crossed
                 return false;
@@ -83,25 +138,23 @@ impl PerfectMatching {
         }
         // no crossing lines can use these indices because they are blocked by a line connecting
         //      two source points
-        let mut no_through_lines_idx = HashSet::<usize>::new();
-        for (x, y) in source_lines {
-            for z in (1 + min(x, y))..max(x, y) {
-                no_through_lines_idx.insert(z);
-            }
-        }
+        let mut no_through_lines_idx: HashSet<_> = source_lines
+            .map(|Pair(x, y)| (1 + x.min(y))..x.max(y))
+            .flatten()
+            .collect();
 
         // the lines connecting two points both on target side
         let target_lines = self
             .pairs
             .iter()
-            .filter(|(z, w)| *z >= source && *w >= source)
+            .filter(|p| p.all(|x| x >= source))
             .cloned();
         let target_crossing_tests = target_lines.clone().combinations(2);
         for cur_item in target_crossing_tests {
             let first_block = cur_item[0];
             let second_block = cur_item[1];
-            let a = in_between(second_block.0, first_block);
-            let b = in_between(second_block.1, first_block);
+            let a = first_block.contains(second_block.0);
+            let b = first_block.contains(second_block.1);
             if a != b {
                 // a pair of lines that both connected source dots, crossed
                 return false;
@@ -109,27 +162,30 @@ impl PerfectMatching {
         }
 
         // no crossing lines can use these indices because they are blocked by a line connecting
-        //      two target points
-        for (x, y) in target_lines {
-            for z in (1 + min(x, y))..max(x, y) {
-                no_through_lines_idx.insert(z);
-            }
-        }
+        // two target points
+
+        no_through_lines_idx.extend(
+            target_lines
+                .map(|Pair(x, y)| (1 + x.min(y))..x.max(y))
+                .flatten(),
+        );
 
         // now check that those crossing lines don't use those indices that were stated to be forbidden
         let through_lines = self
             .pairs
             .iter()
-            .filter(|(z, w)| (*z < source && *w >= source) || (*w < source && *z >= source))
-            .map(|(z, w)| (min(*z, *w), max(*z, *w)));
-        for cur in through_lines.clone() {
-            if no_through_lines_idx.contains(&cur.0) || no_through_lines_idx.contains(&cur.1) {
-                return false;
-            }
+            .filter(|Pair(z, w)| (*z < source && *w >= source) || (*w < source && *z >= source))
+            .map(|p| p.sort());
+
+        if through_lines
+            .clone()
+            .any(|p| p.any(|x| no_through_lines_idx.contains(&x)))
+        {
+            return false;
         }
 
         // the induced map from the through_lines is monotonically increasing
-        is_monotonic_inc(through_lines.map(|(_, w)| w), None)
+        through_lines.map(|Pair(_, w)| w).is_sorted()
     }
 }
 
@@ -143,13 +199,10 @@ impl Mul for ExtendedPerfectMatching {
         let (self_dom, self_cod, self_delta_pow, self_diagram) = self.0;
         let (rhs_dom, rhs_cod, rhs_delta_pow, rhs_diagram) = rhs.0;
         assert_eq!(rhs_dom, self_cod);
-        let mut g: Graph<(), (), Undirected> = Graph::new_undirected();
-        let mut node_idcs = Vec::with_capacity(self_dom + self_cod + rhs_cod);
-        for _ in 0..self_dom + self_cod + rhs_cod {
-            node_idcs.push(None);
-        }
+        let mut g = Graph::<(), (), Undirected>::new_undirected();
+        let mut node_idcs = vec![None; self_dom + self_cod + rhs_cod];
         let self_pairs_copy = self_diagram.pairs.clone();
-        for (p, q) in self_diagram.pairs {
+        for Pair(p, q) in self_diagram.pairs {
             let p_loc = g.add_node(());
             node_idcs[p] = Some(p_loc);
             let q_loc = g.add_node(());
@@ -157,15 +210,14 @@ impl Mul for ExtendedPerfectMatching {
             g.add_edge(p_loc, q_loc, ());
         }
         for (idx, cur_item) in node_idcs.iter().enumerate().take(self_dom + self_cod) {
-            if cur_item.is_none() {
-                panic!(
-                    "index for {idx} unset. These were the ones in self_diagram {:?}",
-                    self_pairs_copy
-                );
-            }
+            assert!(
+                cur_item.is_some(),
+                "index for {idx} unset. These were the ones in self_diagram {:?}",
+                self_pairs_copy
+            );
         }
         let rhs_pairs_copy = rhs_diagram.pairs.clone();
-        for (p, q) in rhs_diagram.pairs {
+        for Pair(p, q) in rhs_diagram.pairs {
             let p_loc = if p >= rhs_dom {
                 let p_loc_temp = g.add_node(());
                 node_idcs[p + self_dom] = Some(p_loc_temp);
@@ -183,37 +235,26 @@ impl Mul for ExtendedPerfectMatching {
             g.add_edge(p_loc, q_loc, ());
         }
         for (idx, cur_item) in node_idcs.iter().enumerate() {
-            if cur_item.is_none() {
-                panic!(
-                    "index for {idx} unset. These were the ones in rhs {:?}",
-                    rhs_pairs_copy
-                );
-            }
+            assert!(
+                cur_item.is_some(),
+                "index for {idx} unset. These were the ones in rhs {:?}",
+                rhs_pairs_copy
+            );
         }
         let endpoints = self_dom + rhs_cod;
-        let mut endpoints_done: HashSet<usize> = HashSet::with_capacity(endpoints);
+        let mut endpoints_done = HashSet::<usize>::with_capacity(endpoints);
         let mut workspace = DfsSpace::new(&g);
         let mut final_matching = Vec::with_capacity(endpoints / 2);
         for i in 0..endpoints {
             if endpoints_done.contains(&i) {
                 continue;
             }
-            let i_loc = (if i < self_dom {
-                node_idcs[i]
-            } else {
-                node_idcs[i + self_cod]
-            })
-            .unwrap();
+            let i_loc = node_idcs[if i < self_dom { i } else { i + self_cod }].unwrap();
             for j in (i + 1)..endpoints {
-                let j_loc = (if j < self_dom {
-                    node_idcs[j]
-                } else {
-                    node_idcs[j + self_cod]
-                })
-                .unwrap();
+                let j_loc = node_idcs[if j < self_dom { j } else { j + self_cod }].unwrap();
                 let ij_conn = has_path_connecting(&g, i_loc, j_loc, Some(&mut workspace));
                 if ij_conn {
-                    final_matching.push((i, j));
+                    final_matching.push(Pair(i, j));
                     endpoints_done.insert(i);
                     endpoints_done.insert(j);
                     break;
@@ -222,12 +263,7 @@ impl Mul for ExtendedPerfectMatching {
         }
         let new_delta_power =
             connected_components(&g) + self_delta_pow + rhs_delta_pow - (endpoints / 2);
-        Self((
-            self_dom,
-            rhs_cod,
-            new_delta_power,
-            PerfectMatching::new(&final_matching),
-        ))
+        Self((self_dom, rhs_cod, new_delta_power, final_matching.into()))
     }
 }
 
@@ -235,7 +271,7 @@ pub struct BrauerMorphism<T>
 where
     T: Add<Output = T> + Zero + One + Copy,
 {
-    my_diagram: LinearCombination<T, (usize, PerfectMatching)>,
+    diagram: LinearCombination<T, (usize, PerfectMatching)>,
     source: usize,
     target: usize,
     is_def_tl: bool,
@@ -246,9 +282,7 @@ where
     T: Add<Output = T> + Zero + One + Copy + Eq,
 {
     fn eq(&self, other: &Self) -> bool {
-        self.my_diagram == other.my_diagram
-            && self.source == other.source
-            && self.target == other.target
+        self.diagram == other.diagram && self.source == other.source && self.target == other.target
     }
 }
 
@@ -258,7 +292,7 @@ where
 {
     fn clone(&self) -> Self {
         Self {
-            my_diagram: self.my_diagram.clone(),
+            diagram: self.diagram.clone(),
             source: self.source,
             target: self.target,
             is_def_tl: self.is_def_tl,
@@ -272,7 +306,7 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BrauerMorphism")
-            .field("my_diagram", &self.my_diagram)
+            .field("diagram", &self.diagram)
             .field("source", &self.source)
             .field("target", &self.target)
             .field("is_def_tl", &self.is_def_tl)
@@ -285,15 +319,9 @@ where
     T: Add<Output = T> + Zero + One + Copy,
 {
     fn identity(on_this: &usize) -> Self {
-        let my_matching = (0..*on_this)
-            .map(|x| (x, x + on_this))
-            .collect::<Vec<(usize, usize)>>();
-        let my_perfect_matching = PerfectMatching::new(&my_matching);
+        let matching: PerfectMatching = (0..*on_this).map(|x| Pair(x, x + on_this)).collect();
         Self {
-            my_diagram: LinearCombination::<T, (usize, PerfectMatching)>::singleton((
-                0,
-                my_perfect_matching,
-            )),
+            diagram: LinearCombination::singleton((0, matching)),
             source: *on_this,
             target: *on_this,
             is_def_tl: true,
@@ -307,20 +335,17 @@ where
 {
     fn compose(&self, other: &Self) -> Result<Self, String> {
         self.composable(other)?;
-        let extended_diagram_self =
-            inj_linearly_extend(&self.my_diagram, |(delta_pow, diagram)| {
-                ExtendedPerfectMatching((self.domain(), self.codomain(), delta_pow, diagram))
-            });
-        let extended_diagram_other =
-            inj_linearly_extend(&other.my_diagram, |(delta_pow, diagram)| {
-                ExtendedPerfectMatching((other.domain(), other.codomain(), delta_pow, diagram))
-            });
-        let extended_diagram_product = extended_diagram_self * extended_diagram_other;
-        let diagram_product = linearly_extend(&extended_diagram_product, |extended| {
-            (extended.0 .2, extended.0 .3)
+        let extended_diagram_self = self.diagram.inj_linearly_extend(|(delta_pow, diagram)| {
+            ExtendedPerfectMatching((self.domain(), self.codomain(), delta_pow, diagram))
         });
+        let extended_diagram_other = other.diagram.inj_linearly_extend(|(delta_pow, diagram)| {
+            ExtendedPerfectMatching((other.domain(), other.codomain(), delta_pow, diagram))
+        });
+        let extended_diagram_product = extended_diagram_self * extended_diagram_other;
+        let diagram_product =
+            extended_diagram_product.linearly_extend(|extended| (extended.0 .2, extended.0 .3));
         Ok(Self {
-            my_diagram: diagram_product,
+            diagram: diagram_product,
             source: self.domain(),
             target: other.codomain(),
             is_def_tl: self.is_def_tl && other.is_def_tl,
@@ -349,29 +374,14 @@ where
         let new_domain = self.domain();
         self.is_def_tl &= other.is_def_tl;
         let shift_idx = |diagram: PerfectMatching, if_above, shift_amount| {
-            PerfectMatching::new(
-                &diagram
-                    .pairs
-                    .iter()
-                    .map(|(x, y)| {
-                        let new_x = if *x >= if_above {
-                            *x + shift_amount
-                        } else {
-                            *x
-                        };
-                        let new_y = if *y >= if_above {
-                            *y + shift_amount
-                        } else {
-                            *y
-                        };
-                        (new_x, new_y)
-                    })
-                    .collect::<Vec<(usize, usize)>>(),
-            )
+            diagram
+                .pairs
+                .iter()
+                .map(|p| p.map(|v| if v >= if_above { v + shift_amount } else { v }))
+                .collect()
         };
-        self.my_diagram = linear_combine(
-            self.my_diagram.clone(),
-            other.my_diagram,
+        self.diagram = self.diagram.linear_combine(
+            other.diagram,
             |(delta_pow1, matching_1), (delta_pow2, matching2)| {
                 let mut new_matching = shift_idx(matching_1, old_domain, other_domain);
                 let mut other_shifted = shift_idx(matching2, 0, old_domain);
@@ -395,81 +405,69 @@ where
 {
     #[allow(dead_code)]
     pub fn temperley_lieb_gens(n: usize) -> Vec<Self> {
-        let mut ret_val = Vec::with_capacity(n - 1);
-        for i in 0..(n - 1) {
-            let mut e_i_pairs = Vec::with_capacity(2 * n);
-            for j in 0..n {
-                if j == i {
-                    e_i_pairs.push((i, i + 1));
-                } else if j == i + 1 {
-                    e_i_pairs.push((i + n, i + 1 + n));
-                } else {
-                    e_i_pairs.push((j, j + n));
+        (0..n - 1)
+            .map(|i| {
+                let e_i_matching: PerfectMatching = (0..n)
+                    .map(|j| {
+                        (if j == i {
+                            (i, i + 1)
+                        } else if j == i + 1 {
+                            (i + n, i + 1 + n)
+                        } else {
+                            (j, j + n)
+                        })
+                        .into()
+                    })
+                    .collect();
+                Self {
+                    diagram: LinearCombination::singleton((0, e_i_matching)),
+                    source: n,
+                    target: n,
+                    is_def_tl: true,
                 }
-            }
-            let e_i_matching = PerfectMatching::new(&e_i_pairs);
-            let cur_e_i = Self {
-                my_diagram: LinearCombination::<T, (usize, PerfectMatching)>::singleton((
-                    0,
-                    e_i_matching,
-                )),
-                source: n,
-                target: n,
-                is_def_tl: true,
-            };
-            ret_val.push(cur_e_i);
-        }
-        ret_val
+            })
+            .collect()
     }
 
     #[allow(dead_code)]
     pub fn symmetric_alg_gens(n: usize) -> Vec<Self> {
-        let mut ret_val = Vec::with_capacity(n);
-        for i in 0..(n - 1) {
-            let mut e_i_pairs = Vec::with_capacity(2 * n);
-            for j in 0..n {
-                if j == i {
-                    e_i_pairs.push((i, i + n + 1));
-                } else if j == i + 1 {
-                    e_i_pairs.push((i + 1, i + n));
-                } else {
-                    e_i_pairs.push((j, j + n));
+        (0..(n - 1))
+            .map(|i| {
+                let e_i_matching: PerfectMatching = (0..n)
+                    .map(|j| {
+                        (if j == i {
+                            (i, i + n + 1)
+                        } else if j == i + 1 {
+                            (i + 1, i + n)
+                        } else {
+                            (j, j + n)
+                        })
+                        .into()
+                    })
+                    .collect();
+                Self {
+                    diagram: LinearCombination::singleton((0, e_i_matching)),
+                    source: n,
+                    target: n,
+                    is_def_tl: false,
                 }
-            }
-            let e_i_matching = PerfectMatching::new(&e_i_pairs);
-            let cur_e_i = Self {
-                my_diagram: LinearCombination::<T, (usize, PerfectMatching)>::singleton((
-                    0,
-                    e_i_matching,
-                )),
-                source: n,
-                target: n,
-                is_def_tl: false,
-            };
-            ret_val.push(cur_e_i);
-        }
-        ret_val
+            })
+            .collect()
     }
 
     pub fn delta_polynomial(coeffs: &[T]) -> Self {
-        let zeroth_coeff = if coeffs.is_empty() {
-            T::zero()
-        } else {
-            coeffs[0]
-        };
+        let zeroth_coeff = *coeffs.first().unwrap_or(&T::zero());
         let empty_matching = PerfectMatching { pairs: vec![] };
-        let mut my_diagram =
-            LinearCombination::<T, (usize, PerfectMatching)>::singleton((0, empty_matching));
-        my_diagram *= zeroth_coeff;
+        let mut diagram = LinearCombination::singleton((0, empty_matching));
+        diagram *= zeroth_coeff;
         for (idx, cur_coeff) in coeffs.iter().enumerate().skip(1) {
             let empty_matching = PerfectMatching { pairs: vec![] };
-            let mut cur_diagram =
-                LinearCombination::<T, (usize, PerfectMatching)>::singleton((idx, empty_matching));
+            let mut cur_diagram = LinearCombination::singleton((idx, empty_matching));
             cur_diagram *= *cur_coeff;
-            my_diagram += cur_diagram;
+            diagram += cur_diagram;
         }
         Self {
-            my_diagram,
+            diagram,
             source: 0,
             target: 0,
             is_def_tl: true,
@@ -481,16 +479,12 @@ where
     where
         F: Fn(T) -> T,
     {
-        let flip_upside_down = |(delta_pow, matching): (usize, PerfectMatching)| {
-            (
-                delta_pow,
-                matching.flip_upside_down(self.source, self.target),
-            )
-        };
-        let mut my_diagram = inj_linearly_extend(&self.my_diagram, flip_upside_down);
-        my_diagram.change_coeffs(num_dagger);
+        let mut diagram = self
+            .diagram
+            .inj_linearly_extend(|(d, m)| (d, m.flip_upside_down(self.source, self.target)));
+        diagram.change_coeffs(num_dagger);
         Self {
-            my_diagram,
+            diagram,
             source: self.target,
             target: self.source,
             is_def_tl: self.is_def_tl,
@@ -502,9 +496,9 @@ where
         if self.is_def_tl {
             return;
         }
-        let is_non_crossing =
-            |(_, p): &(usize, PerfectMatching)| p.non_crossing(self.source, self.target);
-        self.is_def_tl = self.my_diagram.all_terms_satisfy(is_non_crossing);
+        self.is_def_tl = self
+            .diagram
+            .all_terms_satisfy(|(_, p)| p.non_crossing(self.source, self.target));
     }
 }
 
@@ -512,7 +506,7 @@ fn simplify<T>(me: &mut BrauerMorphism<T>)
 where
     T: Add<Output = T> + Zero + One + Copy + AddAssign + Mul<Output = T> + MulAssign + Eq,
 {
-    linear_simplify(&mut me.my_diagram);
+    me.diagram.simplify();
 }
 
 mod test {
@@ -530,12 +524,11 @@ mod test {
         delta_poly_coeffs: &[T],
     ) -> Result<BrauerMorphism<T>, String> {
         fn get_generator<T: Clone>(l_gens: &[T], r_gens: &[T], which: Either<usize, usize>) -> T {
-            use crate::utils::either_f;
-            either_f(which, |n| l_gens[n].clone(), |n| r_gens[n].clone())
+            use crate::utils::EitherExt;
+            which.join(|n| l_gens[n].clone(), |n| r_gens[n].clone())
         }
         use super::simplify;
-        use crate::category::Composable;
-        use crate::monoidal::Monoidal;
+        use crate::{category::Composable, monoidal::Monoidal};
         assert!(!prod_these.is_empty());
         let prod_these_0 = get_generator(e_i, s_i, prod_these[0]);
         let mut delta_poly = BrauerMorphism::delta_polynomial(delta_poly_coeffs);
@@ -562,20 +555,16 @@ mod test {
 
     #[test]
     fn t_l_relations() {
-        use crate::category::Composable;
-        use crate::utils::test_asserter;
+        use crate::{category::Composable, utils::test_asserter};
         use either::Either::Left;
         use num::Complex;
-        use std::cmp::PartialEq;
         let e_i = BrauerMorphism::<Complex<i32>>::temperley_lieb_gens(5);
-        let zero_complex = Complex::<i32>::zero();
-        let one_complex = Complex::<i32>::one();
-        let delta_coeffs = [zero_complex, one_complex];
+        let delta_coeffs: [Complex<i32>; 2] = [<_>::zero(), <_>::one()];
         for idx in 0..e_i.len() {
             assert!(e_i[idx].is_def_tl);
             let e_i_dag = e_i[idx].dagger(|z| z.conj());
             assert!(
-                PartialEq::eq(&e_i[idx], &e_i_dag),
+                &e_i[idx] == &e_i_dag,
                 "{:?} vs {:?} when checking self adjointness of e_i",
                 e_i[idx],
                 e_i_dag
@@ -626,10 +615,8 @@ mod test {
     #[test]
     fn wiki_example() {
         use super::{simplify, BrauerMorphism};
-        use crate::category::Composable;
-        use crate::monoidal::Monoidal;
+        use crate::{category::Composable, monoidal::Monoidal};
         use num::Complex;
-        use num::{One, Zero};
         let e_i = BrauerMorphism::<Complex<i32>>::temperley_lieb_gens(5);
         let zero_complex = Complex::<i32>::zero();
         let one_complex = Complex::<i32>::one();
@@ -667,14 +654,16 @@ mod test {
     #[test]
     fn sym_relations() {
         use super::BrauerMorphism;
-        use crate::category::{Composable, HasIdentity};
-        use crate::utils::test_asserter;
+        use crate::{
+            category::{Composable, HasIdentity},
+            utils::test_asserter,
+        };
         use either::Either::Right;
         use num::Complex;
         let n = 7;
         let s_i = BrauerMorphism::<Complex<i32>>::symmetric_alg_gens(n);
         let one_poly_coeffs = [Complex::<i32>::one()];
-        let my_identity = BrauerMorphism::<Complex<i32>>::identity(&n);
+        let identity = BrauerMorphism::<Complex<i32>>::identity(&n);
         for idx in 0..n - 1 {
             assert!(!s_i[idx].is_def_tl);
             let s_i_dag = s_i[idx].dagger(|z| z.conj());
@@ -687,7 +676,7 @@ mod test {
             let s_is_i = s_i[idx].compose(&s_i[idx]);
             test_asserter(
                 s_is_i,
-                Ok(my_identity.clone()),
+                Ok(identity.clone()),
                 |j, k| !j.is_def_tl && k.is_def_tl,
                 "s_i s_i = 1",
             );
@@ -747,8 +736,7 @@ mod test {
     #[test]
     fn tangle_relations() {
         use super::BrauerMorphism;
-        use crate::category::Composable;
-        use crate::utils::test_asserter;
+        use crate::{category::Composable, utils::test_asserter};
         use either::Either::{Left, Right};
         use num::Complex;
         let n = 7;
