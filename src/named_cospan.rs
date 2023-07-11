@@ -43,6 +43,11 @@ where
         left_names: Vec<LeftPortName>,
         right_names: Vec<RightPortName>,
     ) -> Self {
+        /*
+        assumption that left_names and right_names are unique is not checked
+        LeftPortName and RightPortName don't have to implement std::hash::Hash here
+        so can't enforce with is_unique
+        */
         Self {
             cospan: Cospan::new(left, right, middle),
             left_names,
@@ -69,6 +74,9 @@ where
     {
         assert_eq!(types.len(), prenames.len());
         let (left_names, right_names) = prenames.iter().map(|x| prename_to_name(*x)).unzip();
+        /*
+        assumption that left_names and right_names are unique is not checked
+        */
 
         Self {
             cospan: Cospan::identity(&types.to_vec()),
@@ -119,6 +127,9 @@ where
                 prenames.iter().map(|pre| prename_to_name(*pre).1).collect(),
             )
         };
+        /*
+        assumption that left_names and right_names are unique is not checked
+        */
 
         Self {
             cospan,
@@ -162,13 +173,16 @@ where
         add a new boundary node that maps to a new or existing middle node specified by new_arrow
         name it according to new_name
         which side depends on whether new_name is Left/Right
+        panic if new_name would create a repeat
         */
         self.cospan.add_boundary_node(match new_name {
             Left(new_name_real) => {
+                assert!(!self.left_names.contains(&new_name_real));
                 self.left_names.push(new_name_real);
                 Left(new_arrow)
             }
             Right(new_name_real) => {
+                assert!(!self.right_names.contains(&new_name_real));
                 self.right_names.push(new_name_real);
                 Right(new_arrow)
             }
@@ -335,6 +349,7 @@ where
         if name_pair is Left(old_name,new_name), then look for old_name and if it exists then
         replace that node's name with the new_name
         gives warning and makes no change when there is no node with the desired name
+        panic when this would create two nodes on the same side with the same name
         */
         match name_pair {
             Left((z1, z2)) => {
@@ -342,6 +357,10 @@ where
                     warn!("Node to be changed does not exist. No change made.");
                     return;
                 };
+                assert!(
+                    !self.left_names.iter().any(|r| *r == z2),
+                    "There was already a node on the left with the specified new name"
+                );
                 self.left_names[idx_left] = z2;
             }
             Right((z1, z2)) => {
@@ -349,6 +368,10 @@ where
                     warn!("Node to be changed does not exist. No change made.");
                     return;
                 };
+                assert!(
+                    !self.right_names.iter().any(|r| *r == z2),
+                    "There was already a node on the right with the specified new name"
+                );
                 self.right_names[idx_right] = z2;
             }
         }
@@ -419,6 +442,36 @@ where
     }
 }
 
+impl<Lambda, LeftPortName, RightPortName> NamedCospan<Lambda, LeftPortName, RightPortName>
+where
+    Lambda: Sized + Eq + Copy + Debug,
+    LeftPortName: Eq + std::hash::Hash,
+    RightPortName: Eq + std::hash::Hash,
+{
+    #[allow(dead_code)]
+    pub fn assert_valid(&self, check_id: bool) {
+        self.cospan.assert_valid(check_id);
+        assert!(
+            crate::utils::is_unique(&self.left_names),
+            "There was a duplicate name on the domain"
+        );
+        assert!(
+            crate::utils::is_unique(&self.right_names),
+            "There was a duplicate name on the codomain"
+        );
+        assert_eq!(
+            self.cospan.left_to_middle().len(),
+            self.left_names.len(),
+            "There was a mismatch between the domain size and the list of their names"
+        );
+        assert_eq!(
+            self.cospan.right_to_middle().len(),
+            self.right_names.len(),
+            "There was a mismatch between the codomain size and the list of their names"
+        );
+    }
+}
+
 impl<Lambda, LeftPortName, RightPortName> Monoidal
     for NamedCospan<Lambda, LeftPortName, RightPortName>
 where
@@ -428,6 +481,11 @@ where
 {
     fn monoidal(&mut self, other: Self) {
         self.cospan.monoidal(other.cospan);
+        /*
+        assumption that left_names and right_names are unique is not checked
+        there could be something in both self.left_names and other.left_names
+        causing a repeat in the new self.left_names
+        */
         self.left_names.extend(other.left_names);
         self.right_names.extend(other.right_names);
     }

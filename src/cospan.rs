@@ -85,12 +85,10 @@ where
         self.left.is_empty() && self.right.is_empty() && self.middle.is_empty()
     }
 
-    #[allow(dead_code)]
     pub fn left_to_middle(&self) -> &[MiddleIndex] {
         &self.left
     }
 
-    #[allow(dead_code)]
     pub fn right_to_middle(&self) -> &[MiddleIndex] {
         &self.right
     }
