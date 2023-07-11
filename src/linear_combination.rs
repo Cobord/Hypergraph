@@ -8,6 +8,9 @@ use {
     },
 };
 
+/*
+a formal linear combination of terms from Target with coefficients drawn from Coeffs
+*/
 #[repr(transparent)]
 #[derive(PartialEq, Eq, Debug, Default, Clone)]
 pub struct LinearCombination<Coeffs: Copy, Target: Eq + Hash>(HashMap<Target, Coeffs>);
@@ -24,6 +27,9 @@ impl<Coeffs: Copy, Target: Eq + Hash> Add for LinearCombination<Coeffs, Target>
 where
     Coeffs: AddAssign,
 {
+    /*
+    add two formal sums
+    */
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self {
@@ -42,6 +48,9 @@ impl<Coeffs: Copy, Target: Eq + Hash> AddAssign for LinearCombination<Coeffs, Ta
 where
     Coeffs: AddAssign,
 {
+    /*
+    add two formal sums
+    */
     fn add_assign(&mut self, rhs: Self) {
         for (k, v) in rhs.0.into_iter() {
             self.0
@@ -56,6 +65,9 @@ impl<Coeffs: Copy, Target: Eq + Hash> Sub for LinearCombination<Coeffs, Target>
 where
     Coeffs: SubAssign + Neg<Output = Coeffs>,
 {
+    /*
+    subtract two formal sums
+    */
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self {
@@ -74,6 +86,9 @@ impl<Coeffs: Copy, Target: Eq + Hash> Neg for LinearCombination<Coeffs, Target>
 where
     Coeffs: Neg<Output = Coeffs>,
 {
+    /*
+    negate a formal sum
+    */
     type Output = Self;
 
     fn neg(self) -> Self {
@@ -89,6 +104,9 @@ impl<Coeffs: Copy, Target: Eq + Hash> Mul<Coeffs> for LinearCombination<Coeffs, 
 where
     Coeffs: MulAssign,
 {
+    /*
+    multiply a formal sum by a coefficient
+    */
     type Output = Self;
 
     fn mul(self, rhs: Coeffs) -> Self {
@@ -105,6 +123,9 @@ where
     Coeffs: AddAssign + Mul<Output = Coeffs> + MulAssign + One,
     Target: Mul<Output = Target>,
 {
+    /*
+    multiply two formal sums provided the target has a multiplication operation
+    */
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self {
@@ -118,10 +139,40 @@ where
     }
 }
 
+/*
+This would be a conflicting implementation of Mul for two LinearCombination's
+*/
+/*
+impl<Coeffs: Copy, Target: Eq + Hash + Clone> Mul for LinearCombination<Coeffs, Target>
+where
+    Coeffs: AddAssign + Mul<Output = Coeffs> + MulAssign + One,
+    Target: Mul<Output = LinearCombination<Coeffs,Target>>,
+{
+    /*
+    multiply two formal sums provided the target has a multiplication operation
+    that produces formal sums (usually singletons but does not have to be)
+    */
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self {
+        let mut ret_val = Self(HashMap::new());
+        for (k1, c_k1) in self.0 {
+            for (k2, c_k2) in &rhs.0 {
+                ret_val += (k1.clone() * k2.clone()) * (c_k1 * (*c_k2));
+            }
+        }
+        ret_val
+    }
+}
+*/
+
 impl<Coeffs: Copy, Target: Eq + Hash> MulAssign<Coeffs> for LinearCombination<Coeffs, Target>
 where
     Coeffs: MulAssign,
 {
+    /*
+    multiply a formal sum by a coefficient
+    */
     fn mul_assign(&mut self, rhs: Coeffs) {
         for val in self.0.values_mut() {
             *val *= rhs;
@@ -142,6 +193,11 @@ impl<Coeffs: Copy, Target: Eq + Hash> LinearCombination<Coeffs, Target> {
         V: Eq + Hash,
         F: Fn(Target, U) -> V,
     {
+        /*
+        given a linear combination of T's and a linear combination of U's
+        and an operation that acts like multiplication of T and U to produce V
+        perform the multiplication
+        */
         let mut ret_val = LinearCombination(HashMap::new());
         for (k1, c_k1) in &self.0 {
             for (k2, c_k2) in &rhs.0 {
@@ -158,6 +214,9 @@ where
     Coeffs: One,
 {
     pub fn singleton(t: Target) -> Self {
+        /*
+        a single term with coefficient 1
+        */
         Self([(t, <_>::one())].into())
     }
 
@@ -165,21 +224,33 @@ where
     where
         F: Fn(Coeffs) -> Coeffs,
     {
+        /*
+        change all the coefficients by a function
+        should be by some endomorphism of a coefficient ring
+        so that this is the induced on endomorphism on R[Target]
+        */
         for val in self.0.values_mut() {
             *val = coeff_changer(*val);
         }
     }
 
-    pub fn all_terms_satisfy<F>(&self, is_non_crossing: F) -> bool
+    pub fn all_terms_satisfy<F>(&self, term_predicate: F) -> bool
     where
         F: Fn(&Target) -> bool,
     {
-        self.0.keys().all(is_non_crossing)
+        /*
+        do all the terms without their coefficients
+        satisfy some predicate
+        */
+        self.0.keys().all(term_predicate)
     }
 }
 
 impl<Coeffs: Copy + Zero, Target: Eq + Hash> LinearCombination<Coeffs, Target> {
     pub fn simplify(&mut self) {
+        /*
+        get rid of all the terms that have 0 coefficient
+        */
         self.0.retain(|_, v| !v.is_zero());
     }
 }
@@ -192,6 +263,10 @@ impl<Coeffs: Copy + Zero, Target: Clone + Eq + Hash> LinearCombination<Coeffs, T
     where
         F: Fn(Target) -> Target2,
     {
+        /*
+        do an injective map T1->T2 to induce a map
+        R[T1] -> R[T2]
+        */
         let mut new_map = HashMap::with_capacity(self.0.len());
         for (k, v) in self.0.iter() {
             let new_key = injection(k.clone());
@@ -210,6 +285,10 @@ impl<Coeffs: Copy + Zero, Target: Clone + Eq + Hash> LinearCombination<Coeffs, T
         F: Fn(Target) -> Target2,
         Coeffs: Add<Output = Coeffs>,
     {
+        /*
+        do a map T1->T2 (but this time not necessarily injective) to induce a map
+        R[T1] -> R[T2]
+        */
         let mut new_map = HashMap::with_capacity(self.0.len());
         for (k, v) in self.0.iter() {
             let new_key = f(k.clone());

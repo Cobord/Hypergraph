@@ -27,6 +27,9 @@ where
     BlackBoxLabel: Eq + Copy,
 {
     fn source_size(&self) -> usize {
+        /*
+        how many wires incoming
+        */
         match self {
             Self::Unit(_) => 0,
             Self::Comultiplication(_) | Self::Counit(_) | Self::Identity(_) => 1,
@@ -36,6 +39,9 @@ where
     }
 
     fn target_size(&self) -> usize {
+        /*
+        how many wires outgoing
+        */
         match self {
             Self::Counit(_) => 0,
             Self::Unit(_) | Self::Multiplication(_) | Self::Identity(_) => 1,
@@ -45,6 +51,9 @@ where
     }
 
     fn source_types(&self) -> Vec<Lambda> {
+        /*
+        labels of the wires incoming
+        */
         match self {
             Self::Unit(_) => vec![],
             Self::Multiplication(z) => vec![*z, *z],
@@ -55,6 +64,9 @@ where
     }
 
     fn target_types(&self) -> Vec<Lambda> {
+        /*
+        labels of the wires outgoing
+        */
         match self {
             Self::Unit(z) | Self::Identity(z) | Self::Multiplication(z) => vec![*z],
             Self::Comultiplication(z) => vec![*z, *z],
@@ -68,6 +80,10 @@ where
     where
         F: Fn(BlackBoxLabel) -> BlackBoxLabel,
     {
+        /*
+        horizontal flip where the diagram is drawn left to right
+        sources and targets switched
+        */
         *self = match self {
             Self::Unit(z) => Self::Counit(*z),
             Self::Multiplication(z) => Self::Comultiplication(*z),
@@ -132,6 +148,10 @@ where
     where
         F: Fn(BlackBoxLabel) -> BlackBoxLabel,
     {
+        /*
+        horizontal flip where the diagram is drawn left to right
+        sources and targets switched
+        */
         self.op.hflip(black_box_changer);
         let temp = self.target_side_placement;
         self.source_side_placement = self.target_side_placement;
@@ -163,6 +183,10 @@ where
     where
         F: Fn(BlackBoxLabel) -> BlackBoxLabel,
     {
+        /*
+        horizontal flip where the diagram is drawn left to right
+        sources and targets switched
+        */
         for block in self.blocks.iter_mut() {
             block.hflip(black_box_changer);
         }
@@ -172,6 +196,12 @@ where
     }
 
     pub fn append_block(&mut self, op: FrobeniusOperation<Lambda, BlackBoxLabel>) {
+        /*
+        monoidal of this single layer morphism and op
+        if the diagram is drawn left domain to right codomain
+            and source and target types are read top to bottom
+            this puts op at the bottom
+        */
         let source_side_placement = self.left_type.len();
         let target_side_placement = self.right_type.len();
         self.left_type.extend(op.source_types());
@@ -218,6 +248,10 @@ pub struct FrobeniusMorphism<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Copy
 impl<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Copy>
     From<FrobeniusOperation<Lambda, BlackBoxLabel>> for FrobeniusMorphism<Lambda, BlackBoxLabel>
 {
+    /*
+    convert a single frobenius generator to a layer with only that operation
+    and then to a morphism with only that layer
+    */
     fn from(op: FrobeniusOperation<Lambda, BlackBoxLabel>) -> Self {
         let mut answer_layer = FrobeniusLayer::new();
         answer_layer.append_block(op);
@@ -238,6 +272,10 @@ where
 
     #[allow(dead_code)]
     pub fn depth(&self) -> usize {
+        /*
+        how many layers deep is this morphism presented as
+        use of identities could lower this
+        */
         self.layers.len()
     }
 
@@ -245,6 +283,9 @@ where
         &mut self,
         next_layer: FrobeniusLayer<Lambda, BlackBoxLabel>,
     ) -> Result<(), String> {
+        /*
+        composition with one more layer
+        */
         if let Some(v) = self.layers.pop() {
             if v.right_type != next_layer.left_type {
                 return Err("type mismatch in frobenius morphims composition".to_string());
@@ -259,6 +300,10 @@ where
     where
         F: Fn(BlackBoxLabel) -> BlackBoxLabel,
     {
+        /*
+        horizontal flip where the diagram is drawn left to right
+        sources and targets switched
+        */
         for layer in self.layers.iter_mut() {
             layer.hflip(black_box_changer);
         }
@@ -560,6 +605,12 @@ where
 pub trait Frobenius<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Copy>:
     SymmetricMonoidalMutatingMorphism<Lambda> + HasIdentity<Vec<Lambda>>
 {
+    /*
+    the implementor (Self) of this trait is a type for a morphism in a symmetric monoidal category with
+    objects built as tensor products of basic objects labelled from Lambda
+    and each such basic object is a frobenius object with interpretations
+    so one can interpret each of unit/counit/multiplication/comultiplication as a Self
+    */
     fn interpret_unit(z: Lambda) -> Self;
     fn interpret_counit(z: Lambda) -> Self;
     fn interpret_multiplication(z: Lambda) -> Self;
@@ -572,6 +623,13 @@ pub trait Frobenius<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Copy>:
     where
         F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Result<Self, String>,
     {
+        /*
+        interpret a single frobenius operation as a Self
+        with black_box_interpreter saying how to interpret the black boxes
+            the black boxes do not have to be morphisms that can be built from Frobenius operations (though they might)
+        the identity and symmetric braiding are interpreted
+            using the fact that Self was a morphism in a symmetric monoidal category
+        */
         Ok(match single_step {
             FrobeniusOperation::Unit(z) => Self::interpret_unit(*z),
             FrobeniusOperation::Counit(z) => Self::interpret_counit(*z),
@@ -593,10 +651,14 @@ pub trait Frobenius<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Copy>:
     where
         F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Result<Self, String>,
     {
+        /*
+        interpret a complicated frobenius morphism as a Self
+        built up from all the basic_interpret using composition and monoidal
+        */
         let mut answer = Self::identity(&morphism.domain());
         for layer in &morphism.layers {
             if layer.blocks.is_empty() {
-                return Err("???".to_string());
+                return Err("somehow an empty layer in a frobenius morphism???".to_string());
             }
             let first = &layer.blocks[0];
             let mut cur_layer = Self::basic_interpret(&first.op, black_box_interpreter)?;
@@ -615,6 +677,9 @@ where
     Lambda: Eq + Copy + Debug,
     BlackBoxLabel: Eq + Copy,
 {
+    /*
+    the most obvious implementation of Frobenius is FrobeniusMorphism itself
+    */
     fn interpret_unit(z: Lambda) -> Self {
         FrobeniusOperation::Unit(z).into()
     }
@@ -635,6 +700,10 @@ where
     where
         F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Result<Self, String>,
     {
+        /*
+        ignores black_box_interpreter as if it was just the simple
+        |label,src,tgt| Ok(FrobeniusOperation::UnSpecifiedBox(label, src, tgt))
+        */
         Ok(single_step.clone().into())
     }
 
@@ -645,6 +714,10 @@ where
     where
         F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Result<Self, String>,
     {
+        /*
+        ignores black_box_interpreter as if it was just the simple
+        |label,src,tgt| Ok(FrobeniusOperation::UnSpecifiedBox(label, src, tgt))
+        */
         Ok(morphism.clone())
     }
 }
