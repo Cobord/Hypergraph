@@ -476,7 +476,7 @@ where
         /*
         give the symmetric algebra s_1 \cdots s_{n-1}
         where s_i permutes i and i+1 in 1..n (interpreted in domain and codomain appropriately)
-        matches the rest with their shift in the codomain 
+        matches the rest with their shift in the codomain
         as elements of Hom_{Brauer}(n,n)
         */
         (0..(n - 1))

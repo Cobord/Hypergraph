@@ -21,8 +21,8 @@ where
     Lambda: Sized + Eq + Copy + Debug,
 {
     middle: Vec<(LeftIndex, RightIndex)>, // the leg maps from the source to the domain and codomain sets
-    left: Vec<Lambda>, // the labels on the domain
-    right: Vec<Lambda>, // the labels on the codomain
+    left: Vec<Lambda>,                    // the labels on the domain
+    right: Vec<Lambda>,                   // the labels on the codomain
     is_left_id: bool,
     is_right_id: bool,
 }
@@ -399,7 +399,7 @@ impl<Lambda: Eq + Sized + Debug + Copy> Rel<Lambda> {
         let self_pairs: HashSet<(usize, usize)> = HashSet::from_iter(self.0.middle.iter().cloned());
         let mut ret_val = self.0.clone();
         for (x, y) in &other.0.middle {
-            if !self_pairs.contains(&(*x,*y)) {
+            if !self_pairs.contains(&(*x, *y)) {
                 /*
                 the reason this would panic is if the labels mismatched
                 but because the labels for the Left(x) and Right(y) nodes

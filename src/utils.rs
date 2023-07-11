@@ -137,7 +137,7 @@ pub fn same_labels_check<
     R: ExactSizeIterator + Iterator<Item = Lambda>,
 >(
     l: L,
-    r: R
+    r: R,
 ) -> Result<(), String> {
     if l.len() != r.len() {
         return Err("Mismatch in cardinalities of common interface".to_string());

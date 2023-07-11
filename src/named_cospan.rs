@@ -226,10 +226,8 @@ where
         */
         match desired_name {
             Left(desired_name_left) => {
-                let index_in_left: Option<LeftIndex> = self
-                    .left_names
-                    .iter()
-                    .position(|r| *r == desired_name_left);
+                let index_in_left: Option<LeftIndex> =
+                    self.left_names.iter().position(|r| *r == desired_name_left);
                 index_in_left.map(Left)
             }
             Right(desired_name_right) => {
