@@ -19,6 +19,12 @@ type MiddleIndex = usize;
 type MiddleIndexOrLambda<Lambda> = Either<MiddleIndex, Lambda>;
 
 pub struct NamedCospan<Lambda: Sized + Eq + Copy + Debug, LeftPortName, RightPortName> {
+    /*
+    a cospan of finite sets
+    but this time the elements of the domain and codomain have names
+    that we can use to query/delete them specifically
+    even as the order gets shuffled around
+    */
     cospan: Cospan<Lambda>,
     left_names: Vec<LeftPortName>,
     right_names: Vec<RightPortName>,
@@ -83,6 +89,16 @@ where
         T: Copy,
         F: Fn(T) -> (LeftPortName, RightPortName),
     {
+        /*
+        the cospan from a permutation
+        the labels are given in types and they are in the same order as either the domain/codomain
+            as specified by types_as_on_domain flag
+            so if types_as_on_domain is true then the domain side has the labels in the given order
+            and the codomain has the labels in the order induced by following the permutation
+            vice versa with false
+        the prenames and a prename_to_name function is used to produce all the names
+            the order is similarly done as the labels using the types_as_on_domain flag
+        */
         assert_eq!(types.len(), prenames.len());
         let cospan = Cospan::from_permutation(p.clone(), types, types_as_on_domain);
         let (left_names, right_names) = if types_as_on_domain {
@@ -116,6 +132,11 @@ where
         new_arrow: MiddleIndex,
         new_name: Either<LeftPortName, RightPortName>,
     ) -> Either<LeftIndex, RightIndex> {
+        /*
+        add a new boundary node that maps to the specified middle index of new_arrow
+        name it according to new_name
+        which side depends on whether new_name is Left/Right
+        */
         self.add_boundary_node(Left(new_arrow), new_name)
     }
 
@@ -124,6 +145,11 @@ where
         new_arrow: Lambda,
         new_name: Either<LeftPortName, RightPortName>,
     ) -> Either<LeftIndex, RightIndex> {
+        /*
+        add a new boundary node that maps to a new middle node of specified label new_arrow
+        name it according to new_name
+        which side depends on whether new_name is Left/Right
+        */
         self.add_boundary_node(Right(new_arrow), new_name)
     }
 
@@ -132,6 +158,11 @@ where
         new_arrow: MiddleIndexOrLambda<Lambda>,
         new_name: Either<LeftPortName, RightPortName>,
     ) -> Either<LeftIndex, RightIndex> {
+        /*
+        add a new boundary node that maps to a new or existing middle node specified by new_arrow
+        name it according to new_name
+        which side depends on whether new_name is Left/Right
+        */
         self.cospan.add_boundary_node(match new_name {
             Left(new_name_real) => {
                 self.left_names.push(new_name_real);
@@ -145,6 +176,13 @@ where
     }
 
     pub fn delete_boundary_node(&mut self, which_node: Either<LeftIndex, RightIndex>) {
+        /*
+        deletes a node from one side
+        the order is shuffled in this process so also keep the names
+        in sync with this change
+        CAUTION : relies on knowing that cospan uses swap_remove when deleting a node
+            the implementation of delete_boundary_node on Cospan<Lambda>
+        */
         match which_node {
             Left(z) => {
                 self.left_names.swap_remove(z);
@@ -158,11 +196,19 @@ where
 
     pub fn connect_pair(
         &mut self,
-        node_1: Either<LeftPortName, RightPortName>,
-        node_2: Either<LeftPortName, RightPortName>,
+        node_1_name: Either<LeftPortName, RightPortName>,
+        node_2_name: Either<LeftPortName, RightPortName>,
     ) {
-        let node_1_loc = self.find_node_by_name(node_1);
-        let node_2_loc = self.find_node_by_name(node_2);
+        /*
+        first find node_1 and node_2 by their names
+        if nodes with those names do not exist, then make no change
+        collapse the middle nodes that node_1 and node_2 connect to (A and B)
+        into a single middle node with the same label as the shared label
+        of A and B
+        if A and B do not have the same label, give a warning and make no change
+        */
+        let node_1_loc = self.find_node_by_name(node_1_name);
+        let node_2_loc = self.find_node_by_name(node_2_name);
         if let Some((node_1_loc_real, node_2_loc_real)) = node_1_loc.zip(node_2_loc) {
             self.cospan.connect_pair(node_1_loc_real, node_2_loc_real);
         }
@@ -172,14 +218,22 @@ where
         &self,
         desired_name: Either<LeftPortName, RightPortName>,
     ) -> Option<Either<LeftIndex, RightIndex>> {
+        /*
+        given a name of a node on the domain/codomain give the index in appears in the
+        left_names/right_names (those are supposed to have no duplicates
+            so each left/right name uniquely specifies a node on the appropriate side,
+            there can be repeated names on opposite sides because they will be wrapped in different Left/Right)
+        */
         match desired_name {
             Left(desired_name_left) => {
-                let index_in_left: Option<LeftIndex> =
-                    self.left_names.iter().position(|r| *r == desired_name_left);
+                let index_in_left: Option<LeftIndex> = self
+                    .left_names
+                    .iter()
+                    .position(|r| *r == desired_name_left);
                 index_in_left.map(Left)
             }
             Right(desired_name_right) => {
-                let index_in_right: Option<LeftIndex> = self
+                let index_in_right: Option<RightIndex> = self
                     .right_names
                     .iter()
                     .position(|r| *r == desired_name_right);
@@ -200,6 +254,13 @@ where
         LeftPortName: Copy,
         RightPortName: Copy,
     {
+        /*
+        given predicates on the left names and right names
+        find all the left/right indices of nodes with names
+        satisfying their appropriate predicates
+        if at_most_one, then shortcircuit this so only give the first one found
+            do this when know a priori there should <=1 boundary node in the answer
+        */
         if at_most_one {
             let index_in_left: Option<LeftIndex> =
                 self.left_names.iter().position(|r| left_pred(*r));
@@ -241,6 +302,11 @@ where
         &mut self,
         which_node: Either<LeftPortName, RightPortName>,
     ) {
+        /*
+        find a node by it's name
+        if it is not found, there is nothing to delet so give a warning and no change made
+        if it is found, delete that node (see delete_boundary_node and the CAUTION therein)
+        */
         let which_node_idx = match which_node {
             Left(z) => {
                 let index = self.left_names.iter().position(|r| *r == z);
@@ -266,6 +332,12 @@ where
         &mut self,
         name_pair: Either<(LeftPortName, LeftPortName), (RightPortName, RightPortName)>,
     ) {
+        /*
+        change a name of a boundary node
+        if name_pair is Left(old_name,new_name), then look for old_name and if it exists then
+        replace that node's name with the new_name
+        gives warning and makes no change when there is no node with the desired name
+        */
         match name_pair {
             Left((z1, z2)) => {
                 let Some(idx_left) = self.left_names.iter().position(|r| *r == z1) else {
@@ -286,6 +358,9 @@ where
 
     #[allow(dead_code)]
     pub fn add_middle(&mut self, new_middle: Lambda) {
+        /*
+        add a new node to the sink with specified label
+        */
         self.cospan.add_middle(new_middle);
     }
 
@@ -295,6 +370,9 @@ where
         Mu: Sized + Eq + Copy + Debug,
         RightPortName: Clone,
     {
+        /*
+        change the labels with the function f
+        */
         NamedCospan {
             cospan: self.cospan.map(f),
             left_names: self.left_names.clone(),
@@ -318,6 +396,15 @@ where
         G: Fn(&mut T, Either<LeftPortName, RightPortName>),
         RightPortName: Clone,
     {
+        /*
+        make this into a graph
+        vertices for every node in left,right and middle
+        the vertices are colored by the combined result
+            of the first output of lambda_decorator based on their label
+            and if they are a port then the port decorator can change this decoration based on that color and their name
+        the edges are colored by the second output of lambda_decorator
+            based on the (shared) label of their endpoints
+        */
         let (left_nodes, middle_nodes, right_nodes, mut graph) =
             self.cospan.to_graph(lambda_decorator);
         for (left_idx, left_node) in left_nodes.iter().enumerate() {

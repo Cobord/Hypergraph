@@ -131,6 +131,26 @@ impl<T, E> ResultExt<T, E> for Result<T, E> {
     }
 }
 
+pub fn same_labels_check<
+    Lambda: Eq + Debug,
+    L: ExactSizeIterator + Iterator<Item = Lambda>,
+    R: ExactSizeIterator + Iterator<Item = Lambda>,
+>(
+    l: L,
+    r: R
+) -> Result<(), String> {
+    if l.len() != r.len() {
+        return Err("Mismatch in cardinalities of common interface".to_string());
+    }
+    let Some((w1, w2)) = l.zip(r).find(|(a, b)| a != b) else {
+        return Ok(());
+    };
+    Err(format!(
+        "Mismatch in labels of common interface. At some index there was {:?} vs {:?}",
+        w1, w2
+    ))
+}
+
 #[allow(dead_code)]
 pub fn test_asserter<T, U, F>(
     observed: Result<T, U>,

@@ -342,7 +342,7 @@ where
         let self_interface = self.right.iter().map(|mid| self.middle[*mid]);
         let other_interface = other.left.iter().map(|mid| other.middle[*mid]);
 
-        crate::span::dim_check(self_interface, other_interface)
+        crate::utils::same_labels_check(self_interface, other_interface)
     }
 
     fn compose(&self, other: &Self) -> Result<Self, String> {

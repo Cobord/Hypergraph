@@ -32,6 +32,17 @@ impl InOut {
 type Doubled<T> = (T, T);
 type DoubledEither<T, U> = Either<Doubled<T>, Doubled<U>>;
 
+/*
+a wiring diagram with wires labelled using Lambda
+is a cospan between sets A and B
+A describes a set of nodes on internal circles each one being labelled with
+    an InOut for orientation
+    an InterCircle for which of multiple internal circles we are on
+    an IntraCircle to label which node on that circle it is
+B describes a set of nodes on the single external circle
+    an InOut for orientation
+    an IntraCircle to label which node on that circle it is
+*/
 #[allow(dead_code)]
 #[repr(transparent)]
 pub struct WiringDiagram<
@@ -57,6 +68,12 @@ where
         &mut self,
         name_pair: DoubledEither<(InOut, InterCircle, IntraCircle), (InOut, IntraCircle)>,
     ) {
+        /*
+        change a name of a boundary node
+        specific to LeftPortName and RightPortName of WiringDiagram being in the specific format
+            with InOut,InterCircle and IntraCircle
+        gives warning and makes no change when there is no node with the desired name
+        */
         self.0.change_boundary_node_name(name_pair);
     }
 
@@ -66,6 +83,13 @@ where
         type_: Lambda,
         new_name: Either<(InOut, InterCircle, IntraCircle), (InOut, IntraCircle)>,
     ) {
+        /*
+        add a new boundary node that maps to a new middle node of specified label type_
+        name it according to new_name
+        which side depends on whether new_name is Left/Right
+        that new middle node connects to nothing else, so this new node is unconnected to the
+            rest of the diagram
+        */
         let _ = self.0.add_boundary_node_unknown_target(type_, new_name);
     }
 
@@ -75,6 +99,14 @@ where
         node_1: Either<(InOut, InterCircle, IntraCircle), (InOut, IntraCircle)>,
         node_2: Either<(InOut, InterCircle, IntraCircle), (InOut, IntraCircle)>,
     ) {
+        /*
+        first find node_1 and node_2 by their names
+        if nodes with those names do not exist, then make no change
+        collapse the middle nodes that node_1 and node_2 connect to (A and B)
+        into a single middle node with the same label as the shared label
+        of A and B
+        if A and B do not have the same label, give a warning and make no change
+        */
         self.0.connect_pair(node_1, node_2)
     }
 
@@ -83,6 +115,11 @@ where
         &mut self,
         which_node: Either<(InOut, InterCircle, IntraCircle), (InOut, IntraCircle)>,
     ) {
+        /*
+        find a node by it's name
+        if it is not found, there is nothing to delet so give a warning and no change made
+        if it is found, delete that node (see delete_boundary_node in NamedCospan and the CAUTION therein)
+        */
         self.0.delete_boundary_node_by_name(which_node)
     }
 
@@ -92,6 +129,9 @@ where
         F: Fn(Lambda) -> Mu,
         Mu: Sized + Eq + Copy + Debug,
     {
+        /*
+        change the labels with the function f
+        */
         WiringDiagram::new(self.0.map(f))
     }
 
@@ -105,6 +145,13 @@ where
         InterCircle: Copy,
         IntraCircle: Copy,
     {
+        /*
+        replace the internal circle of self labelled by which_circle (call it C)
+        with the contents of internal_other
+        so that the external circle of internal_other is interpreted as C
+        the new internal circles of self are all the old internal circles except for C
+            and all the internal circles of internal_other
+        */
         let found_nodes: Vec<_> = NamedCospan::find_nodes_by_name_predicate(
             &self.0,
             |z| z.1 == which_circle,

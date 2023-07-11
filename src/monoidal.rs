@@ -4,11 +4,20 @@ use {
 };
 
 pub trait Monoidal {
+    /*
+    change the morphism self to the morphism (self \otimes other)
+    */
     fn monoidal(&mut self, other: Self);
 }
 
 #[derive(PartialEq, Eq, Clone)]
 pub struct GenericMonoidalMorphismLayer<BoxType, Lambda: Eq + Copy> {
+    /*
+    a single layer for a black box filled morphism
+    in a monoidal category whose objects
+        are presented as tensor products of Lambda
+    the black boxes are labelled with BoxType
+    */
     pub blocks: Vec<BoxType>,
     pub left_type: Vec<Lambda>,
     pub right_type: Vec<Lambda>,
@@ -58,6 +67,16 @@ where
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct GenericMonoidalMorphism<BoxType, Lambda: Eq + Copy> {
+    /*
+    a black box filled morphism
+    in a monoidal category whose objects
+        are presented as tensor products of Lambda
+    the black boxes are labelled with BoxType
+    when given a function from BoxType to the
+        actual type for the morphisms in the desired category
+        one can interpret this as the aforementioned type
+        by building up with composition and monoidal
+    */
     layers: Vec<GenericMonoidalMorphismLayer<BoxType, Lambda>>,
 }
 
@@ -217,6 +236,12 @@ pub trait MonoidalMutatingMorphism<T: Eq>: Monoidal + ComposableMutating<T> {}
 pub trait GenericMonoidalInterpretableMut<Lambda: Eq + Copy + Debug>:
     Monoidal + ComposableMutating<Vec<Lambda>> + HasIdentity<Vec<Lambda>>
 {
+    /*
+    given a function from BoxType to the
+        actual type (Self) for the morphisms in the desired category
+        one can interpret a GenericaMonoidalMorphism as a Self
+        by building up with composition and monoidal
+    */
     fn interpret<F, BoxType>(
         morphism: &GenericMonoidalMorphism<BoxType, Lambda>,
         black_box_interpreter: &F,
@@ -227,7 +252,7 @@ pub trait GenericMonoidalInterpretableMut<Lambda: Eq + Copy + Debug>:
         let mut answer = Self::identity(&morphism.domain());
         for layer in &morphism.layers {
             let Some(first) = &layer.blocks.first() else {
-                return Err("???".to_string());
+                return Err("somehow an empty layer in a generica monoidal morphism???".to_string());
             };
             let mut cur_layer = black_box_interpreter(first)?;
             for block in &layer.blocks[1..] {
@@ -241,6 +266,15 @@ pub trait GenericMonoidalInterpretableMut<Lambda: Eq + Copy + Debug>:
 pub trait GenericMonoidalInterpretable<Lambda: Eq + Copy + Debug>:
     Monoidal + Composable<Vec<Lambda>> + HasIdentity<Vec<Lambda>>
 {
+    /*
+    given a function from BoxType to the
+        actual type (Self) for the morphisms in the desired category
+        one can interpret a GenericaMonoidalMorphism as a Self
+        by building up with composition and monoidal
+    only different from above because of the distinction between compositions
+        that are done by modifying self to the composition self;other
+        or that return a new self;other
+    */
     fn interpret<F, BoxType>(
         morphism: &GenericMonoidalMorphism<BoxType, Lambda>,
         black_box_interpreter: &F,
@@ -251,7 +285,7 @@ pub trait GenericMonoidalInterpretable<Lambda: Eq + Copy + Debug>:
         let mut answer = Self::identity(&morphism.domain());
         for layer in &morphism.layers {
             let Some(first) = &layer.blocks.first() else {
-                return Err("???".to_string());
+                return Err("somehow an empty layer in a generica monoidal morphism???".to_string());
             };
             let mut cur_layer = black_box_interpreter(first)?;
             for block in &layer.blocks[1..] {
@@ -269,6 +303,10 @@ where
     Lambda: Eq + Copy + Debug,
     BoxType: HasIdentity<Lambda> + Clone,
 {
+    /*
+    the most obvious implementation of MonoidalMutatingMorphism is GenericMonoidalMorphism itself
+    use all the structure of monoidal, compose, identity provided by concatenating blocks and layers appropriately
+    */
 }
 
 impl<Lambda, BoxType> GenericMonoidalInterpretableMut<Lambda>
@@ -277,4 +315,11 @@ where
     Lambda: Eq + Copy + Debug,
     BoxType: HasIdentity<Lambda> + Clone,
 {
+    /*
+    the most obvious implementation of GenericMonoidalInterpretableMut is GenericMonoidalMorphism itself
+    use the default implementation given in the trait itself
+    in Frobenius we override the default implementation with just a clone
+        because there we are only concerned with the case when black_box_interpreter
+        was just sending the black boxes with the same sort of black box
+    */
 }

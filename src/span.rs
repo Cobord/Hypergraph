@@ -20,9 +20,9 @@ pub struct Span<Lambda>
 where
     Lambda: Sized + Eq + Copy + Debug,
 {
-    middle: Vec<(LeftIndex, RightIndex)>,
-    left: Vec<Lambda>,
-    right: Vec<Lambda>,
+    middle: Vec<(LeftIndex, RightIndex)>, // the leg maps from the source to the domain and codomain sets
+    left: Vec<Lambda>, // the labels on the domain
+    right: Vec<Lambda>, // the labels on the codomain
     is_left_id: bool,
     is_right_id: bool,
 }
@@ -97,6 +97,13 @@ where
         &mut self,
         new_boundary: Either<Lambda, Lambda>,
     ) -> Either<LeftIndex, RightIndex> {
+        /*
+        add a new boundary node with specified label
+        which side depends on whether Left or Right
+        it is not in the image of the leg maps
+        but the index is returned so the caller
+            can put it in the image of the leg maps later
+        */
         match new_boundary {
             Left(z) => {
                 self.left.push(z);
@@ -113,6 +120,12 @@ where
         &mut self,
         new_middle: (LeftIndex, RightIndex),
     ) -> Result<MiddleIndex, String> {
+        /*
+        add a new node at the source
+        the leg maps on this new node send it to the specified indices
+        the labels of these two targets must match up
+        upon success, the index of this new node is returned
+        */
         let type_left = self.left[new_middle.0];
         let type_right = self.right[new_middle.1];
         if type_left != type_right {
@@ -133,6 +146,9 @@ where
         F: Fn(Lambda) -> Mu,
         Mu: Sized + Eq + Copy + Debug,
     {
+        /*
+        change the labels with the function f
+        */
         Span::new(
             self.left.iter().map(|l| f(*l)).collect(),
             self.right.iter().map(|l| f(*l)).collect(),
@@ -141,10 +157,18 @@ where
     }
 
     pub fn is_jointly_injective(&self) -> bool {
+        /*
+        could this span be interpreted as a Relation instead of just a span
+        if the leg maps are jointly injective, then might as well say the source node
+        is a subset of the domain \times codomain, instead of it's own new set
+        */
         crate::utils::is_unique(&self.middle)
     }
 
     pub fn dagger(&self) -> Self {
+        /*
+        flip the domain and codomain
+        */
         Self::new(
             self.codomain(),
             self.domain(),
@@ -168,32 +192,12 @@ where
     }
 }
 
-pub fn dim_check<
-    Lambda: Eq + Debug,
-    L: ExactSizeIterator + Iterator<Item = Lambda>,
-    R: ExactSizeIterator + Iterator<Item = Lambda>,
->(
-    l: L,
-    r: R,
-) -> Result<(), String> {
-    if l.len() != r.len() {
-        return Err("Mismatch in cardinalities of common interface".to_string());
-    }
-    let Some((w1, w2)) = l.zip(r).find(|(a, b)| a != b) else {
-        return Ok(());
-    };
-    Err(format!(
-        "Mismatch in labels of common interface. At some index there was {:?} vs {:?}",
-        w1, w2
-    ))
-}
-
 impl<Lambda> Composable<Vec<Lambda>> for Span<Lambda>
 where
     Lambda: Sized + Eq + Copy + Debug,
 {
     fn composable(&self, other: &Self) -> Result<(), String> {
-        dim_check(self.right.iter(), other.left.iter())
+        crate::utils::same_labels_check(self.right.iter(), other.left.iter())
     }
 
     fn compose(&self, other: &Self) -> Result<Self, String> {
@@ -301,6 +305,11 @@ where
     }
 }
 
+/*
+wrapper around span for rel
+where the source is now always assumed to be a subset of the product
+by the leg maps being jointly injective
+*/
 #[repr(transparent)]
 pub struct Rel<Lambda: Eq + Sized + Debug + Copy>(Span<Lambda>);
 
@@ -349,6 +358,12 @@ impl<Lambda> GenericMonoidalInterpretable<Lambda> for Rel<Lambda> where Lambda: 
 
 impl<Lambda: Eq + Sized + Debug + Copy> Rel<Lambda> {
     fn new(x: Span<Lambda>, do_check: bool) -> Self {
+        /*
+        given a span interpret it as a relation
+        if not do_check, then assume that this is possible
+        otherwise makes sure this is possible with the
+        leg maps actually being jointly injective
+        */
         if do_check {
             assert!(x.is_jointly_injective());
         }
@@ -356,6 +371,11 @@ impl<Lambda: Eq + Sized + Debug + Copy> Rel<Lambda> {
     }
 
     fn subsumes(&self, other: &Rel<Lambda>) -> bool {
+        /*
+        given two relations on the same domain and codomain (A and B)
+        we have two subsets of A \times B
+        is the one for self a superset of the one for other
+        */
         assert_eq!(self.domain(), other.domain());
         assert_eq!(self.codomain(), other.codomain());
 
@@ -368,18 +388,37 @@ impl<Lambda: Eq + Sized + Debug + Copy> Rel<Lambda> {
 
     #[allow(dead_code)]
     fn union(&self, other: &Self) -> Self {
+        /*
+        given two relations on the same domain and codomain (A and B)
+        we have two subsets of A \times B
+        make a new relation with the union of those two
+        */
         assert_eq!(self.domain(), other.domain());
         assert_eq!(self.codomain(), other.codomain());
 
+        let self_pairs: HashSet<(usize, usize)> = HashSet::from_iter(self.0.middle.iter().cloned());
         let mut ret_val = self.0.clone();
         for (x, y) in &other.0.middle {
-            ret_val.add_middle((*x, *y)).unwrap();
+            if !self_pairs.contains(&(*x,*y)) {
+                /*
+                the reason this would panic is if the labels mismatched
+                but because the labels for the Left(x) and Right(y) nodes
+                matched when other was created, we know they do
+                so the unwrap should never panic
+                */
+                ret_val.add_middle((*x, *y)).unwrap();
+            }
         }
         Self(ret_val)
     }
 
     #[allow(dead_code)]
     fn intersection(&self, other: &Self) -> Self {
+        /*
+        given two relations on the same domain and codomain (A and B)
+        we have two subsets of A \times B
+        make a new relation with the intesection of those two
+        */
         assert_eq!(self.domain(), other.domain());
         assert_eq!(self.codomain(), other.codomain());
 
@@ -400,6 +439,11 @@ impl<Lambda: Eq + Sized + Debug + Copy> Rel<Lambda> {
 
     #[allow(dead_code)]
     fn complement(&self) -> Result<Self, String> {
+        /*
+        say self is a relation with domain and codomain A and B
+        make a new relation with (A \times B) \setminus self
+        there can be errors if there are label mismatches
+        */
         let source_size = self.domain().len();
         let target_size = self.codomain().len();
 
@@ -418,26 +462,45 @@ impl<Lambda: Eq + Sized + Debug + Copy> Rel<Lambda> {
     }
 
     fn is_homogeneous(&self) -> bool {
+        /*
+        a relation with the same domain and codomain
+        */
         self.0.domain() == self.0.codomain()
     }
 
     fn is_reflexive(&self) -> bool {
+        /*
+        a relation with the same domain and codomain A
+        such that \forall x \in A : R(x,x)
+        */
         let identity_rel = Self::new(Span::<Lambda>::identity(&self.0.domain()), false);
         self.subsumes(&identity_rel)
     }
 
     #[allow(dead_code)]
     fn is_irreflexive(&self) -> bool {
+        /*
+        is the complement reflexive
+        if there are label mismatches when trying to create the complement, then return false
+        */
         self.complement().map(|x| x.is_reflexive()).unwrap_or(false)
     }
 
     fn is_symmetric(&self) -> bool {
+        /*
+        a relation with the same domain and codomain A
+        such that \forall x,y \in A : R(x,y) -> R(y,x)
+        */
         let dagger = Self::new(self.0.dagger(), false);
         self.subsumes(&dagger)
     }
 
     #[allow(dead_code)]
     fn is_antisymmetric(&self) -> bool {
+        /*
+        a relation with the same domain and codomain A
+        such that \forall x \neq y \in A : \neg ( R(x,y) ^ R(y,x) )
+        */
         let dagger = Self::new(self.0.dagger(), false);
         let intersect = self.intersection(&dagger);
         let identity_rel = Self::new(Span::<Lambda>::identity(&self.0.domain()), false);
@@ -445,17 +508,31 @@ impl<Lambda: Eq + Sized + Debug + Copy> Rel<Lambda> {
     }
 
     fn is_transitive(&self) -> bool {
+        /*
+        self(x,y) ^ self(y,z) means that twice(x,z)
+        is self(x,z) by itself true
+        */
         let twice = Self::new(self.0.compose(&self.0).unwrap(), true);
         self.subsumes(&twice)
     }
 
     #[allow(dead_code)]
     fn is_equivalence_rel(&self) -> bool {
+        /*
+        is this an equivalence relation
+        so we can interpret a pair (x,y) being in the source of this relation as x \equiv y
+        and not equivalent otherwise
+        */
         self.is_homogeneous() && self.is_reflexive() && self.is_symmetric() && self.is_transitive()
     }
 
     #[allow(dead_code)]
     fn is_partial_order(&self) -> bool {
+        /*
+        is this a partial order
+        so we can interpret a pair (x,y) being in the source of this relation as x \leq y
+        and not \leq otherwise
+        */
         self.is_homogeneous()
             && self.is_reflexive()
             && self.is_antisymmetric()

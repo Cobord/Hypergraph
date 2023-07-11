@@ -38,7 +38,7 @@ impl Pair {
         f(self.0) || f(self.1)
     }
 
-    pub fn flip_upside_down(&self, source: usize, target: usize) -> Self {
+    fn flip_upside_down(&self, source: usize, target: usize) -> Self {
         self.map(|v| if v < source { v + target } else { v - source })
     }
 
@@ -57,10 +57,6 @@ impl Pair {
     pub fn contains(&self, x: usize) -> bool {
         (x < self.0 && x > self.1) || (x < self.1 && x > self.0)
     }
-
-    // pub fn new(x: usize, y: usize) -> Self {
-    //     Self(x, y)
-    // }
 }
 
 impl From<(usize, usize)> for Pair {
@@ -71,10 +67,19 @@ impl From<(usize, usize)> for Pair {
 
 #[derive(PartialEq, Eq, Clone, Hash, Debug)]
 struct PerfectMatching {
+    /*
+    if gather all the entries in all the pairs, this gives 0..2n-1
+    with n being the length of pairs
+    each entry of pairs then says those two numbers are matched
+    */
     pairs: Vec<Pair>,
 }
 
 impl FromIterator<Pair> for PerfectMatching {
+    /*
+    build a PerfectMatching from something that iterates to yield Pair
+    makes sure that this iterator gives all the numbers 0..2n-1
+    */
     fn from_iter<T: IntoIterator<Item = Pair>>(pair_prime: T) -> Self {
         let pairs: Vec<Pair> = pair_prime.into_iter().collect();
         let max_expected = pairs.len() * 2;
@@ -106,6 +111,9 @@ impl PerfectMatching {
     }
 
     fn canonicalize(&mut self) {
+        /*
+        each matched pair is given as the smaller number first
+        */
         for Pair(p, q) in self.pairs.iter_mut() {
             if *p > *q {
                 std::mem::swap(p, q);
@@ -116,6 +124,13 @@ impl PerfectMatching {
     }
 
     fn flip_upside_down(&self, source: usize, target: usize) -> Self {
+        /*
+        interpret the numbers 0..source as on the one layer
+        then continuing the numbering on the other layer
+        so this is a perfect matching as in a BrauerDiagram
+        with specified source and target, then what is the perfect matching from
+        flipping the diagram and still using the same convention for how the nodes are numbered
+        */
         self.pairs
             .iter()
             .map(|x| x.flip_upside_down(source, target))
@@ -123,8 +138,12 @@ impl PerfectMatching {
     }
 
     fn non_crossing(&self, source: usize, _target: usize) -> bool {
-        // the lines connecting two points both on source side
+        /*
+        when interpreting this as a BrauerDiagram with specified domain/codomain (sum of both=2n)
+        is it actually temperley lieb with no crossings
+        */
         let source_lines = self.pairs.iter().filter(|p| p.all(|x| x < source)).cloned();
+        // source_lines are the lines connecting two points both on source side
         let source_crossing_tests = source_lines.clone().combinations(2);
         for cur_item in source_crossing_tests {
             let first_block = cur_item[0];
@@ -155,7 +174,7 @@ impl PerfectMatching {
             let a = first_block.contains(second_block.0);
             let b = first_block.contains(second_block.1);
             if a != b {
-                // a pair of lines that both connected source dots, crossed
+                // a pair of lines that both connected target dots, crossed
                 return false;
             }
         }
@@ -184,10 +203,21 @@ impl PerfectMatching {
     }
 }
 
+/*
+a single Brauer Diagram (and an accompanying power of delta)
+- a domain size
+- a codomain size
+- some number of circles contributing delta^k
+- a perfect matching on domain+codomain
+*/
 #[derive(PartialEq, Eq, Hash, Clone)]
 struct ExtendedPerfectMatching((usize, usize, usize, PerfectMatching));
 
 impl Mul for ExtendedPerfectMatching {
+    /*
+    concatenate the two diagrams
+    removing any circles, and adding them to the combined power of delta
+    */
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
@@ -266,6 +296,12 @@ pub struct BrauerMorphism<T>
 where
     T: Add<Output = T> + Zero + One + Copy,
 {
+    /*
+    a linear combination of (usize,PerfectMatching)
+        where a term (k,match) means \delta^k*(match interpreted with source and target)
+    the source and target are common for all terms
+    is_def_tl means all the terms are non-crossing
+    */
     diagram: LinearCombination<T, (usize, PerfectMatching)>,
     source: usize,
     target: usize,
@@ -329,6 +365,13 @@ where
     T: Add<Output = T> + Zero + One + Copy + AddAssign + Mul<Output = T> + MulAssign,
 {
     fn compose(&self, other: &Self) -> Result<Self, String> {
+        /*
+        put the domain and codomain information into each term to get ExtendedPerfectMatching
+        the multiplication implementation on ExtendedPerfectMatching
+        which describes the composition of single terms
+        so that induces the implementation of multiplication on LinearCombination<T,ExtendedPerfectMatching>
+        then put that information back into a BrauerMorphism<T>
+        */
         self.composable(other)?;
         let extended_diagram_self = self.diagram.inj_linearly_extend(|(delta_pow, diagram)| {
             ExtendedPerfectMatching((self.domain(), self.codomain(), delta_pow, diagram))
@@ -400,6 +443,10 @@ where
 {
     #[allow(dead_code)]
     pub fn temperley_lieb_gens(n: usize) -> Vec<Self> {
+        /*
+        give the Temperley-Lieb e_1 \cdots e_{n-1}
+        as elements of Hom_{Brauer}(n,n)
+        */
         (0..n - 1)
             .map(|i| {
                 let e_i_matching: PerfectMatching = (0..n)
@@ -426,6 +473,12 @@ where
 
     #[allow(dead_code)]
     pub fn symmetric_alg_gens(n: usize) -> Vec<Self> {
+        /*
+        give the symmetric algebra s_1 \cdots s_{n-1}
+        where s_i permutes i and i+1 in 1..n (interpreted in domain and codomain appropriately)
+        matches the rest with their shift in the codomain 
+        as elements of Hom_{Brauer}(n,n)
+        */
         (0..(n - 1))
             .map(|i| {
                 let e_i_matching: PerfectMatching = (0..n)
@@ -451,6 +504,10 @@ where
     }
 
     pub fn delta_polynomial(coeffs: &[T]) -> Self {
+        /*
+        The morphisms in Hom_{Brauer}(0,0) are in the polynomial ring T[delta]
+        Give such an element upon specifying the coefficients of such a polynomial
+        */
         let zeroth_coeff = *coeffs.first().unwrap_or(&T::zero());
         let empty_matching = PerfectMatching { pairs: vec![] };
         let mut diagram = LinearCombination::singleton((0, empty_matching));
@@ -474,6 +531,10 @@ where
     where
         F: Fn(T) -> T,
     {
+        /*
+        for each term, flip the diagram upside down and change the coefficient to it's daggger
+        as specified by the num_dagger function
+        */
         let mut diagram = self
             .diagram
             .inj_linearly_extend(|(d, m)| (d, m.flip_upside_down(self.source, self.target)));
@@ -488,6 +549,11 @@ where
 
     #[allow(dead_code)]
     pub fn set_is_tl(&mut self) {
+        /*
+        if not sure that it is definitely a Temperley-Lieb morphism,
+        then check the diagrams in all the terms
+        if already sure, then don't need to check
+        */
         if self.is_def_tl {
             return;
         }
@@ -501,6 +567,9 @@ fn simplify<T>(me: &mut BrauerMorphism<T>)
 where
     T: Add<Output = T> + Zero + One + Copy + AddAssign + Mul<Output = T> + MulAssign + Eq,
 {
+    /*
+    get rid of all the terms with zero coefficient
+    */
     me.diagram.simplify();
 }
 
