@@ -3,6 +3,8 @@ Utilities for cospans, wiring diagrams, frobenius algebras and spans along with 
 
 [Fong-Spivak Hypergraph Categories](https://arxiv.org/pdf/1806.08304.pdf)
 
+[Span and Cospan](https://en.wikipedia.org/wiki/Span_(category_theory))
+
 ## Cospan
 
 The notion of cospan here is for finite sets sliced over some Lambda.
@@ -18,6 +20,8 @@ Then one can delete and change the maps based on these names.
 ## Wiring Diagrams
 
 This operad is built on top of Cospans.
+
+### TODO : draw a picture
 
 ## Span/Rel
 
