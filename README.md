@@ -33,3 +33,15 @@ The more general objects are presented as tensor products of these basic objects
 ## Brauer
 
 [Brauer Algebra](https://en.wikipedia.org/wiki/Brauer_algebra)
+
+## Category Traits
+
+There are traits which when implemented indicate that is a morphism in some category. That category can also be monoidal and symmetric monoidal. For example,
+if one implements the trait to say T indicates a morphism in a monoidal category, then we have functions which give the identity morphisms on specified objects,
+compose T's to another (there are two versions of this for whether this is done by mutating one of the inputs or producing a fresh T). Because the category
+is not symmetric monoidal in this case, there isn't the trait that provides the functions for producing and manipulating morphisms from Permuatations.
+
+Similar to Frobenius we can interpret a generic monoidal morphism in any such trait. The generic monoidal morphism encodes how to build up a morphism from
+some BlackBox, monoidal product and composition. Suppose T implements all the traits needed to be a morphism in a monoidal category. Then if one
+also gives a function that takes that BlackBox label and the domain/codomain then the interpret function produces the corresponding T using the functions of the
+monoidal and composition traits.
