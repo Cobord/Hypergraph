@@ -1,3 +1,5 @@
+use either::Either::{Left, Right};
+
 use {
     crate::{
         category::Composable,
@@ -75,6 +77,20 @@ where
         gives warning and makes no change when there is no node with the desired name
         */
         self.0.change_boundary_node_name(name_pair);
+    }
+
+    #[allow(dead_code)]
+    pub fn toggle_orientation(&mut self, of_left_side: bool) {
+        let toggler = if of_left_side {
+            Left(|z: &mut (InOut, InterCircle, IntraCircle)| {
+                z.0 = z.0.flipped();
+            })
+        } else {
+            Right(|z: &mut (InOut, IntraCircle)| {
+                z.0 = z.0.flipped();
+            })
+        };
+        self.0.change_boundary_node_names(toggler);
     }
 
     #[allow(dead_code)]
@@ -167,31 +183,48 @@ where
         let mut self_inner_names_unaffected = self.0.left_names().clone();
         remove_multiple(&mut self_inner_names_unaffected, found_nodes);
 
-        // todo handle orientations
-
+        /*
+        identity on all the other internal circles
+        the names are orientation reversed for the identity
+        if we draw a line connecting the endpoints on internal and external circles
+        the one on the internal circle pointing into the boundary
+            means the one on the external circle points away from the boundary
+        and vice versa
+        */
         internal_other.0.monoidal(NamedCospan::identity(
             &self_inner_interface_unaffected,
             &self_inner_names_unaffected,
-            |left_name| (left_name, (left_name.0, left_name.2)),
+            |left_name| (left_name, (left_name.0.flipped(), left_name.2)),
         ));
 
+        /*
+        permute the codomain of internal so it lines up with the domain of self
+        by name
+        the composition only has a trouble if the types don't match up
+        it ignores the names on the internal junction
+        so if we want to glue by node name, we must permute first
+        the orientations flip so that across the internal junction all lines
+        have consistent orientation upon gluing
+        */
         let p = necessary_permutation(
             internal_other.0.right_names(),
             &self
                 .0
                 .left_names()
                 .iter()
-                .map(|z| (z.0, z.2))
+                .map(|z| (z.0.flipped(), z.2))
                 .collect::<Vec<_>>(),
         )?;
-
         internal_other.0.permute_side(&p, true);
-        self.0 = self.0.compose(&internal_other.0)?;
+
+        self.0 = internal_other.0.compose(&self.0)?;
         Ok(())
     }
 }
 
 mod test {
+    use crate::assert_ok;
+
 
     #[test]
     fn no_input_example() {
@@ -217,5 +250,41 @@ mod test {
         let changed_names = example.0.right_names();
         assert_eq!(changed_names[0], (InOut::Out, 0));
         assert_eq!(changed_names[1..], unchanged_right_names[1..]);
+    }
+
+    #[test]
+    fn operadic() {
+        use super::{InOut, WiringDiagram};
+        use crate::named_cospan::NamedCospan;
+
+        type LeftName = usize;
+        let inner_right_names = vec![
+            (InOut::In, 0),
+            (InOut::Out, 1),
+            (InOut::In, 2),
+            (InOut::Out, 3),
+            (InOut::Out, 4),
+        ];
+        let outer_left_names = inner_right_names
+            .iter()
+            .map(|(orient,name)| (orient.flipped(),0,*name))
+            .collect();
+        let example_inner: WiringDiagram<_, LeftName, _> = WiringDiagram::new(NamedCospan::new(
+            vec![],
+            vec![0, 1, 2, 2, 0],
+            vec![true, true, false],
+            vec![],
+            inner_right_names,
+        ));
+        let mut example_outer: WiringDiagram<_, LeftName, _> = WiringDiagram::new(NamedCospan::new(
+            vec![0, 0, 1, 1, 0],
+            vec![0],
+            vec![true, false],
+            outer_left_names,
+            vec![(InOut::Out,0)],
+        ));
+        let op_subbed = example_outer.operadic_substitution(0, example_inner);
+        assert_ok!(op_subbed);
+        // TODO assertions that this is the correct composition
     }
 }

@@ -340,6 +340,28 @@ where
         self.delete_boundary_node(which_node_idx);
     }
 
+    pub fn change_boundary_node_names<FL, FR>(&mut self, f: Either<FL, FR>)
+    where
+        FL: Fn(&mut LeftPortName),
+        FR: Fn(&mut RightPortName),
+    {
+        /*
+        change all boundary names on one side according to a function
+        */
+        match f {
+            Left(left_fun) => {
+                for cur_left_name in self.left_names.iter_mut() {
+                    left_fun(cur_left_name);
+                }
+            }
+            Right(right_fun) => {
+                for cur_right_name in self.right_names.iter_mut() {
+                    right_fun(cur_right_name);
+                }
+            }
+        }
+    }
+
     pub fn change_boundary_node_name(
         &mut self,
         name_pair: Either<(LeftPortName, LeftPortName), (RightPortName, RightPortName)>,
