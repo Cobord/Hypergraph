@@ -553,7 +553,6 @@ fn monotone_epi_mono_fact(v: FinSetMap) -> (FinSetMap, FinSetMap) {
 }
 
 mod test {
-    use crate::{category::Composable, symmetric_monoidal::SymmetricMonoidalDiscreteMorphism};
 
     #[test]
     fn surjectivity() {
@@ -809,6 +808,7 @@ mod test {
     #[test]
     fn permutation_test() {
         use crate::finset::{permutation_sort, Decomposition, FinSetMap};
+        use crate::symmetric_monoidal::SymmetricMonoidalDiscreteMorphism;
         use permutations::Permutation;
         let mut cur_test: FinSetMap = vec![0, 1, 1, 1, 2, 3, 4, 7, 8, 9, 11];
         let mut exp_sorted = vec![0, 1, 1, 1, 2, 3, 4, 7, 8, 9, 11];
@@ -920,6 +920,7 @@ mod test {
 
     #[test]
     fn two_decompositions() {
+        use crate::category::Composable;
         use crate::finset::Decomposition;
         use rand::Rng;
 
