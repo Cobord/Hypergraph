@@ -259,18 +259,20 @@ mod test {
         use crate::symmetric_monoidal::SymmetricMonoidalMorphism;
         use permutations::Permutation;
 
-        type LeftName = usize;
-        let inner_right_names = vec![
+        type WireName = usize;
+        type CircleName = i32;
+        let inner_right_names: Vec<(_, CircleName)> = vec![
             (InOut::In, 0),
             (InOut::Out, 1),
             (InOut::In, 2),
             (InOut::Out, 3),
             (InOut::Out, 4),
         ];
-        let outer_left_names: Vec<_> = inner_right_names
+        let mut outer_left_names: Vec<_> = inner_right_names
             .iter()
             .map(|(orient, name)| (orient.flipped(), 0, *name))
             .collect();
+        outer_left_names.push((InOut::Undirected, 1, 500));
 
         /*
         inner circle has no further inner circles
@@ -281,7 +283,7 @@ mod test {
         0 and 2 are oriented in to the boundary
         their names are just the numbers and orientations
         */
-        let example_inner: WiringDiagram<_, LeftName, _> = WiringDiagram::new(NamedCospan::new(
+        let example_inner: WiringDiagram<_, WireName, _> = WiringDiagram::new(NamedCospan::new(
             vec![],
             vec![0, 1, 2, 2, 0],
             vec![true, true, false],
@@ -289,20 +291,20 @@ mod test {
             inner_right_names,
         ));
         /*
-        outer circle has only 1 inner circle
-        which has 5 ports for the outer of previous to connect to
+        outer circle has 2 inner circles
+        the first has 5 ports for the outer of previous to connect to
         0, 1 and 4 are connected to a common middle with type true
             and that is connected to the only port on the very outer circle
         2 and 3 are connected to a common middle with type false
+        the second has 1 port which is undirected and labelled 500 and of type false
         */
-        let mut example_outer: WiringDiagram<_, LeftName, _> =
-            WiringDiagram::new(NamedCospan::new(
-                vec![0, 0, 1, 1, 0],
-                vec![0],
-                vec![true, false],
-                outer_left_names.clone(),
-                vec![(InOut::Out, 0)],
-            ));
+        let mut example_outer: WiringDiagram<_, _, _> = WiringDiagram::new(NamedCospan::new(
+            vec![0, 0, 1, 1, 0, 1],
+            vec![0],
+            vec![true, false],
+            outer_left_names.clone(),
+            vec![(InOut::Out, 0)],
+        ));
         /*
         permuting the domain of outer doesn't matter because the
         wires will be matched up by name not by index
@@ -310,7 +312,7 @@ mod test {
         use rand::seq::SliceRandom;
         use rand::thread_rng;
         let mut rng = thread_rng();
-        let mut y = [0, 1, 2, 3, 4];
+        let mut y: Vec<usize> = (0..6).collect();
         y.shuffle(&mut rng);
         let p = Permutation::try_from(&y).unwrap();
         example_outer.0.permute_side(&p, false);
@@ -319,15 +321,18 @@ mod test {
         assert_eq!(*example_outer.0.right_names(), vec![(InOut::Out, 0)]);
         assert_eq!(
             example_outer.0.domain(),
-            p.permute(&vec![true, true, false, false, true])
+            p.permute(&vec![true, true, false, false, true, false])
         );
         assert_eq!(*example_outer.0.codomain(), vec![true]);
 
         let op_subbed = example_outer.operadic_substitution(0, example_inner);
         assert_ok!(op_subbed);
         example_outer.0.assert_valid_nohash(false);
-        assert!(example_outer.0.left_names().is_empty());
-        assert!(example_outer.0.domain().is_empty());
+        assert_eq!(
+            *example_outer.0.left_names(),
+            vec![(InOut::Undirected, 1, 500)]
+        );
+        assert_eq!(*example_outer.0.domain(), vec![false]);
         assert_eq!(*example_outer.0.right_names(), vec![(InOut::Out, 0)]);
         assert_eq!(*example_outer.0.codomain(), vec![true]);
     }
