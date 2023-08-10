@@ -256,6 +256,8 @@ mod test {
         use crate::assert_ok;
         use crate::category::Composable;
         use crate::named_cospan::NamedCospan;
+        use crate::symmetric_monoidal::SymmetricMonoidalMorphism;
+        use permutations::Permutation;
 
         type LeftName = usize;
         let inner_right_names = vec![
@@ -265,7 +267,7 @@ mod test {
             (InOut::Out, 3),
             (InOut::Out, 4),
         ];
-        let outer_left_names = inner_right_names
+        let outer_left_names: Vec<_> = inner_right_names
             .iter()
             .map(|(orient, name)| (orient.flipped(), 0, *name))
             .collect();
@@ -290,7 +292,7 @@ mod test {
         outer circle has only 1 inner circle
         which has 5 ports for the outer of previous to connect to
         0, 1 and 4 are connected to a common middle with type true
-            and that is conneccted to the only port on the very outer circle
+            and that is connected to the only port on the very outer circle
         2 and 3 are connected to a common middle with type false
         */
         let mut example_outer: WiringDiagram<_, LeftName, _> =
@@ -298,9 +300,29 @@ mod test {
                 vec![0, 0, 1, 1, 0],
                 vec![0],
                 vec![true, false],
-                outer_left_names,
+                outer_left_names.clone(),
                 vec![(InOut::Out, 0)],
             ));
+        /*
+        permuting the domain of outer doesn't matter because the
+        wires will be matched up by name not by index
+        */
+        use rand::seq::SliceRandom;
+        use rand::thread_rng;
+        let mut rng = thread_rng();
+        let mut y = [0, 1, 2, 3, 4];
+        y.shuffle(&mut rng);
+        let p = Permutation::try_from(&y).unwrap();
+        example_outer.0.permute_side(&p, false);
+        example_outer.0.assert_valid_nohash(false);
+        assert_eq!(*example_outer.0.left_names(), p.permute(&outer_left_names));
+        assert_eq!(*example_outer.0.right_names(), vec![(InOut::Out, 0)]);
+        assert_eq!(
+            example_outer.0.domain(),
+            p.permute(&vec![true, true, false, false, true])
+        );
+        assert_eq!(*example_outer.0.codomain(), vec![true]);
+
         let op_subbed = example_outer.operadic_substitution(0, example_inner);
         assert_ok!(op_subbed);
         example_outer.0.assert_valid_nohash(false);
