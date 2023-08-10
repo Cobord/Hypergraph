@@ -424,7 +424,6 @@ impl Composable<usize> for Decomposition {
         } else {
             Self::try_from(composite).map_err(|_| "???".to_string())
         }
-        //todo test
     }
 
     fn domain(&self) -> usize {
@@ -453,14 +452,13 @@ impl SymmetricMonoidalDiscreteMorphism<usize> for Decomposition {
         }
     }
 
-    fn from_permutation(p: Permutation, type_: usize, _: bool) -> Self {
-        assert_eq!(p.len(), type_);
-        let _answer = Self {
+    fn from_permutation(p: Permutation, perm_len: usize, _: bool) -> Self {
+        assert_eq!(p.len(), perm_len);
+        Self {
             permutation_part: p,
-            order_preserving_injection: OrderPresInj::identity(&type_),
-            order_preserving_surjection: OrderPresSurj::identity(&type_),
-        };
-        todo!("might be p.inv() instead")
+            order_preserving_injection: OrderPresInj::identity(&perm_len),
+            order_preserving_surjection: OrderPresSurj::identity(&perm_len),
+        }
     }
 }
 
@@ -555,6 +553,7 @@ fn monotone_epi_mono_fact(v: FinSetMap) -> (FinSetMap, FinSetMap) {
 }
 
 mod test {
+    use crate::{category::Composable, symmetric_monoidal::SymmetricMonoidalDiscreteMorphism};
 
     #[test]
     fn surjectivity() {
@@ -809,7 +808,7 @@ mod test {
 
     #[test]
     fn permutation_test() {
-        use crate::finset::{permutation_sort, FinSetMap};
+        use crate::finset::{permutation_sort, Decomposition, FinSetMap};
         use permutations::Permutation;
         let mut cur_test: FinSetMap = vec![0, 1, 1, 1, 2, 3, 4, 7, 8, 9, 11];
         let mut exp_sorted = vec![0, 1, 1, 1, 2, 3, 4, 7, 8, 9, 11];
@@ -821,6 +820,12 @@ mod test {
             cur_perm.permute(&[0, 1, 1, 1, 2, 3, 4, 7, 8, 9, 11]),
             cur_test
         );
+        let decomp = Decomposition::from_permutation(cur_perm.clone(), cur_test.len(), true);
+        for idx in 0..cur_test.len() {
+            let after_decomp = decomp.apply(idx);
+            let after_cur_perm = cur_perm.apply(idx);
+            assert_eq!(after_decomp, after_cur_perm);
+        }
 
         cur_test = vec![1, 0];
         exp_sorted = vec![0, 1];
@@ -829,6 +834,12 @@ mod test {
         assert_eq!(cur_test, exp_sorted);
         assert_eq!(cur_perm, exp_perm);
         assert_eq!(cur_perm.permute(&[1, 0]), cur_test);
+        let decomp = Decomposition::from_permutation(cur_perm.clone(), cur_test.len(), true);
+        for idx in 0..cur_test.len() {
+            let after_decomp = decomp.apply(idx);
+            let after_cur_perm = cur_perm.apply(idx);
+            assert_eq!(after_decomp, after_cur_perm);
+        }
 
         cur_test = vec![2, 1, 0];
         exp_sorted = vec![0, 1, 2];
@@ -837,6 +848,12 @@ mod test {
         assert_eq!(cur_test, exp_sorted);
         assert_eq!(cur_perm, exp_perm);
         assert_eq!(cur_perm.permute(&[2, 1, 0]), cur_test);
+        let decomp = Decomposition::from_permutation(cur_perm.clone(), cur_test.len(), true);
+        for idx in 0..cur_test.len() {
+            let after_decomp = decomp.apply(idx);
+            let after_cur_perm = cur_perm.apply(idx);
+            assert_eq!(after_decomp, after_cur_perm);
+        }
 
         cur_test = vec![2, 0, 1];
         exp_sorted = vec![0, 1, 2];
@@ -845,6 +862,12 @@ mod test {
         assert_eq!(cur_test, exp_sorted);
         assert_eq!(cur_perm, exp_perm);
         assert_eq!(cur_perm.permute(&[2, 0, 1]), cur_test);
+        let decomp = Decomposition::from_permutation(cur_perm.clone(), cur_test.len(), true);
+        for idx in 0..cur_test.len() {
+            let after_decomp = decomp.apply(idx);
+            let after_cur_perm = cur_perm.apply(idx);
+            assert_eq!(after_decomp, after_cur_perm);
+        }
 
         cur_test = vec![2, 0, 0, 1, 1];
         exp_sorted = vec![0, 0, 1, 1, 2];
@@ -853,6 +876,12 @@ mod test {
         assert_eq!(cur_test, exp_sorted);
         assert_eq!(cur_perm, exp_perm);
         assert_eq!(cur_perm.permute(&[2, 0, 0, 1, 1]), cur_test);
+        let decomp = Decomposition::from_permutation(cur_perm.clone(), cur_test.len(), true);
+        for idx in 0..cur_test.len() {
+            let after_decomp = decomp.apply(idx);
+            let after_cur_perm = cur_perm.apply(idx);
+            assert_eq!(after_decomp, after_cur_perm);
+        }
     }
 
     #[test]
@@ -885,6 +914,45 @@ mod test {
                 }
             } else {
                 assert!(false, "All maps of finite sets decompose");
+            }
+        }
+    }
+
+    #[test]
+    fn two_decompositions() {
+        use crate::finset::Decomposition;
+        use rand::Rng;
+
+        let fin_set_size: usize = 20;
+        let mut rng = rand::thread_rng();
+        let trial_num = 10;
+
+        for _ in 0..trial_num {
+            let first_int_map: Vec<_> = (0..fin_set_size)
+                .map(|_| rng.gen_range(0..fin_set_size))
+                .collect();
+            let second_int_map: Vec<_> = (0..fin_set_size)
+                .map(|_| rng.gen_range(0..fin_set_size))
+                .collect();
+            let max_first = *first_int_map.iter().max().unwrap();
+            let leftover_needed = (fin_set_size - max_first - 1).max(0);
+            let decomp_1 =
+                Decomposition::try_from((first_int_map.clone(), leftover_needed)).unwrap();
+            let decomp_2 = Decomposition::try_from((second_int_map.clone(), 0)).unwrap();
+            let actual_codomain = *second_int_map.iter().max().unwrap() + 1;
+            assert_eq!(decomp_1.domain(), fin_set_size);
+            assert_eq!(decomp_1.codomain(), fin_set_size);
+            assert_eq!(decomp_2.domain(), fin_set_size);
+            assert_eq!(decomp_2.codomain(), actual_codomain);
+            let decomp_12 = decomp_1.compose(&decomp_2).unwrap();
+            assert_eq!(decomp_12.domain(), fin_set_size);
+            assert_eq!(decomp_12.codomain(), actual_codomain);
+            for idx in 0..fin_set_size {
+                let after_first = first_int_map[idx];
+                assert_eq!(decomp_1.apply(idx), after_first);
+                let after_second = second_int_map[after_first];
+                assert_eq!(decomp_2.apply(after_first), after_second);
+                assert_eq!(decomp_12.apply(idx), after_second);
             }
         }
     }
