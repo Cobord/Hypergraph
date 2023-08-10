@@ -21,7 +21,9 @@ Then one can delete and change the maps based on these names.
 
 This operad is built on top of Cospans.
 
-### TODO : draw a picture
+![Wiring Diagram from Spivak 13](https://github.com/Cobord/Hypergraph/assets/12960709/a9eef1fc-c192-44b9-8026-5aa2a75980cf)
+
+*Wiring Diagram as drawn in Spivak 13*
 
 ## Span/Rel
 
