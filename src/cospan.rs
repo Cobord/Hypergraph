@@ -177,6 +177,25 @@ where
         }
     }
 
+    pub fn map_to_same(
+        &self,
+        node_1: Either<LeftIndex, RightIndex>,
+        node_2: Either<LeftIndex, RightIndex>,
+    ) -> bool {
+        /*
+        are the middle nodes that node_1 and node_2 connect to the same
+        */
+        let mid_for_node_1 = match node_1 {
+            Left(z) => self.left[z],
+            Right(z) => self.right[z],
+        };
+        let mid_for_node_2 = match node_2 {
+            Left(z) => self.left[z],
+            Right(z) => self.right[z],
+        };
+        mid_for_node_1 == mid_for_node_2
+    }
+
     pub fn connect_pair(
         &mut self,
         node_1: Either<LeftIndex, RightIndex>,

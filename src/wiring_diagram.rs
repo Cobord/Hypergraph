@@ -12,7 +12,7 @@ use {
     std::fmt::Debug,
 };
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 #[allow(dead_code)]
 pub enum InOut {
     In,
@@ -261,14 +261,14 @@ mod test {
 
         type WireName = usize;
         type CircleName = i32;
-        let inner_right_names: Vec<(_, CircleName)> = vec![
+        let inner_right_names: Vec<(_, WireName)> = vec![
             (InOut::In, 0),
             (InOut::Out, 1),
             (InOut::In, 2),
             (InOut::Out, 3),
             (InOut::Out, 4),
         ];
-        let mut outer_left_names: Vec<_> = inner_right_names
+        let mut outer_left_names: Vec<(_, CircleName, _)> = inner_right_names
             .iter()
             .map(|(orient, name)| (orient.flipped(), 0, *name))
             .collect();
@@ -283,13 +283,14 @@ mod test {
         0 and 2 are oriented in to the boundary
         their names are just the numbers and orientations
         */
-        let example_inner: WiringDiagram<_, WireName, _> = WiringDiagram::new(NamedCospan::new(
-            vec![],
-            vec![0, 1, 2, 2, 0],
-            vec![true, true, false],
-            vec![],
-            inner_right_names,
-        ));
+        let example_inner: WiringDiagram<_, CircleName, WireName> =
+            WiringDiagram::new(NamedCospan::new(
+                vec![],
+                vec![0, 1, 2, 2, 0],
+                vec![true, true, false],
+                vec![],
+                inner_right_names,
+            ));
         /*
         outer circle has 2 inner circles
         the first has 5 ports for the outer of previous to connect to
@@ -335,5 +336,298 @@ mod test {
         assert_eq!(*example_outer.0.domain(), vec![false]);
         assert_eq!(*example_outer.0.right_names(), vec![(InOut::Out, 0)]);
         assert_eq!(*example_outer.0.codomain(), vec![true]);
+    }
+
+    #[test]
+    fn operadic_multiple() {
+        use super::{InOut, WiringDiagram};
+        use crate::assert_err;
+        use crate::assert_ok;
+        use crate::category::Composable;
+        use crate::named_cospan::NamedCospan;
+        use crate::symmetric_monoidal::SymmetricMonoidalMorphism;
+        use either::Either::{Left, Right};
+        use permutations::Permutation;
+
+        type WireName = char;
+        type CircleName = i32;
+
+        let outer_label = |c: WireName| (InOut::Undirected, c);
+        let outer_right_names: Vec<(_, WireName)> = ['a', 'b', 'c', 'd', 'e']
+            .into_iter()
+            .map(outer_label)
+            .collect();
+
+        let inner_label = |(w, c): (WireName, CircleName)| (InOut::Undirected, c, w);
+        let outer_left_names: Vec<(_, CircleName, WireName)> = [
+            ('r', 1),
+            ('s', 1),
+            ('t', 1),
+            ('u', 2),
+            ('v', 2),
+            ('w', 3),
+            ('x', 3),
+            ('y', 3),
+            ('z', 3),
+        ]
+        .into_iter()
+        .map(inner_label)
+        .collect();
+
+        /*
+        outer circle has 3 inner circles
+        the first has 3 ports
+            they are named r,s,t and connected to 2,1,3 in the middle
+        the second has 2 ports
+            they are named u,v and are connected to 4 and 3
+        the third has 3 ports
+            they are named w,x,y,z and are connected to 1,4,5,6
+        there are no colors to the wires
+        */
+        let mut example_outer: WiringDiagram<_, _, _> = WiringDiagram::new(NamedCospan::new(
+            vec![1, 0, 2, 3, 2, 0, 3, 4, 5],
+            vec![0, 1, 2, 4, 5],
+            vec![(); 6],
+            outer_left_names.clone(),
+            outer_right_names.clone(),
+        ));
+        /*
+        permuting the domain of outer doesn't matter because the
+        wires will be matched up by name not by index
+        */
+        use rand::seq::SliceRandom;
+        use rand::thread_rng;
+        let mut rng = thread_rng();
+        let mut y: Vec<usize> = (0..9).collect();
+        y.shuffle(&mut rng);
+        let p1 = Permutation::try_from(&y).unwrap();
+        example_outer.0.permute_side(&p1, false);
+        example_outer.0.assert_valid_nohash(false);
+
+        let mut y: Vec<usize> = (0..5).collect();
+        y.shuffle(&mut rng);
+        let p2 = Permutation::try_from(&y).unwrap();
+        example_outer.0.permute_side(&p2, true);
+        example_outer.0.assert_valid_nohash(false);
+
+        assert_eq!(*example_outer.0.left_names(), p1.permute(&outer_left_names));
+        assert_eq!(
+            *example_outer.0.right_names(),
+            p2.permute(&outer_right_names)
+        );
+        assert_eq!(example_outer.0.domain(), vec![(); 9]);
+        assert_eq!(example_outer.0.codomain(), vec![(); 5]);
+
+        let inner_1_right_names: Vec<(_, WireName)> = outer_left_names
+            .iter()
+            .filter_map(|(in_out, circle_name, wire_name)| {
+                if *circle_name == 1 {
+                    Some((in_out.flipped(), *wire_name))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        let inner_1_left_names: Vec<(InOut, CircleName, WireName)> = vec![];
+
+        /*
+        first inner circle gets substituted for the r,s,t circle
+        t goes to a unconnected middle
+        r and s go to the same middle
+        there are no internal circles
+        */
+        let example_inner_1: WiringDiagram<_, _, _> = WiringDiagram::new(NamedCospan::new(
+            vec![],
+            vec![1, 1, 0],
+            vec![(), ()],
+            inner_1_left_names,
+            inner_1_right_names,
+        ));
+
+        let subbed = example_outer.operadic_substitution(1, example_inner_1);
+        assert_ok!(subbed);
+
+        example_outer.0.assert_valid_nohash(false);
+        let expected_left_names = [
+            (InOut::Undirected, 2, 'u'),
+            (InOut::Undirected, 2, 'v'),
+            (InOut::Undirected, 3, 'w'),
+            (InOut::Undirected, 3, 'x'),
+            (InOut::Undirected, 3, 'y'),
+            (InOut::Undirected, 3, 'z'),
+        ];
+        let mut obs_left_names = example_outer.0.left_names().clone();
+        obs_left_names.sort();
+        assert_eq!(obs_left_names, expected_left_names.to_vec());
+        assert_eq!(*example_outer.0.domain(), vec![(); 9 - 3]);
+        let expected_right_names = [
+            (InOut::Undirected, 'a'),
+            (InOut::Undirected, 'b'),
+            (InOut::Undirected, 'c'),
+            (InOut::Undirected, 'd'),
+            (InOut::Undirected, 'e'),
+        ];
+        let mut obs_right_names = example_outer.0.right_names().clone();
+        obs_right_names.sort();
+        assert_eq!(obs_right_names, expected_right_names.to_vec());
+        assert_eq!(*example_outer.0.codomain(), vec![(); 5]);
+
+        assert!(example_outer
+            .0
+            .map_to_same(Right(outer_label('a')), Right(outer_label('b'))));
+        assert!(example_outer
+            .0
+            .map_to_same(Right(outer_label('a')), Left(inner_label(('w', 3)))));
+        assert!(!example_outer
+            .0
+            .map_to_same(Right(outer_label('a')), Right(outer_label('c'))));
+        assert!(example_outer
+            .0
+            .map_to_same(Right(outer_label('c')), Left(inner_label(('v', 2)))));
+        assert!(!example_outer
+            .0
+            .map_to_same(Right(outer_label('a')), Right(outer_label('d'))));
+        assert!(!example_outer
+            .0
+            .map_to_same(Right(outer_label('a')), Right(outer_label('e'))));
+        assert!(!example_outer
+            .0
+            .map_to_same(Right(outer_label('c')), Right(outer_label('d'))));
+        assert!(!example_outer
+            .0
+            .map_to_same(Right(outer_label('c')), Right(outer_label('e'))));
+        assert!(!example_outer
+            .0
+            .map_to_same(Right(outer_label('d')), Right(outer_label('e'))));
+        assert!(example_outer
+            .0
+            .map_to_same(Right(outer_label('d')), Left(inner_label(('y', 3)))));
+        assert!(example_outer
+            .0
+            .map_to_same(Right(outer_label('e')), Left(inner_label(('z', 3)))));
+        assert!(example_outer
+            .0
+            .map_to_same(Left(inner_label(('u', 2))), Left(inner_label(('x', 3)))));
+        assert!(!example_outer
+            .0
+            .map_to_same(Left(inner_label(('u', 2))), Right(outer_label('b'))));
+        assert!(!example_outer
+            .0
+            .map_to_same(Left(inner_label(('u', 2))), Right(outer_label('c'))));
+        assert!(!example_outer
+            .0
+            .map_to_same(Left(inner_label(('u', 2))), Right(outer_label('d'))));
+        assert!(!example_outer
+            .0
+            .map_to_same(Left(inner_label(('u', 2))), Right(outer_label('e'))));
+
+        let inner_2_right_names: Vec<_> = outer_left_names
+            .iter()
+            .filter_map(|(in_out, circle_name, wire_name)| {
+                if *circle_name == 2 {
+                    Some((in_out.flipped(), *wire_name))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        let inner_2_left_names = vec![inner_label(('q', 4))];
+
+        /*
+        first inner circle gets substituted for the u,v circle
+        u and v go to the same middle
+        that middle connects to a inner circle with port name q
+        */
+        let make_example_inner_2 = || {
+            WiringDiagram::new(NamedCospan::new(
+                vec![0],
+                vec![0, 0],
+                vec![()],
+                inner_2_left_names.clone(),
+                inner_2_right_names.clone(),
+            ))
+        };
+
+        let subbed = example_outer.operadic_substitution(1, make_example_inner_2());
+        assert_err!(subbed);
+        let subbed = example_outer.operadic_substitution(3, make_example_inner_2());
+        assert_err!(subbed);
+        let subbed = example_outer.operadic_substitution(5, make_example_inner_2());
+        assert_err!(subbed);
+        let subbed = example_outer.operadic_substitution(2, make_example_inner_2());
+        assert_ok!(subbed);
+
+        example_outer.0.assert_valid_nohash(false);
+        let expected_left_names = [
+            (InOut::Undirected, 3, 'w'),
+            (InOut::Undirected, 3, 'x'),
+            (InOut::Undirected, 3, 'y'),
+            (InOut::Undirected, 3, 'z'),
+            (InOut::Undirected, 4, 'q'),
+        ];
+        let mut obs_left_names = example_outer.0.left_names().clone();
+        obs_left_names.sort();
+        assert_eq!(obs_left_names, expected_left_names.to_vec());
+        assert_eq!(*example_outer.0.domain(), vec![(); 9 - 3 - 2 + 1]);
+        let expected_right_names = [
+            (InOut::Undirected, 'a'),
+            (InOut::Undirected, 'b'),
+            (InOut::Undirected, 'c'),
+            (InOut::Undirected, 'd'),
+            (InOut::Undirected, 'e'),
+        ];
+        let mut obs_right_names = example_outer.0.right_names().clone();
+        obs_right_names.sort();
+        assert_eq!(obs_right_names, expected_right_names.to_vec());
+        assert_eq!(*example_outer.0.codomain(), vec![(); 5]);
+
+        assert!(example_outer
+            .0
+            .map_to_same(Right(outer_label('a')), Right(outer_label('b'))));
+        assert!(example_outer
+            .0
+            .map_to_same(Right(outer_label('a')), Left(inner_label(('w', 3)))));
+        assert!(!example_outer
+            .0
+            .map_to_same(Right(outer_label('a')), Right(outer_label('c'))));
+        assert!(example_outer
+            .0
+            .map_to_same(Right(outer_label('c')), Left(inner_label(('q', 4)))));
+        assert!(!example_outer
+            .0
+            .map_to_same(Right(outer_label('a')), Right(outer_label('d'))));
+        assert!(!example_outer
+            .0
+            .map_to_same(Right(outer_label('a')), Right(outer_label('e'))));
+        assert!(!example_outer
+            .0
+            .map_to_same(Right(outer_label('c')), Right(outer_label('d'))));
+        assert!(!example_outer
+            .0
+            .map_to_same(Right(outer_label('c')), Right(outer_label('e'))));
+        assert!(!example_outer
+            .0
+            .map_to_same(Right(outer_label('d')), Right(outer_label('e'))));
+        assert!(example_outer
+            .0
+            .map_to_same(Right(outer_label('d')), Left(inner_label(('y', 3)))));
+        assert!(example_outer
+            .0
+            .map_to_same(Right(outer_label('e')), Left(inner_label(('z', 3)))));
+        assert!(example_outer
+            .0
+            .map_to_same(Left(inner_label(('q', 4))), Left(inner_label(('x', 3)))));
+        assert!(!example_outer
+            .0
+            .map_to_same(Left(inner_label(('q', 4))), Right(outer_label('b'))));
+        assert!(example_outer
+            .0
+            .map_to_same(Left(inner_label(('q', 4))), Right(outer_label('c'))));
+        assert!(!example_outer
+            .0
+            .map_to_same(Left(inner_label(('q', 4))), Right(outer_label('d'))));
+        assert!(!example_outer
+            .0
+            .map_to_same(Left(inner_label(('q', 4))), Right(outer_label('e'))));
     }
 }

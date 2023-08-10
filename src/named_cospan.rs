@@ -229,6 +229,26 @@ where
         self.cospan.delete_boundary_node(which_node);
     }
 
+    #[allow(dead_code)]
+    pub fn map_to_same(
+        &mut self,
+        node_1_name: Either<LeftPortName, RightPortName>,
+        node_2_name: Either<LeftPortName, RightPortName>,
+    ) -> bool {
+        /*
+        first find node_1 and node_2 by their names
+        if nodes with those names do not exist, then false
+        query if the middle nodes that node_1 and node_2 connect to are the same
+        */
+        let node_1_loc = self.find_node_by_name(node_1_name);
+        let node_2_loc = self.find_node_by_name(node_2_name);
+        if let Some((node_1_loc_real, node_2_loc_real)) = node_1_loc.zip(node_2_loc) {
+            self.cospan.map_to_same(node_1_loc_real, node_2_loc_real)
+        } else {
+            false
+        }
+    }
+
     pub fn connect_pair(
         &mut self,
         node_1_name: Either<LeftPortName, RightPortName>,

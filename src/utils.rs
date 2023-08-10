@@ -190,6 +190,18 @@ macro_rules! assert_ok {
     };
 }
 
+#[macro_export]
+macro_rules! assert_err {
+    ( $x:expr ) => {
+        match $x {
+            std::result::Result::Err(v) => v,
+            std::result::Result::Ok(e) => {
+                panic!("No error calling {}: {:?}", stringify!($x), e);
+            }
+        }
+    };
+}
+
 mod test {
 
     #[test]
