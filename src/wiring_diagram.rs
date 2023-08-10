@@ -223,8 +223,6 @@ where
 }
 
 mod test {
-    use crate::assert_ok;
-
 
     #[test]
     fn no_input_example() {
@@ -255,6 +253,8 @@ mod test {
     #[test]
     fn operadic() {
         use super::{InOut, WiringDiagram};
+        use crate::assert_ok;
+        use crate::category::Composable;
         use crate::named_cospan::NamedCospan;
 
         type LeftName = usize;
@@ -267,8 +267,18 @@ mod test {
         ];
         let outer_left_names = inner_right_names
             .iter()
-            .map(|(orient,name)| (orient.flipped(),0,*name))
+            .map(|(orient, name)| (orient.flipped(), 0, *name))
             .collect();
+
+        /*
+        inner circle has no further inner circles
+        it has 5 ports on the outside
+        0 and 4 are connected to a common middle with type true
+        2 and 3 are connected to a common middle with type false
+        1 is connected to a middle with type true
+        0 and 2 are oriented in to the boundary
+        their names are just the numbers and orientations
+        */
         let example_inner: WiringDiagram<_, LeftName, _> = WiringDiagram::new(NamedCospan::new(
             vec![],
             vec![0, 1, 2, 2, 0],
@@ -276,15 +286,27 @@ mod test {
             vec![],
             inner_right_names,
         ));
-        let mut example_outer: WiringDiagram<_, LeftName, _> = WiringDiagram::new(NamedCospan::new(
-            vec![0, 0, 1, 1, 0],
-            vec![0],
-            vec![true, false],
-            outer_left_names,
-            vec![(InOut::Out,0)],
-        ));
+        /*
+        outer circle has only 1 inner circle
+        which has 5 ports for the outer of previous to connect to
+        0, 1 and 4 are connected to a common middle with type true
+            and that is conneccted to the only port on the very outer circle
+        2 and 3 are connected to a common middle with type false
+        */
+        let mut example_outer: WiringDiagram<_, LeftName, _> =
+            WiringDiagram::new(NamedCospan::new(
+                vec![0, 0, 1, 1, 0],
+                vec![0],
+                vec![true, false],
+                outer_left_names,
+                vec![(InOut::Out, 0)],
+            ));
         let op_subbed = example_outer.operadic_substitution(0, example_inner);
         assert_ok!(op_subbed);
-        // TODO assertions that this is the correct composition
+        example_outer.0.assert_valid_nohash(false);
+        assert!(example_outer.0.left_names().is_empty());
+        assert!(example_outer.0.domain().is_empty());
+        assert_eq!(*example_outer.0.right_names(), vec![(InOut::Out, 0)]);
+        assert_eq!(*example_outer.0.codomain(), vec![true]);
     }
 }

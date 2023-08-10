@@ -33,6 +33,27 @@ pub struct NamedCospan<Lambda: Sized + Eq + Copy + Debug, LeftPortName, RightPor
 impl<Lambda, LeftPortName, RightPortName> NamedCospan<Lambda, LeftPortName, RightPortName>
 where
     Lambda: Sized + Eq + Copy + Debug,
+    LeftPortName: Eq,
+    RightPortName: Eq,
+{
+    pub fn assert_valid_nohash(&self, check_id: bool) {
+        self.cospan.assert_valid(check_id, true);
+        assert_eq!(
+            self.cospan.left_to_middle().len(),
+            self.left_names.len(),
+            "There was a mismatch between the domain size and the list of their names"
+        );
+        assert_eq!(
+            self.cospan.right_to_middle().len(),
+            self.right_names.len(),
+            "There was a mismatch between the codomain size and the list of their names"
+        );
+    }
+}
+
+impl<Lambda, LeftPortName, RightPortName> NamedCospan<Lambda, LeftPortName, RightPortName>
+where
+    Lambda: Sized + Eq + Copy + Debug,
     LeftPortName: Eq + Clone,
     RightPortName: Eq,
 {
@@ -472,7 +493,7 @@ where
 {
     #[allow(dead_code)]
     pub fn assert_valid(&self, check_id: bool) {
-        self.cospan.assert_valid(check_id);
+        self.assert_valid_nohash(check_id);
         assert!(
             crate::utils::is_unique(&self.left_names),
             "There was a duplicate name on the domain"
@@ -480,16 +501,6 @@ where
         assert!(
             crate::utils::is_unique(&self.right_names),
             "There was a duplicate name on the codomain"
-        );
-        assert_eq!(
-            self.cospan.left_to_middle().len(),
-            self.left_names.len(),
-            "There was a mismatch between the domain size and the list of their names"
-        );
-        assert_eq!(
-            self.cospan.right_to_middle().len(),
-            self.right_names.len(),
-            "There was a mismatch between the codomain size and the list of their names"
         );
     }
 }

@@ -35,7 +35,7 @@ impl<Lambda> Cospan<Lambda>
 where
     Lambda: Sized + Eq + Copy + Debug,
 {
-    pub fn assert_valid(&self, check_id: bool) {
+    pub fn assert_valid(&self, check_id_strong: bool, check_id_weak: bool) {
         let middle_size = self.middle.len();
         let left_in_bounds = self.left.iter().all(|z| *z < middle_size);
         assert!(
@@ -47,12 +47,14 @@ where
             right_in_bounds,
             "A target for one of the right arrows was out of bounds"
         );
-        if check_id {
+        if check_id_strong || (check_id_weak && self.is_left_id) {
             let is_left_really_id = represents_id(self.left.iter().cloned());
             assert_eq!(
                 is_left_really_id, self.is_left_id,
                 "The identity nature of the left arrow was wrong"
             );
+        }
+        if check_id_strong || (check_id_weak && self.is_right_id) {
             let is_right_really_id = represents_id(self.right.iter().cloned());
             assert_eq!(
                 is_right_really_id, self.is_right_id,
@@ -71,7 +73,7 @@ where
             is_left_id,
             is_right_id,
         };
-        answer.assert_valid(false);
+        answer.assert_valid(false, false);
         answer
     }
 

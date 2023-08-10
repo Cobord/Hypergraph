@@ -31,7 +31,7 @@ impl<Lambda> Span<Lambda>
 where
     Lambda: Sized + Eq + Copy + Debug,
 {
-    pub fn assert_valid(&self, check_id: bool) {
+    pub fn assert_valid(&self, check_id_strong: bool, check_id_weak: bool) {
         let left_size = self.left.len();
         let left_in_bounds = self.middle.iter().all(|(z, _)| *z < left_size);
         assert!(
@@ -52,12 +52,14 @@ where
             left_right_types_match,
             "There was a left and right linked by something in the span, but their lambda types didn't match"
         );
-        if check_id {
+        if check_id_strong || (check_id_weak && self.is_left_id) {
             let is_left_really_id = represents_id(self.middle_to_left().into_iter());
             assert_eq!(
                 is_left_really_id, self.is_left_id,
                 "The identity nature of the left arrow was wrong"
             );
+        }
+        if check_id_strong || (check_id_weak && self.is_right_id) {
             let is_right_really_id = represents_id(self.middle_to_right().into_iter());
             assert_eq!(
                 is_right_really_id, self.is_right_id,
@@ -80,7 +82,7 @@ where
             is_left_id,
             is_right_id,
         };
-        answer.assert_valid(false);
+        answer.assert_valid(false, false);
         answer
     }
 
