@@ -1,5 +1,7 @@
 use either::Either::{Left, Right};
 
+use crate::operadic::Operadic;
+
 use {
     crate::{
         category::Composable,
@@ -150,17 +152,21 @@ where
         */
         WiringDiagram::new(self.0.map(f))
     }
+}
 
+impl<Lambda, InterCircle, IntraCircle> Operadic<InterCircle>
+    for WiringDiagram<Lambda, InterCircle, IntraCircle>
+where
+    Lambda: Eq + Copy + Debug,
+    InterCircle: Eq + Copy,
+    IntraCircle: Eq + Copy,
+{
     #[allow(dead_code)]
-    pub fn operadic_substitution(
+    fn operadic_substitution(
         &mut self,
         which_circle: InterCircle,
         mut internal_other: Self,
-    ) -> Result<(), String>
-    where
-        InterCircle: Copy,
-        IntraCircle: Copy,
-    {
+    ) -> Result<(), String> {
         /*
         replace the internal circle of self labelled by which_circle (call it C)
         with the contents of internal_other
@@ -256,6 +262,7 @@ mod test {
         use crate::assert_ok;
         use crate::category::Composable;
         use crate::named_cospan::NamedCospan;
+        use crate::operadic::Operadic;
         use crate::symmetric_monoidal::SymmetricMonoidalMorphism;
         use permutations::Permutation;
 
@@ -345,6 +352,7 @@ mod test {
         use crate::assert_ok;
         use crate::category::Composable;
         use crate::named_cospan::NamedCospan;
+        use crate::operadic::Operadic;
         use crate::symmetric_monoidal::SymmetricMonoidalMorphism;
         use either::Either::{Left, Right};
         use permutations::Permutation;
