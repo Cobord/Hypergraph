@@ -69,6 +69,14 @@ where
         LeftPortName and RightPortName don't have to implement std::hash::Hash here
         so can't enforce with is_unique
         */
+        assert!(
+            left_names.len() == left.len(),
+            "There must be names for everything in the domain and no others"
+        );
+        assert!(
+            right_names.len() == right.len(),
+            "There must be names for everything in the codomain and no others"
+        );
         Self {
             cospan: Cospan::new(left, right, middle),
             left_names,

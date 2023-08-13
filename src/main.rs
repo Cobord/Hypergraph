@@ -26,6 +26,8 @@ use crate::wiring_diagram::InOut;
 mod linear_combination;
 mod temperley_lieb;
 
+mod en_operad;
+
 fn main() {
     let mut x = NamedCospan::<u32, &'static str, &'static str>::empty();
     x.add_boundary_node_unknown_target(0, Right("out1"));
