@@ -2,7 +2,10 @@ use {
     crate::{
         category::{ComposableMutating, HasIdentity},
         finset::Decomposition,
-        monoidal::{Monoidal, MonoidalMutatingMorphism},
+        monoidal::{
+            GenericMonoidalMorphism, GenericMonoidalMorphismLayer, Monoidal,
+            MonoidalMutatingMorphism,
+        },
         symmetric_monoidal::SymmetricMonoidalMutatingMorphism,
         utils::in_place_permute,
     },
@@ -425,6 +428,54 @@ where
     Lambda: Eq + Copy + Debug,
     BlackBoxLabel: Eq + Copy,
 {
+}
+
+impl<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Copy>
+    From<GenericMonoidalMorphismLayer<(BlackBoxLabel, Vec<Lambda>, Vec<Lambda>), Lambda>>
+    for FrobeniusLayer<Lambda, BlackBoxLabel>
+{
+    fn from(
+        value: GenericMonoidalMorphismLayer<(BlackBoxLabel, Vec<Lambda>, Vec<Lambda>), Lambda>,
+    ) -> Self {
+        let mut new_blocks: Vec<FrobeniusBlock<Lambda, BlackBoxLabel>> =
+            Vec::with_capacity(value.blocks.len());
+        let mut src_side_shift = 0;
+        let mut tgt_side_shift = 0;
+        for (op, dom_op, cod_op) in value.blocks {
+            let dom_op_len = dom_op.len();
+            let cod_op_len = cod_op.len();
+            let frob_op = FrobeniusOperation::UnSpecifiedBox(op, dom_op, cod_op);
+            new_blocks.push(FrobeniusBlock {
+                op: frob_op,
+                source_side_placement: src_side_shift,
+                target_side_placement: tgt_side_shift,
+            });
+            src_side_shift += dom_op_len;
+            tgt_side_shift += cod_op_len;
+        }
+        Self {
+            blocks: new_blocks,
+            left_type: value.left_type,
+            right_type: value.right_type,
+        }
+    }
+}
+
+impl<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Copy>
+    From<GenericMonoidalMorphism<(BlackBoxLabel, Vec<Lambda>, Vec<Lambda>), Lambda>>
+    for FrobeniusMorphism<Lambda, BlackBoxLabel>
+{
+    fn from(
+        value: GenericMonoidalMorphism<(BlackBoxLabel, Vec<Lambda>, Vec<Lambda>), Lambda>,
+    ) -> Self {
+        Self {
+            layers: value
+                .extract_layers()
+                .into_iter()
+                .map(FrobeniusLayer::from)
+                .collect(),
+        }
+    }
 }
 
 impl<Lambda, BlackBoxLabel> SymmetricMonoidalMutatingMorphism<Lambda>

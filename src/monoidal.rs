@@ -114,6 +114,10 @@ where
         }
         Ok(())
     }
+
+    pub fn extract_layers(self) -> Vec<GenericMonoidalMorphismLayer<BoxType, Lambda>> {
+        self.layers
+    }
 }
 
 impl<Lambda, BoxType> HasIdentity<Vec<Lambda>> for GenericMonoidalMorphism<BoxType, Lambda>
