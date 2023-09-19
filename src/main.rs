@@ -4,6 +4,8 @@ use petgraph::dot::Dot;
 use union_find::{QuickUnionUf, UnionBySize};
 
 mod category;
+mod fp_gp;
+mod free_gp;
 mod utils;
 use category::ComposableMutating;
 mod cospan;
