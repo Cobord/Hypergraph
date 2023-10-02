@@ -304,7 +304,7 @@ where
         let g2_count = G2::num_generators();
         let n_mod = n % (g1_count + g2_count);
         if n_mod < g1_count {
-            let piece = G1::generator(n);
+            let piece = G1::generator(n_mod);
             Self {
                 pieces: vec![(piece, G2::one())],
                 my_am: FewAssum::Free,
