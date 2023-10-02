@@ -30,6 +30,8 @@ mod temperley_lieb;
 
 mod en_operad;
 
+mod amalgamated;
+
 fn main() {
     let mut x = NamedCospan::<u32, &'static str, &'static str>::empty();
     x.add_boundary_node_unknown_target(0, Right("out1"));
