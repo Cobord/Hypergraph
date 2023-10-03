@@ -219,7 +219,7 @@ where
     SimpAmal: SimpleAmalgamater<G1, G2> + Eq + Clone,
 {
     #[allow(dead_code)]
-    pub fn new(some_pieces : Vec<Either<(G1,G2),Either<G1,G2>>>, am_to_use : SimpAmal) -> Self {
+    pub fn new(some_pieces: Vec<Either<(G1, G2), Either<G1, G2>>>, am_to_use: SimpAmal) -> Self {
         let mut ret_val = Self::make_one(am_to_use);
         for cur_piece in some_pieces.into_iter() {
             match cur_piece {
@@ -265,7 +265,11 @@ where
     }
 
     #[allow(dead_code)]
-    pub fn convert_to_g3<G3: One>(&self, g1_into: impl Fn(&G1) -> G3, g2_into: impl Fn(&G2) -> G3) -> G3 {
+    pub fn convert_to_g3<G3: One>(
+        &self,
+        g1_into: impl Fn(&G1) -> G3,
+        g2_into: impl Fn(&G2) -> G3,
+    ) -> G3 {
         self.pieces
             .iter()
             .fold(G3::one(), |acc, (g1_part, g2_part)| {
