@@ -1,4 +1,7 @@
-use std::ops::{Div, DivAssign, Mul, MulAssign};
+use std::{
+    collections::VecDeque,
+    ops::{Div, DivAssign, Mul, MulAssign},
+};
 
 use either::Either::{self, Left, Right};
 use num::One;
@@ -54,6 +57,150 @@ where
     }
 }
 
+#[allow(dead_code)]
+#[derive(PartialEq, Eq, Clone)]
+pub enum FreeMonoidy<X1, X2> {
+    SomeCommuting(fn(&X1, &X2) -> bool),
+    ResourceBasedCommuting(fn(Either<&X1, &X2>) -> Vec<usize>),
+}
+
+impl<G1, G2, X1, X2> SimpleAmalgamater<G1, G2> for FreeMonoidy<X1, X2>
+where
+    G1: One + Clone + From<VecDeque<X1>> + Into<VecDeque<X1>>,
+    G2: One + Clone + From<VecDeque<X2>> + Into<VecDeque<X2>>,
+{
+    #[allow(dead_code)]
+    fn swapper(&self, x: &G2, y: &G1) -> Option<(G1, G2, G1, G2)> {
+        /*
+        TODO : fix repetition
+        */
+        match self {
+            FreeMonoidy::SomeCommuting(do_commute) => {
+                let mut found_change_at_all = false;
+                let mut ret_val_vecs_1: VecDeque<X2> = x.clone().into();
+                let mut ret_val_vecs_2: VecDeque<X1> = y.clone().into();
+                let x_len = ret_val_vecs_1.len();
+                let y_len = ret_val_vecs_2.len();
+                let mut ret_val_vecs_0: VecDeque<X1> = VecDeque::with_capacity(y_len / 2);
+                let mut ret_val_vecs_3: VecDeque<X2> = VecDeque::with_capacity(x_len / 2);
+                for _ in 0..std::cmp::min(x_len, y_len) {
+                    let mut found_change_now = false;
+                    if let Some(last_of_1) = ret_val_vecs_1.pop_back() {
+                        if ret_val_vecs_2
+                            .iter()
+                            .all(|in_2| do_commute(in_2, &last_of_1))
+                        {
+                            ret_val_vecs_3.push_front(last_of_1);
+                            found_change_now = true;
+                        } else {
+                            ret_val_vecs_1.push_back(last_of_1);
+                        }
+                    } else if !ret_val_vecs_2.is_empty() {
+                        found_change_now = true;
+                        ret_val_vecs_0.append(&mut ret_val_vecs_2);
+                    }
+                    if let Some(first_of_2) = ret_val_vecs_2.pop_front() {
+                        if ret_val_vecs_1
+                            .iter()
+                            .all(|in_1| do_commute(&first_of_2, in_1))
+                        {
+                            ret_val_vecs_0.push_back(first_of_2);
+                            found_change_now = true;
+                        } else {
+                            ret_val_vecs_2.push_front(first_of_2);
+                        }
+                    } else if !ret_val_vecs_1.is_empty() {
+                        found_change_now = true;
+                        ret_val_vecs_1.append(&mut ret_val_vecs_3);
+                        std::mem::swap(&mut ret_val_vecs_1, &mut ret_val_vecs_3);
+                    }
+                    if found_change_now {
+                        found_change_at_all = true;
+                    } else {
+                        break;
+                    }
+                }
+                if found_change_at_all {
+                    let ret_val = (
+                        ret_val_vecs_0.into(),
+                        ret_val_vecs_1.into(),
+                        ret_val_vecs_2.into(),
+                        ret_val_vecs_3.into(),
+                    );
+                    Some(ret_val)
+                } else {
+                    None
+                }
+            }
+            FreeMonoidy::ResourceBasedCommuting(which_resources_used) => {
+                let do_commute = |x1: &X1, x2: &X2| {
+                    let x_used = which_resources_used(Left(x1));
+                    let mut y_used = which_resources_used(Right(x2));
+                    y_used.sort();
+                    !x_used
+                        .into_iter()
+                        .any(|x_cur| y_used.binary_search(&x_cur).is_ok())
+                };
+                let mut found_change_at_all = false;
+                let mut ret_val_vecs_1: VecDeque<X2> = x.clone().into();
+                let mut ret_val_vecs_2: VecDeque<X1> = y.clone().into();
+                let x_len = ret_val_vecs_1.len();
+                let y_len = ret_val_vecs_2.len();
+                let mut ret_val_vecs_0: VecDeque<X1> = VecDeque::with_capacity(y_len / 2);
+                let mut ret_val_vecs_3: VecDeque<X2> = VecDeque::with_capacity(x_len / 2);
+                for _ in 0..std::cmp::min(x_len, y_len) {
+                    let mut found_change_now = false;
+                    if let Some(last_of_1) = ret_val_vecs_1.pop_back() {
+                        if ret_val_vecs_2
+                            .iter()
+                            .all(|in_2| do_commute(in_2, &last_of_1))
+                        {
+                            ret_val_vecs_3.push_front(last_of_1);
+                            found_change_now = true;
+                        } else {
+                            ret_val_vecs_1.push_back(last_of_1);
+                        }
+                    } else if !ret_val_vecs_2.is_empty() {
+                        found_change_now = true;
+                        ret_val_vecs_0.append(&mut ret_val_vecs_2);
+                    }
+                    if let Some(first_of_2) = ret_val_vecs_2.pop_front() {
+                        if ret_val_vecs_1
+                            .iter()
+                            .all(|in_1| do_commute(&first_of_2, in_1))
+                        {
+                            ret_val_vecs_0.push_back(first_of_2);
+                            found_change_now = true;
+                        } else {
+                            ret_val_vecs_2.push_front(first_of_2);
+                        }
+                    } else if !ret_val_vecs_1.is_empty() {
+                        found_change_now = true;
+                        ret_val_vecs_1.append(&mut ret_val_vecs_3);
+                        std::mem::swap(&mut ret_val_vecs_1, &mut ret_val_vecs_3);
+                    }
+                    if found_change_now {
+                        found_change_at_all = true;
+                    } else {
+                        break;
+                    }
+                }
+                if found_change_at_all {
+                    let ret_val = (
+                        ret_val_vecs_0.into(),
+                        ret_val_vecs_1.into(),
+                        ret_val_vecs_2.into(),
+                        ret_val_vecs_3.into(),
+                    );
+                    Some(ret_val)
+                } else {
+                    None
+                }
+            }
+        }
+    }
+}
+
 #[derive(PartialEq, Eq, Clone)]
 pub struct SimplyAmalgamatedProduct<G1, G2, SimpAmal>
 where
@@ -71,6 +218,23 @@ where
     G2: One + MulAssign + Eq + Clone,
     SimpAmal: SimpleAmalgamater<G1, G2> + Eq + Clone,
 {
+    #[allow(dead_code)]
+    pub fn new(some_pieces : Vec<Either<(G1,G2),Either<G1,G2>>>, am_to_use : SimpAmal) -> Self {
+        let mut ret_val = Self::make_one(am_to_use);
+        for cur_piece in some_pieces.into_iter() {
+            match cur_piece {
+                Left(both_together) => {
+                    ret_val *= Left(both_together.0);
+                    ret_val *= Right(both_together.1);
+                }
+                Right(one_at_time) => {
+                    ret_val *= one_at_time;
+                }
+            }
+        }
+        ret_val
+    }
+
     #[allow(dead_code)]
     pub fn into_free_version(self) -> SimplyAmalgamatedProduct<G1, G2, FewAssum<G1, G2>> {
         SimplyAmalgamatedProduct::<G1, G2, FewAssum<G1, G2>> {
@@ -101,12 +265,25 @@ where
     }
 
     #[allow(dead_code)]
-    pub fn convert_to_g3<G3: One>(&self, g1_into: fn(&G1) -> G3, g2_into: fn(&G2) -> G3) -> G3 {
+    pub fn convert_to_g3<G3: One>(&self, g1_into: impl Fn(&G1) -> G3, g2_into: impl Fn(&G2) -> G3) -> G3 {
         self.pieces
             .iter()
             .fold(G3::one(), |acc, (g1_part, g2_part)| {
                 acc * g1_into(g1_part) * g2_into(g2_part)
             })
+    }
+
+    #[allow(dead_code)]
+    pub fn right_act<X>(
+        &self,
+        g1_right_act: impl Fn(&G1, &mut X),
+        g2_right_act: impl Fn(&G2, &mut X),
+        target_point: &mut X,
+    ) {
+        self.pieces.iter().rev().for_each(|(g1_part, g2_part)| {
+            g2_right_act(g2_part, target_point);
+            g1_right_act(g1_part, target_point);
+        });
     }
 
     pub fn simplify(&mut self, idcs_to_look: Option<Vec<usize>>) -> bool {
@@ -126,7 +303,8 @@ where
             iter_num += 1;
             let (g1, g2) = &self.pieces[cur_idx];
             let (g3, g4) = &self.pieces[cur_idx + 1];
-            if *g2 == g2_one || *g3 == g1_one {
+            if *g3 == g1_one && *g4 == g2_one {
+            } else if *g2 == g2_one || *g3 == g1_one {
                 let g13 = g1.clone() * g3.clone();
                 let g24 = g2.clone() * g4.clone();
                 let new_piece_nonident = g13 != g1_one || g24 != g2_one;
@@ -351,7 +529,6 @@ where
     SimpAmal2: SimpleAmalgamater<G3, G4> + Eq + Clone,
     G5Letters: Into<Either<G1, G2>> + Into<Either<G3, G4>> + Eq + Clone,
 {
-    #[allow(dead_code)]
     pub fn new(cur_word: &[G5Letters], amal_1: SimpAmal1, amal_2: SimpAmal2) -> Self {
         let g1g2_iden = SimplyAmalgamatedProduct::<G1, G2, SimpAmal1>::make_one(amal_1);
         let g3g4_iden = SimplyAmalgamatedProduct::<G3, G4, SimpAmal2>::make_one(amal_2);
@@ -364,7 +541,6 @@ where
         }
     }
 
-    #[allow(dead_code)]
     pub fn alternating_simplify(&mut self, effort_cutoff: usize, max_word_length: usize) {
         let mut iters_used_up = 0;
         let mut done = false;
@@ -468,6 +644,45 @@ where
     }
 }
 
+#[repr(transparent)]
+struct NonAlternatingSimplifier<G1, G2, SimpAmal1, G3Letters>
+where
+    G1: One + MulAssign + Eq + Clone + Into<Vec<G3Letters>>,
+    G2: One + MulAssign + Eq + Clone + Into<Vec<G3Letters>>,
+    SimpAmal1: SimpleAmalgamater<G1, G2> + Eq + Clone,
+    G3Letters: Into<Either<G1, G2>> + Eq + Clone,
+{
+    underlying: AlternatingSimplifier<G1, G2, G1, G2, SimpAmal1, SimpAmal1, G3Letters>,
+}
+
+impl<G1, G2, SimpAmal1, G3Letters> NonAlternatingSimplifier<G1, G2, SimpAmal1, G3Letters>
+where
+    G1: One + MulAssign + Eq + Clone + Into<Vec<G3Letters>>,
+    G2: One + MulAssign + Eq + Clone + Into<Vec<G3Letters>>,
+    SimpAmal1: SimpleAmalgamater<G1, G2> + Eq + Clone,
+    G3Letters: Into<Either<G1, G2>> + Eq + Clone,
+{
+    #[allow(dead_code)]
+    pub fn new(cur_word: &[G3Letters], amal_1: SimpAmal1) -> Self {
+        Self {
+            underlying:
+                AlternatingSimplifier::<G1, G2, G1, G2, SimpAmal1, SimpAmal1, G3Letters>::new(
+                    cur_word,
+                    amal_1.clone(),
+                    amal_1,
+                ),
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn simplify(&mut self, effort_cutoff: usize, max_word_length: usize) {
+        // does 1 unnecessary round of do_right
+        // but that should create no additional simplifications
+        self.underlying
+            .alternating_simplify(effort_cutoff, max_word_length);
+    }
+}
+
 mod test_setup {
     use num::One;
     use std::ops::{DivAssign, Mul, MulAssign};
@@ -509,6 +724,14 @@ mod test_setup {
 
         fn num_generators() -> usize {
             1
+        }
+    }
+    #[allow(dead_code)]
+    pub fn s_action(me: &Z2Part, fraction: &mut (i128, i128)) {
+        if me.0 {
+            let temp = fraction.0;
+            fraction.0 = -fraction.1;
+            fraction.1 = temp;
         }
     }
 
@@ -560,6 +783,23 @@ mod test_setup {
             Self::STZero
         }
     }
+    #[allow(dead_code)]
+    pub fn st_action(me: &Z3Part, fraction: &mut (i128, i128)) {
+        let s = Z2Part(true);
+        match me {
+            Z3Part::STZero => {}
+            Z3Part::STOne => {
+                fraction.0 += fraction.1;
+                s_action(&s, fraction);
+            }
+            Z3Part::STTwo => {
+                fraction.0 += fraction.1;
+                s_action(&s, fraction);
+                fraction.0 += fraction.1;
+                s_action(&s, fraction);
+            }
+        }
+    }
     impl FinitelyPresentedGroup for Z3Part {
         fn generator(_n: usize) -> Self {
             Self::STOne
@@ -575,7 +815,7 @@ mod test {
 
     #[test]
     fn psl2z() {
-        use super::test_setup::{Z2Part, Z3Part};
+        use super::test_setup::{s_action, st_action, Z2Part, Z3Part};
         use super::{FewAssum, SimplyAmalgamatedProduct};
         use crate::fp_gp::FinitelyPresentedWords;
         use num::One;
@@ -622,7 +862,20 @@ mod test {
         assert!(should_st.is_some_and(|g| g == st));
         let should_ss = psl2z_iter.next();
         assert!(should_ss.is_some_and(|g| g == s.clone() * s));
-        for _temp in psl2z_iter.take(10) {}
+        let mut farey = (1, 0);
+        s_action(&Z2Part(true), &mut farey);
+        assert_eq!(farey, (0, 1));
+        st_action(&Z3Part::STOne, &mut farey);
+        assert_eq!(farey, (-1, 1));
+        st_action(&Z3Part::STOne, &mut farey);
+        assert_eq!(farey, (-1, 0));
+        st_action(&Z3Part::STOne, &mut farey);
+        assert_eq!(farey, (0, -1));
+        s_action(&Z2Part(true), &mut farey);
+        assert_eq!(farey, (1, 0));
+        for temp in psl2z_iter.take(10) {
+            temp.right_act(s_action, st_action, &mut farey);
+        }
     }
 
     #[test]
