@@ -278,6 +278,20 @@ where
     }
 
     #[allow(dead_code)]
+    fn convert_into_iterator<X1, X2>(self) -> impl Iterator<Item = Either<X1, X2>>
+    where
+        G1: IntoIterator<Item = X1>,
+        G2: IntoIterator<Item = X2>,
+    {
+        self.pieces.into_iter().flat_map(|(g1_piece, g2_piece)| {
+            g1_piece
+                .into_iter()
+                .map(Left)
+                .chain(g2_piece.into_iter().map(Right))
+        })
+    }
+
+    #[allow(dead_code)]
     pub fn right_act<X>(
         &self,
         g1_right_act: impl Fn(&G1, &mut X),
