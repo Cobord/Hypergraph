@@ -18,6 +18,7 @@ type RightIndex = usize;
 type MiddleIndex = usize;
 type MiddleIndexOrLambda<Lambda> = Either<MiddleIndex, Lambda>;
 
+#[derive(Clone)]
 pub struct NamedCospan<Lambda: Sized + Eq + Copy + Debug, LeftPortName, RightPortName> {
     /*
     a cospan of finite sets

@@ -2,15 +2,17 @@ use itertools::Itertools;
 
 use crate::{category::HasIdentity, operadic::Operadic};
 
+type IntervalCoord = f32;
+
 #[allow(dead_code)]
-struct E1 {
+pub struct E1 {
     arity: usize,
-    sub_intervals: Vec<(f32, f32)>,
+    sub_intervals: Vec<(IntervalCoord, IntervalCoord)>,
 }
 
 impl E1 {
     #[allow(dead_code)]
-    fn new(sub_intervals: Vec<(f32, f32)>) -> Self {
+    pub fn new(sub_intervals: Vec<(IntervalCoord, IntervalCoord)>) -> Self {
         /*
         new n-ary operation in E1 operad where n is the length of
         */
@@ -106,7 +108,7 @@ mod test {
 
     #[test]
     fn identity_e1_random() {
-        use super::E1;
+        use super::{IntervalCoord, E1};
         use crate::assert_ok;
         use crate::category::HasIdentity;
         use crate::operadic::Operadic;
@@ -118,11 +120,11 @@ mod test {
 
         for _ in 0..trial_num {
             let used_arity: u8 = rng.gen_range(1..arity_max);
-            let mut sub_ints: Vec<f32> = (0..2 * used_arity)
+            let mut sub_ints: Vec<IntervalCoord> = (0..2 * used_arity)
                 .map(|_| rng.gen_range(0.0..1.0))
                 .collect();
             sub_ints.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
-            let sub_intervals: Vec<(f32, f32)> = sub_ints
+            let sub_intervals: Vec<(IntervalCoord, IntervalCoord)> = sub_ints
                 .chunks_exact(2)
                 .map(|chunk| (chunk[0], chunk[1]))
                 .collect();

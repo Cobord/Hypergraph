@@ -14,6 +14,7 @@ pub trait SimpleAmalgamater<G1, G2> {
     the only relations in the amalgamation are of the form
     b_1 a_1 = a_2 b_2 a_3 b_3
     with the latter being the preferred form
+    for subsequent reference this will be denoted as G1 *_{AM} G2
     */
 }
 
@@ -220,6 +221,12 @@ where
 {
     #[allow(dead_code)]
     pub fn new(some_pieces: Vec<Either<(G1, G2), Either<G1, G2>>>, am_to_use: SimpAmal) -> Self {
+        /*
+        create a new G1 *_{AM} G2 group element
+        the entries of the vector can be (G1,G2) pairs like they are in self.pieces
+        or they can be either g1 g2 for a single part of the tuple
+        the either is inside the vec so they can be heterogeneous
+        */
         let mut ret_val = Self::make_one(am_to_use);
         for cur_piece in some_pieces.into_iter() {
             match cur_piece {
@@ -237,6 +244,9 @@ where
 
     #[allow(dead_code)]
     pub fn into_free_version(self) -> SimplyAmalgamatedProduct<G1, G2, FewAssum<G1, G2>> {
+        /*
+        forget the relations that self.my_am would impose
+        */
         SimplyAmalgamatedProduct::<G1, G2, FewAssum<G1, G2>> {
             pieces: self.pieces,
             my_am: FewAssum::Free,
@@ -248,6 +258,10 @@ where
         free_version: SimplyAmalgamatedProduct<G1, G2, FewAssum<G1, G2>>,
         am_to_use: SimpAmal,
     ) -> Self {
+        /*
+        go from a free word alternating in G1 and G2 to the corresponding
+        element in G1 *_AM G2
+        */
         assert!(free_version.my_am == FewAssum::Free);
         let mut to_ret = Self {
             pieces: free_version.pieces,
@@ -258,6 +272,9 @@ where
     }
 
     pub fn make_one(my_am: SimpAmal) -> Self {
+        /*
+        the One trait but need to be able to input my_am
+        */
         Self {
             pieces: vec![],
             my_am,
@@ -270,6 +287,9 @@ where
         g1_into: impl Fn(&G1) -> G3,
         g2_into: impl Fn(&G2) -> G3,
     ) -> G3 {
+        /*
+        convert to another monoid G3 based on how G1 and G2 parts get converted
+        */
         self.pieces
             .iter()
             .fold(G3::one(), |acc, (g1_part, g2_part)| {
@@ -283,6 +303,11 @@ where
         G1: IntoIterator<Item = X1>,
         G2: IntoIterator<Item = X2>,
     {
+        /*
+        each G1,G2 piece monoid is a equivalent to a sequence in the letters X1 and X2
+        respectively
+        so this G1 *_AM G2 gives a sequence in Either<X1,X2>
+        */
         self.pieces.into_iter().flat_map(|(g1_piece, g2_piece)| {
             g1_piece
                 .into_iter()
@@ -298,6 +323,13 @@ where
         g2_right_act: impl Fn(&G2, &mut X),
         target_point: &mut X,
     ) {
+        /*
+        if G1 and G2 both act on X
+        in a way that the cross relations hold
+        these laws are not enforced
+        the caller is responsible for passing in correct gi_right_act functions
+        then self does too
+        */
         self.pieces.iter().rev().for_each(|(g1_part, g2_part)| {
             g2_right_act(g2_part, target_point);
             g1_right_act(g1_part, target_point);
@@ -305,6 +337,12 @@ where
     }
 
     pub fn simplify(&mut self, idcs_to_look: Option<Vec<usize>>) -> bool {
+        /*
+        simplify the presentation according to the rules of self.my_am.swapper
+        if now the only place a change will happen are among a small set of options
+        can pass that in as idcs_to_look, otherwise use None there
+        return whether any such simplification occurred
+        */
         if self.pieces.is_empty() {
             return false;
         }
@@ -318,6 +356,9 @@ where
         let g1_one = G1::one();
         let g2_one = G2::one();
         while let Some(cur_idx) = real_idcs.pop() {
+            if cur_idx>=len_self_pieces-1 {
+                continue;
+            }
             iter_num += 1;
             let (g1, g2) = &self.pieces[cur_idx];
             let (g3, g4) = &self.pieces[cur_idx + 1];

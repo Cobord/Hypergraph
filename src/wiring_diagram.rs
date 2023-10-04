@@ -47,6 +47,7 @@ B describes a set of nodes on the single external circle
     an InOut for orientation
     an IntraCircle to label which node on that circle it is
 */
+#[derive(Clone)]
 #[allow(dead_code)]
 #[repr(transparent)]
 pub struct WiringDiagram<
