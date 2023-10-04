@@ -11,11 +11,9 @@ use {
 
 type LeftIndex = usize;
 type RightIndex = usize;
-#[allow(dead_code)]
 type MiddleIndex = usize;
 
 #[derive(Clone)]
-#[allow(dead_code)]
 pub struct Span<Lambda>
 where
     Lambda: Sized + Eq + Copy + Debug,
@@ -414,7 +412,6 @@ impl<Lambda: Eq + Sized + Debug + Copy> Rel<Lambda> {
         Self(ret_val)
     }
 
-    #[allow(dead_code)]
     fn intersection(&self, other: &Self) -> Self {
         /*
         given two relations on the same domain and codomain (A and B)
@@ -439,7 +436,6 @@ impl<Lambda: Eq + Sized + Debug + Copy> Rel<Lambda> {
         Self(ret_val)
     }
 
-    #[allow(dead_code)]
     fn complement(&self) -> Result<Self, String> {
         /*
         say self is a relation with domain and codomain A and B
@@ -497,7 +493,6 @@ impl<Lambda: Eq + Sized + Debug + Copy> Rel<Lambda> {
         self.subsumes(&dagger)
     }
 
-    #[allow(dead_code)]
     fn is_antisymmetric(&self) -> bool {
         /*
         a relation with the same domain and codomain A

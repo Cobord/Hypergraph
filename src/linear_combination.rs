@@ -141,6 +141,9 @@ where
 
 /*
 This would be a conflicting implementation of Mul for two LinearCombination's
+We like to choose the Target type so that it is a nice basis
+which when multiplied doesn't produce a complicated linear combination
+but instead just some Target again
 */
 /*
 impl<Coeffs: Copy, Target: Eq + Hash + Clone> Mul for LinearCombination<Coeffs, Target>

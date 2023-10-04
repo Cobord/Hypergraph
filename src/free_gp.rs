@@ -19,7 +19,6 @@ pub trait FreeGenerator: Eq + Clone {
 /*
 e.g. (a,1),(b,2),(a,3) representing a^1*b^2*a^3
 */
-#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FreeGroup<Gen>
 where
@@ -32,7 +31,6 @@ impl<Gen> FreeGroup<Gen>
 where
     Gen: FreeGenerator,
 {
-    #[allow(dead_code)]
     fn validate(&self) {
         for (idx, cur_window) in self.word.windows(2).enumerate() {
             let p1 = &cur_window[0];
@@ -156,7 +154,6 @@ where
     }
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum FreeZ2_3 {
     A,

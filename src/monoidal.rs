@@ -125,7 +125,6 @@ where
     Lambda: Eq + Copy,
     BoxType: HasIdentity<Lambda>,
 {
-    #[allow(dead_code)]
     fn identity(on_this: &Vec<Lambda>) -> Self {
         Self {
             layers: vec![<_>::identity(on_this)],

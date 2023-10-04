@@ -70,7 +70,6 @@ where
     G1: One + Clone + From<VecDeque<X1>> + Into<VecDeque<X1>>,
     G2: One + Clone + From<VecDeque<X2>> + Into<VecDeque<X2>>,
 {
-    #[allow(dead_code)]
     fn swapper(&self, x: &G2, y: &G1) -> Option<(G1, G2, G1, G2)> {
         /*
         TODO : fix repetition
@@ -356,7 +355,7 @@ where
         let g1_one = G1::one();
         let g2_one = G2::one();
         while let Some(cur_idx) = real_idcs.pop() {
-            if cur_idx>=len_self_pieces-1 {
+            if cur_idx >= len_self_pieces - 1 {
                 continue;
             }
             iter_num += 1;

@@ -15,7 +15,6 @@ use {
 };
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
-#[allow(dead_code)]
 pub enum InOut {
     In,
     Out,
@@ -23,7 +22,6 @@ pub enum InOut {
 }
 
 impl InOut {
-    #[allow(dead_code)]
     pub fn flipped(self) -> Self {
         match self {
             Self::In => Self::Out,
@@ -48,7 +46,6 @@ B describes a set of nodes on the single external circle
     an IntraCircle to label which node on that circle it is
 */
 #[derive(Clone)]
-#[allow(dead_code)]
 #[repr(transparent)]
 pub struct WiringDiagram<
     Lambda: Eq + Copy + Debug,
@@ -162,7 +159,6 @@ where
     InterCircle: Eq + Copy,
     IntraCircle: Eq + Copy,
 {
-    #[allow(dead_code)]
     fn operadic_substitution(
         &mut self,
         which_circle: InterCircle,
