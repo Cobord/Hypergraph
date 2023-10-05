@@ -72,6 +72,8 @@ impl Operadic<usize> for E1 {
                 which_input + 1
             ));
         }
+        self.sub_intervals
+            .sort_by(|i1, i2| i1.0.partial_cmp(&i2.0).unwrap());
         let (a, b) = self.sub_intervals[which_input];
         let length_subbed = b - a;
         let mut new_subs = other_obj
