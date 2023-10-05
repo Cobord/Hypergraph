@@ -1,4 +1,8 @@
+use std::ops::MulAssign;
+
 use itertools::Itertools;
+use num::One;
+use rand::{rngs::ThreadRng, Rng};
 
 use crate::{category::HasIdentity, operadic::Operadic};
 
@@ -11,7 +15,6 @@ pub struct E1 {
 }
 
 impl E1 {
-    #[allow(dead_code)]
     pub fn new(sub_intervals: Vec<(IntervalCoord, IntervalCoord)>) -> Self {
         /*
         new n-ary operation in E1 operad where n is the length of
@@ -31,6 +34,33 @@ impl E1 {
             arity: sub_intervals.len(),
             sub_intervals,
         }
+    }
+
+    #[allow(dead_code)]
+    pub fn random(cur_arity: usize, rng: &mut ThreadRng) -> Self {
+        let mut sub_ints: Vec<IntervalCoord> = (0..2 * cur_arity)
+            .map(|_| rng.gen_range(0.0..1.0))
+            .collect();
+        sub_ints.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
+        let sub_intervals: Vec<(IntervalCoord, IntervalCoord)> = sub_ints
+            .chunks_exact(2)
+            .map(|chunk| (chunk[0], chunk[1]))
+            .collect();
+        Self::new(sub_intervals)
+    }
+
+    #[allow(dead_code)]
+    fn go_to_monoid<M: One + MulAssign>(
+        &mut self,
+        interval_fn: impl Fn((IntervalCoord, IntervalCoord)) -> M,
+    ) -> M {
+        self.sub_intervals
+            .sort_by(|i1, i2| i1.0.partial_cmp(&i2.0).unwrap());
+        let mut acc = M::one();
+        self.sub_intervals.iter().for_each(|x| {
+            acc *= interval_fn(*x);
+        });
+        acc
     }
 }
 
@@ -141,6 +171,55 @@ mod test {
             assert_ok!(composed);
             assert_eq!(id.arity, used_arity as usize);
             assert_eq!(id.sub_intervals, sub_intervals);
+        }
+    }
+
+    #[test]
+    fn two_random_nontrivials() {
+        use super::{IntervalCoord, E1};
+        use crate::assert_ok;
+        use crate::operadic::Operadic;
+        use rand::Rng;
+
+        let arity_max: u8 = 20;
+        let mut rng = rand::thread_rng();
+        let trial_num = 10;
+
+        for _ in 0..trial_num {
+            let used_arity_1: u8 = rng.gen_range(1..arity_max);
+            let mut sub_ints: Vec<IntervalCoord> = (0..2 * used_arity_1)
+                .map(|_| rng.gen_range(0.0..1.0))
+                .collect();
+            sub_ints.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
+            let sub_intervals: Vec<(IntervalCoord, IntervalCoord)> = sub_ints
+                .chunks_exact(2)
+                .map(|chunk| (chunk[0], chunk[1]))
+                .collect();
+            let as_e1_v1 = E1::new(sub_intervals.clone());
+
+            let used_arity_2: u8 = rng.gen_range(1..arity_max);
+            let mut sub_ints: Vec<IntervalCoord> = (0..2 * used_arity_2)
+                .map(|_| rng.gen_range(0.0..1.0))
+                .collect();
+            sub_ints.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
+            let sub_intervals: Vec<(IntervalCoord, IntervalCoord)> = sub_ints
+                .chunks_exact(2)
+                .map(|chunk| (chunk[0], chunk[1]))
+                .collect();
+            let mut as_e1_v2 = E1::new(sub_intervals.clone());
+
+            let which_to_replace = rng.gen_range(0..used_arity_2);
+
+            let composed = as_e1_v2.operadic_substitution(which_to_replace as usize, as_e1_v1);
+            assert_ok!(composed);
+            assert_eq!(as_e1_v2.arity, (used_arity_1 + used_arity_2 - 1) as usize);
+            for (which, interval) in sub_intervals.iter().enumerate() {
+                if which == (which_to_replace as usize) {
+                    assert!(!as_e1_v2.sub_intervals.contains(interval));
+                } else {
+                    assert!(as_e1_v2.sub_intervals.contains(interval));
+                }
+            }
         }
     }
 }
