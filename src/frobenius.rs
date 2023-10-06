@@ -21,6 +21,7 @@ pub enum FrobeniusOperation<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy> {
     Counit(Lambda),
     Identity(Lambda),
     SymmetricBraiding(Lambda, Lambda),
+    Spider(Lambda,usize,usize),
     UnSpecifiedBox(BlackBoxLabel, Vec<Lambda>, Vec<Lambda>),
 }
 
@@ -38,6 +39,7 @@ where
             Self::Comultiplication(_) | Self::Counit(_) | Self::Identity(_) => 1,
             Self::Multiplication(_) | Self::SymmetricBraiding(_, _) => 2,
             Self::UnSpecifiedBox(_, srcs, _) => srcs.len(),
+            Self::Spider(_,d,_) => *d,
         }
     }
 
@@ -50,6 +52,7 @@ where
             Self::Unit(_) | Self::Multiplication(_) | Self::Identity(_) => 1,
             Self::Comultiplication(_) | Self::SymmetricBraiding(_, _) => 2,
             Self::UnSpecifiedBox(_, _, tgts) => tgts.len(),
+            Self::Spider(_,_,d) => *d,
         }
     }
 
@@ -63,6 +66,7 @@ where
             Self::Comultiplication(z) | Self::Counit(z) | Self::Identity(z) => vec![*z],
             Self::SymmetricBraiding(z, w) => vec![*z, *w],
             Self::UnSpecifiedBox(_, srcs, _) => srcs.clone(),
+            Self::Spider(z,d,_) => vec![*z; *d],
         }
     }
 
@@ -76,6 +80,7 @@ where
             Self::Counit(_) => vec![],
             Self::SymmetricBraiding(z, w) => vec![*w, *z],
             Self::UnSpecifiedBox(_, _, tgts) => tgts.clone(),
+            Self::Spider(z,_,d) => vec![*z; *d],
         }
     }
 
@@ -97,6 +102,7 @@ where
             Self::UnSpecifiedBox(label, srcs, tgts) => {
                 Self::UnSpecifiedBox(black_box_changer(*label), tgts.clone(), srcs.clone())
             }
+            Self::Spider(z,d1,d2) => Self::Spider(*z,*d2,*d1)
         };
     }
 }
@@ -692,6 +698,10 @@ pub trait Frobenius<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Copy>:
                 Self::from_permutation(transposition, &[*z1, *z2], true)
             }
             FrobeniusOperation::UnSpecifiedBox(bbl, z1, z2) => black_box_interpreter(bbl, z1, z2)?,
+            FrobeniusOperation::Spider(z,d1,d2) => {
+                let broken_down = special_frobenius_morphism(*d1,*d2,*z);
+                Self::interpret(&broken_down,black_box_interpreter)?
+            }
         })
     }
 
