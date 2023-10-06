@@ -15,7 +15,7 @@ pub struct E1 {
 }
 
 impl E1 {
-    pub fn new(sub_intervals: Vec<(IntervalCoord, IntervalCoord)>) -> Self {
+    pub fn new(sub_intervals: Vec<(IntervalCoord, IntervalCoord)>, overlap_check: bool) -> Self {
         /*
         new n-ary operation in E1 operad where n is the length of
         */
@@ -25,14 +25,21 @@ impl E1 {
                 "Each subinterval must be an interval contained in (0,1)"
             );
         }
-        for cur_pair in sub_intervals.iter().combinations(2) {
-            let (a, b) = cur_pair[0];
-            let (c, d) = cur_pair[1];
-            assert!(*b < *c || *d < *a, "The subintervals cannot overlap");
-        }
-        Self {
-            arity: sub_intervals.len(),
-            sub_intervals,
+        if overlap_check {
+            let mut new_sub_intervals = sub_intervals.clone();
+            new_sub_intervals.sort_by(|i1, i2| i1.0.partial_cmp(&i2.0).unwrap());
+            for ((a, b), (c, d)) in new_sub_intervals.iter().tuple_windows() {
+                assert!(*b < *c || *d < *a, "The subintervals cannot overlap");
+            }
+            Self {
+                arity: sub_intervals.len(),
+                sub_intervals: new_sub_intervals,
+            }
+        } else {
+            Self {
+                arity: sub_intervals.len(),
+                sub_intervals,
+            }
         }
     }
 
@@ -46,21 +53,82 @@ impl E1 {
             .chunks_exact(2)
             .map(|chunk| (chunk[0], chunk[1]))
             .collect();
-        Self::new(sub_intervals)
+        Self::new(sub_intervals, false)
+    }
+
+    fn canonicalize(&mut self) {
+        self.sub_intervals
+            .sort_by(|i1, i2| i1.0.partial_cmp(&i2.0).unwrap());
     }
 
     #[allow(dead_code)]
-    fn go_to_monoid<M: One + MulAssign>(
+    pub fn go_to_monoid<M: One + MulAssign>(
         &mut self,
         interval_fn: impl Fn((IntervalCoord, IntervalCoord)) -> M,
     ) -> M {
-        self.sub_intervals
-            .sort_by(|i1, i2| i1.0.partial_cmp(&i2.0).unwrap());
+        self.canonicalize();
         let mut acc = M::one();
         self.sub_intervals.iter().for_each(|x| {
             acc *= interval_fn(*x);
         });
         acc
+    }
+
+    #[allow(dead_code)]
+    pub fn coalesce_boxes(
+        &mut self,
+        all_in_this_interval: (IntervalCoord, IntervalCoord),
+    ) -> Result<(), String> {
+        self.can_coalesce_boxes(all_in_this_interval)?;
+        let (a, b) = all_in_this_interval;
+        self.sub_intervals.retain(|(c, d)| *d <= a || *c >= b);
+        self.sub_intervals.push((a, b));
+        self.arity = self.sub_intervals.len();
+        Ok(())
+    }
+
+    pub fn can_coalesce_boxes(
+        &self,
+        all_in_this_interval: (IntervalCoord, IntervalCoord),
+    ) -> Result<(), String> {
+        let (a, b) = all_in_this_interval;
+        if a >= b || a < 0.0 || b > 1.0 {
+            return Err(
+                "The coalescing interval must be an interval contained in (0,1)".to_string(),
+            );
+        }
+        for cur_pair in self.sub_intervals.iter() {
+            let (c, d) = cur_pair;
+            let contained_within = *c >= a && *d <= b;
+            let disjoint_from = *d <= a || *c >= b;
+            let bad_config = !(contained_within || disjoint_from);
+            if bad_config {
+                return Err("All subintervals must be either contained within or disjoint from the coalescing interval".to_string());
+            }
+        }
+        Ok(())
+    }
+
+    #[allow(dead_code)]
+    pub fn min_closeness(&self) -> Option<IntervalCoord> {
+        if self.arity < 2 {
+            return None;
+        }
+        assert!(
+            !self
+                .sub_intervals
+                .iter()
+                .is_sorted_by(|i1, i2| i1.0.partial_cmp(&i2.0)),
+            "Should be in canonical form already"
+        );
+        let mut min_closeness = 1.0;
+        for (i1, i2) in self.sub_intervals.iter().tuple_windows() {
+            let cur_closeness = i2.0 - i1.1;
+            if cur_closeness < min_closeness {
+                min_closeness = cur_closeness;
+            }
+        }
+        Some(min_closeness)
     }
 }
 
@@ -72,8 +140,7 @@ impl Operadic<usize> for E1 {
                 which_input + 1
             ));
         }
-        self.sub_intervals
-            .sort_by(|i1, i2| i1.0.partial_cmp(&i2.0).unwrap());
+        self.canonicalize();
         let (a, b) = self.sub_intervals[which_input];
         let length_subbed = b - a;
         let mut new_subs = other_obj
@@ -112,19 +179,19 @@ mod test {
         use crate::{assert_err, assert_ok};
 
         let mut x = E1::identity(&());
-        let zero_ary = E1::new(vec![]);
+        let zero_ary = E1::new(vec![], true);
         let composed = x.operadic_substitution(0, zero_ary);
         assert_ok!(composed);
         assert_eq!(x.arity, 0);
         assert_eq!(x.sub_intervals, vec![]);
 
         let mut x = E1::identity(&());
-        let zero_ary = E1::new(vec![]);
+        let zero_ary = E1::new(vec![], true);
         let composed = x.operadic_substitution(1, zero_ary);
         assert_err!(composed);
 
         let id = E1::identity(&());
-        let mut x = E1::new(vec![]);
+        let mut x = E1::new(vec![], true);
         let composed = x.operadic_substitution(0, id);
         assert_eq!(
             composed,
@@ -160,8 +227,8 @@ mod test {
                 .chunks_exact(2)
                 .map(|chunk| (chunk[0], chunk[1]))
                 .collect();
-            let mut as_e1_v1 = E1::new(sub_intervals.clone());
-            let as_e1_v2 = E1::new(sub_intervals.clone());
+            let mut as_e1_v1 = E1::new(sub_intervals.clone(), false);
+            let as_e1_v2 = E1::new(sub_intervals.clone(), false);
             let which_to_replace = rng.gen_range(0..used_arity);
             let id = E1::identity(&());
             let composed = as_e1_v1.operadic_substitution(which_to_replace as usize, id);
@@ -197,7 +264,7 @@ mod test {
                 .chunks_exact(2)
                 .map(|chunk| (chunk[0], chunk[1]))
                 .collect();
-            let as_e1_v1 = E1::new(sub_intervals.clone());
+            let as_e1_v1 = E1::new(sub_intervals.clone(), false);
 
             let used_arity_2: u8 = rng.gen_range(1..arity_max);
             let mut sub_ints: Vec<IntervalCoord> = (0..2 * used_arity_2)
@@ -208,9 +275,11 @@ mod test {
                 .chunks_exact(2)
                 .map(|chunk| (chunk[0], chunk[1]))
                 .collect();
-            let mut as_e1_v2 = E1::new(sub_intervals.clone());
+            let mut as_e1_v2 = E1::new(sub_intervals.clone(), false);
 
             let which_to_replace = rng.gen_range(0..used_arity_2);
+
+            let split_box = as_e1_v2.sub_intervals[which_to_replace as usize];
 
             let composed = as_e1_v2.operadic_substitution(which_to_replace as usize, as_e1_v1);
             assert_ok!(composed);
@@ -221,6 +290,12 @@ mod test {
                 } else {
                     assert!(as_e1_v2.sub_intervals.contains(interval));
                 }
+            }
+            let res = as_e1_v2.coalesce_boxes(split_box);
+            assert_ok!(res);
+            assert_eq!(as_e1_v2.arity, used_arity_2 as usize);
+            for interval in sub_intervals.iter() {
+                assert!(as_e1_v2.sub_intervals.contains(interval));
             }
         }
     }
