@@ -17,7 +17,7 @@ pub struct E1 {
 impl E1 {
     pub fn new(sub_intervals: Vec<(IntervalCoord, IntervalCoord)>, overlap_check: bool) -> Self {
         /*
-        new n-ary operation in E1 operad where n is the length of
+        new n-ary operation in E1 operad where n is the length of input
         */
         for (a, b) in &sub_intervals {
             assert!(
@@ -129,6 +129,11 @@ impl E1 {
             }
         }
         Some(min_closeness)
+    }
+
+    pub fn extract_sub_intervals(mut self) -> Vec<(IntervalCoord, IntervalCoord)> {
+        self.canonicalize();
+        self.sub_intervals
     }
 }
 
