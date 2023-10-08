@@ -28,7 +28,7 @@ use crate::wiring_diagram::InOut;
 mod linear_combination;
 mod temperley_lieb;
 
-mod en_operad;
+mod e1_operad;
 
 mod amalgamated;
 
