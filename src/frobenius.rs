@@ -10,7 +10,7 @@ use {
             GenericMonoidalMorphism, GenericMonoidalMorphismLayer, Monoidal,
             MonoidalMutatingMorphism,
         },
-        symmetric_monoidal::SymmetricMonoidalMutatingMorphism,
+        symmetric_monoidal::SymmetricMonoidalMorphism,
         utils::in_place_permute,
     },
     permutations::Permutation,
@@ -527,7 +527,7 @@ impl<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Clone>
     }
 }
 
-impl<Lambda, BlackBoxLabel> SymmetricMonoidalMutatingMorphism<Lambda>
+impl<Lambda, BlackBoxLabel> SymmetricMonoidalMorphism<Lambda>
     for FrobeniusMorphism<Lambda, BlackBoxLabel>
 where
     Lambda: Eq + Copy + Debug,
@@ -703,7 +703,7 @@ where
 
 // TODO implement and test
 pub trait Frobenius<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Clone>:
-    SymmetricMonoidalMutatingMorphism<Lambda> + HasIdentity<Vec<Lambda>>
+    SymmetricMonoidalMorphism<Lambda> + HasIdentity<Vec<Lambda>> + MonoidalMutatingMorphism<Vec<Lambda>>
 {
     /*
     the implementor (Self) of this trait is a type for a morphism in a symmetric monoidal category with
@@ -743,7 +743,7 @@ pub trait Frobenius<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Clone>:
             FrobeniusOperation::UnSpecifiedBox(bbl, z1, z2) => black_box_interpreter(bbl, z1, z2)?,
             FrobeniusOperation::Spider(z, d1, d2) => {
                 let broken_down = special_frobenius_morphism(*d1, *d2, *z);
-                Self::interpret(&broken_down, black_box_interpreter)?
+                Self::interpret_frob(&broken_down, black_box_interpreter)?
             }
         })
     }
@@ -840,7 +840,7 @@ where
     where
         F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Result<Self, String>,
     {
-        Frobenius::<_, _>::interpret_frob(gen, &black_box_interpreter)
+        Self::interpret_frob(gen, &black_box_interpreter)
     }
 }
 
@@ -959,7 +959,7 @@ mod test {
         use super::{FrobeniusMorphism, FrobeniusOperation};
         use crate::{
             category::ComposableMutating,
-            symmetric_monoidal::SymmetricMonoidalMutatingMorphism,
+            symmetric_monoidal::SymmetricMonoidalMorphism,
             utils::{in_place_permute, rand_perm},
         };
         use rand::{distributions::Uniform, prelude::Distribution};
