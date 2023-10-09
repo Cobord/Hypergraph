@@ -145,7 +145,9 @@ where
         let idx_change = self.sub_circles.iter().position(|p| p.0 == name_change.0);
         if let Some(real_idx_change) = idx_change {
             assert!(
-                self.sub_circles.sub_circles.iter().all(|(a, _, _)| a==name_change.0 || a!=name_change.1),
+                self.sub_circles
+                    .iter()
+                    .all(|(a, _, _)| *a == name_change.0 || *a != name_change.1),
                 "each subcircle must have a unique name"
             );
             self.sub_circles[real_idx_change].0 = name_change.1;
