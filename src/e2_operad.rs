@@ -17,7 +17,7 @@ fn disk_contains(
     let center_contained = displace.0 * displace.0 + displace.1 * displace.1 <= r * r;
     if center_contained {
         if let Some(_real_rad) = query_radius {
-            todo!()
+            todo!("disk containment")
         } else {
             true
         }
@@ -27,7 +27,7 @@ fn disk_contains(
 }
 
 fn disk_overlaps(_a: PointCenter, _b: Radius, _c: PointCenter, _d: Radius) -> bool {
-    todo!()
+    todo!("disk overlapping")
 }
 
 #[allow(dead_code)]
@@ -110,7 +110,7 @@ where
         if self.arity < 2 {
             return None;
         }
-        todo!()
+        todo!("disk closeness")
     }
 
     #[allow(dead_code)]
