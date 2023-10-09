@@ -13,6 +13,7 @@ mod symmetric_monoidal;
 mod finset;
 
 mod frobenius;
+mod frobenius_system;
 
 mod cospan;
 mod named_cospan;

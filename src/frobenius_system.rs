@@ -1,41 +1,57 @@
 use {
-    crate::frobenius::{Frobenius,FrobeniusMorphism},
-    either::Either,
     petgraph::{algo::toposort, prelude::DiGraph},
-    std::collections::HashMap,
+    std::{collections::HashMap, marker::PhantomData},
 };
 
+pub trait Contains<BlackBoxLabel> {
+    fn contained_labels(&self) -> Vec<BlackBoxLabel>;
+}
+
+pub trait InterpretableMorphism<GeneralVersion, Lambda, BlackBoxLabel>: Sized {
+    fn interpret<F>(gen: &GeneralVersion, black_box_interpreter: F) -> Result<Self, String>
+    where
+        F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Result<Self, String>;
+}
+
 #[allow(dead_code)]
-struct FrobeniusSystem<BlackBoxLabel, Lambda, T>
+struct MorphismSystem<BlackBoxLabel, Lambda, GeneralBlackBoxed, T>
 where
-    BlackBoxLabel: std::hash::Hash + Eq + Copy,
-    Lambda: Eq + Copy + std::fmt::Debug,
-    T: Frobenius<Lambda, BlackBoxLabel>,
+    BlackBoxLabel: std::hash::Hash + Eq,
+    T: InterpretableMorphism<GeneralBlackBoxed, Lambda, BlackBoxLabel>,
+    GeneralBlackBoxed: Contains<BlackBoxLabel>,
 {
-    composite_pieces: HashMap<BlackBoxLabel, FrobeniusMorphism<Lambda, BlackBoxLabel>>,
+    composite_pieces: HashMap<BlackBoxLabel, GeneralBlackBoxed>,
     simple_pieces: HashMap<BlackBoxLabel, T>,
     main: BlackBoxLabel,
     dag: DiGraph<BlackBoxLabel, ()>,
+    dummy: PhantomData<Lambda>,
 }
 
-impl<BlackBoxLabel, Lambda, T> FrobeniusSystem<BlackBoxLabel, Lambda, T>
+impl<GeneralBlackBoxed, BlackBoxLabel, Lambda, T>
+    MorphismSystem<BlackBoxLabel, Lambda, GeneralBlackBoxed, T>
 where
-    BlackBoxLabel: std::hash::Hash + Eq + Copy + std::fmt::Debug,
-    Lambda: Eq + Copy + std::fmt::Debug,
-    T: Frobenius<Lambda, BlackBoxLabel> + Clone,
+    BlackBoxLabel: std::hash::Hash + Eq + Clone + std::fmt::Debug,
+    Lambda: Eq + std::fmt::Debug + Copy,
+    T: InterpretableMorphism<GeneralBlackBoxed, Lambda, BlackBoxLabel> + Clone,
+    GeneralBlackBoxed: Contains<BlackBoxLabel>,
 {
     #[allow(dead_code)]
     pub fn new(_main_name: BlackBoxLabel) -> Self {
-        todo!("new frobenius system")
+        todo!("new system")
     }
 
     #[allow(dead_code)]
-    pub fn add_definition(
+    pub fn add_definition_composite(
         &mut self,
         _new_name: BlackBoxLabel,
-        _new_def: Either<FrobeniusMorphism<Lambda, BlackBoxLabel>, T>,
+        _new_def: GeneralBlackBoxed,
     ) {
-        todo!("add a definition for a black boxed morphism that is either directly a T or a general Frobenius with black boxes to be filled with earlier definitions")
+        todo!("add a definition for a black boxed morphism with black boxes to be filled with other definitions")
+    }
+
+    #[allow(dead_code)]
+    pub fn add_definition_simple(&mut self, _new_name: BlackBoxLabel, _new_def: T) {
+        todo!("add a definition for a black boxed morphism that is directly a T")
     }
 
     #[allow(dead_code)]
@@ -45,7 +61,7 @@ where
 
     #[allow(dead_code)]
     fn interpret_nomut(&self, interpret_target: Option<BlackBoxLabel>) -> Result<T, String> {
-        let which_interpreting = interpret_target.unwrap_or(self.main);
+        let which_interpreting = interpret_target.unwrap_or(self.main.clone());
         if let Some(simple_answer) = self.simple_pieces.get(&which_interpreting) {
             return Ok(simple_answer.clone());
         }
@@ -55,15 +71,15 @@ where
                 let simple_answer = self
                     .simple_pieces
                     .get(bb)
-                    .ok_or(format!("No filling for {:?}", bb))
+                    .ok_or(format!("No filling for {:?}", bb.clone()))
                     .map(|z| z.clone());
                 if simple_answer.is_err() {
-                    self.interpret_nomut(Some(*bb))
+                    self.interpret_nomut(Some(bb.clone()))
                 } else {
                     simple_answer
                 }
             };
-            T::interpret(complicated_answer_2, &black_box_interpreter).map_err(
+            T::interpret(complicated_answer_2, black_box_interpreter).map_err(
                 |internal_explanation| {
                     format!(
                         "When doing {:?}\n{}",
@@ -77,8 +93,11 @@ where
     }
 
     #[allow(dead_code)]
-    fn interpret_mut(&mut self, interpret_target: Option<BlackBoxLabel>) -> Result<T, String> {
-        let which_interpreting = interpret_target.unwrap_or(self.main);
+    pub fn fill_black_boxes(
+        &mut self,
+        interpret_target: Option<BlackBoxLabel>,
+    ) -> Result<T, String> {
+        let which_interpreting = interpret_target.unwrap_or(self.main.clone());
         if let Some(simple_answer) = self.simple_pieces.get(&which_interpreting) {
             return Ok(simple_answer.clone());
         }
@@ -87,10 +106,10 @@ where
             for cur_node in ordered {
                 let node_name = self.dag.node_weight(cur_node);
                 if let Some(my_bb) = node_name {
-                    let cur_answer = self.interpret_nomut(Some(*my_bb));
+                    let cur_answer = self.interpret_nomut(Some(my_bb.clone()));
                     if let Ok(real_cur_answer) = cur_answer.clone() {
+                        self.simple_pieces.insert(my_bb.clone(), real_cur_answer);
                         let _ = self.composite_pieces.remove(my_bb);
-                        self.simple_pieces.insert(*my_bb, real_cur_answer);
                     }
                     if *my_bb == which_interpreting {
                         return cur_answer;

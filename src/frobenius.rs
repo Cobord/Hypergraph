@@ -1,3 +1,7 @@
+use itertools::Itertools;
+
+use crate::frobenius_system::{Contains, InterpretableMorphism};
+
 use {
     crate::{
         category::{ComposableMutating, HasIdentity},
@@ -14,7 +18,7 @@ use {
 };
 
 #[derive(PartialEq, Eq, Clone)]
-pub enum FrobeniusOperation<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy> {
+pub enum FrobeniusOperation<Lambda: Eq + Copy, BlackBoxLabel: Eq + Clone> {
     Unit(Lambda),
     Multiplication(Lambda),
     Comultiplication(Lambda),
@@ -28,7 +32,7 @@ pub enum FrobeniusOperation<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy> {
 impl<Lambda, BlackBoxLabel> FrobeniusOperation<Lambda, BlackBoxLabel>
 where
     Lambda: Eq + Copy,
-    BlackBoxLabel: Eq + Copy,
+    BlackBoxLabel: Eq + Clone,
 {
     fn source_size(&self) -> usize {
         /*
@@ -100,7 +104,7 @@ where
             Self::Identity(z) => Self::Identity(*z),
             Self::SymmetricBraiding(z, w) => Self::SymmetricBraiding(*w, *z),
             Self::UnSpecifiedBox(label, srcs, tgts) => {
-                Self::UnSpecifiedBox(black_box_changer(*label), tgts.clone(), srcs.clone())
+                Self::UnSpecifiedBox(black_box_changer(label.clone()), tgts.clone(), srcs.clone())
             }
             Self::Spider(z, d1, d2) => Self::Spider(*z, *d2, *d1),
         };
@@ -108,16 +112,29 @@ where
 }
 
 #[derive(PartialEq, Eq, Clone)]
-struct FrobeniusBlock<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy> {
+struct FrobeniusBlock<Lambda: Eq + Copy, BlackBoxLabel: Eq + Clone> {
     op: FrobeniusOperation<Lambda, BlackBoxLabel>,
     source_side_placement: usize,
     target_side_placement: usize,
 }
 
+impl<Lambda, BlackBoxLabel> Contains<BlackBoxLabel> for FrobeniusBlock<Lambda, BlackBoxLabel>
+where
+    Lambda: Eq + Copy + Debug,
+    BlackBoxLabel: Eq + Clone,
+{
+    fn contained_labels(&self) -> Vec<BlackBoxLabel> {
+        match &self.op {
+            FrobeniusOperation::UnSpecifiedBox(lab, _, _) => vec![lab.clone()],
+            _ => vec![],
+        }
+    }
+}
+
 impl<Lambda, BlackBoxLabel> FrobeniusBlock<Lambda, BlackBoxLabel>
 where
     Lambda: Eq + Copy,
-    BlackBoxLabel: Eq + Copy,
+    BlackBoxLabel: Eq + Clone,
 {
     fn new(
         op: FrobeniusOperation<Lambda, BlackBoxLabel>,
@@ -169,16 +186,29 @@ where
 }
 
 #[derive(PartialEq, Eq, Clone)]
-struct FrobeniusLayer<Lambda: Eq + Copy, BlackBoxLabel: Eq + Copy> {
+struct FrobeniusLayer<Lambda: Eq + Copy, BlackBoxLabel: Eq + Clone> {
     blocks: Vec<FrobeniusBlock<Lambda, BlackBoxLabel>>,
     left_type: Vec<Lambda>,
     right_type: Vec<Lambda>,
 }
 
+impl<Lambda, BlackBoxLabel> Contains<BlackBoxLabel> for FrobeniusLayer<Lambda, BlackBoxLabel>
+where
+    Lambda: Eq + Copy + Debug,
+    BlackBoxLabel: Eq + Clone,
+{
+    fn contained_labels(&self) -> Vec<BlackBoxLabel> {
+        self.blocks
+            .iter()
+            .flat_map(|block| block.contained_labels())
+            .collect_vec()
+    }
+}
+
 impl<Lambda, BlackBoxLabel> FrobeniusLayer<Lambda, BlackBoxLabel>
 where
     Lambda: Eq + Copy,
-    BlackBoxLabel: Eq + Copy,
+    BlackBoxLabel: Eq + Clone,
 {
     pub fn new() -> Self {
         Self {
@@ -226,7 +256,7 @@ where
 impl<Lambda, BlackBoxLabel> HasIdentity<Vec<Lambda>> for FrobeniusLayer<Lambda, BlackBoxLabel>
 where
     Lambda: Eq + Copy,
-    BlackBoxLabel: Eq + Copy,
+    BlackBoxLabel: Eq + Clone,
 {
     fn identity(on_type: &Vec<Lambda>) -> Self {
         let mut answer = Self::new();
@@ -240,7 +270,7 @@ where
 impl<Lambda, BlackBoxLabel> Monoidal for FrobeniusLayer<Lambda, BlackBoxLabel>
 where
     Lambda: Eq + Copy,
-    BlackBoxLabel: Eq + Copy,
+    BlackBoxLabel: Eq + Clone,
 {
     fn monoidal(&mut self, other: Self) {
         for new_op in other.blocks {
@@ -250,11 +280,24 @@ where
 }
 
 #[derive(Clone, PartialEq, Eq)]
-pub struct FrobeniusMorphism<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Copy> {
+pub struct FrobeniusMorphism<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Clone> {
     layers: Vec<FrobeniusLayer<Lambda, BlackBoxLabel>>,
 }
 
-impl<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Copy>
+impl<Lambda, BlackBoxLabel> Contains<BlackBoxLabel> for FrobeniusMorphism<Lambda, BlackBoxLabel>
+where
+    Lambda: Eq + Copy + Debug,
+    BlackBoxLabel: Eq + Clone,
+{
+    fn contained_labels(&self) -> Vec<BlackBoxLabel> {
+        self.layers
+            .iter()
+            .flat_map(|layer| layer.contained_labels())
+            .collect_vec()
+    }
+}
+
+impl<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Clone>
     From<FrobeniusOperation<Lambda, BlackBoxLabel>> for FrobeniusMorphism<Lambda, BlackBoxLabel>
 {
     /*
@@ -273,7 +316,7 @@ impl<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Copy>
 impl<Lambda, BlackBoxLabel> FrobeniusMorphism<Lambda, BlackBoxLabel>
 where
     Lambda: Eq + Copy + Debug,
-    BlackBoxLabel: Eq + Copy,
+    BlackBoxLabel: Eq + Clone,
 {
     pub fn new() -> Self {
         Self { layers: vec![] }
@@ -323,7 +366,7 @@ where
 impl<Lambda, BlackBoxLabel> HasIdentity<Vec<Lambda>> for FrobeniusMorphism<Lambda, BlackBoxLabel>
 where
     Lambda: Eq + Copy + Debug,
-    BlackBoxLabel: Eq + Copy,
+    BlackBoxLabel: Eq + Clone,
 {
     fn identity(on_this: &Vec<Lambda>) -> Self {
         Self {
@@ -335,7 +378,7 @@ where
 impl<Lambda, BlackBoxLabel> Monoidal for FrobeniusMorphism<Lambda, BlackBoxLabel>
 where
     Lambda: Eq + Copy + Debug,
-    BlackBoxLabel: Eq + Copy,
+    BlackBoxLabel: Eq + Clone,
 {
     fn monoidal(&mut self, other: Self) {
         let self_len = self.layers.len();
@@ -363,7 +406,7 @@ impl<Lambda, BlackBoxLabel> ComposableMutating<Vec<Lambda>>
     for FrobeniusMorphism<Lambda, BlackBoxLabel>
 where
     Lambda: Eq + Copy + Debug,
-    BlackBoxLabel: Eq + Copy,
+    BlackBoxLabel: Eq + Clone,
 {
     fn composable(&self, other: &Self) -> Result<(), String> {
         if self.layers.is_empty() || other.layers.is_empty() {
@@ -432,11 +475,11 @@ impl<Lambda, BlackBoxLabel> MonoidalMutatingMorphism<Vec<Lambda>>
     for FrobeniusMorphism<Lambda, BlackBoxLabel>
 where
     Lambda: Eq + Copy + Debug,
-    BlackBoxLabel: Eq + Copy,
+    BlackBoxLabel: Eq + Clone,
 {
 }
 
-impl<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Copy>
+impl<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Clone>
     From<GenericMonoidalMorphismLayer<(BlackBoxLabel, Vec<Lambda>, Vec<Lambda>), Lambda>>
     for FrobeniusLayer<Lambda, BlackBoxLabel>
 {
@@ -467,7 +510,7 @@ impl<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Copy>
     }
 }
 
-impl<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Copy>
+impl<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Clone>
     From<GenericMonoidalMorphism<(BlackBoxLabel, Vec<Lambda>, Vec<Lambda>), Lambda>>
     for FrobeniusMorphism<Lambda, BlackBoxLabel>
 {
@@ -488,7 +531,7 @@ impl<Lambda, BlackBoxLabel> SymmetricMonoidalMutatingMorphism<Lambda>
     for FrobeniusMorphism<Lambda, BlackBoxLabel>
 where
     Lambda: Eq + Copy + Debug,
-    BlackBoxLabel: Eq + Copy,
+    BlackBoxLabel: Eq + Clone,
 {
     fn permute_side(&mut self, p: &permutations::Permutation, of_codomain: bool) {
         if of_codomain {
@@ -572,7 +615,7 @@ where
     }
 }
 
-pub fn special_frobenius_morphism<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Copy>(
+pub fn special_frobenius_morphism<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Clone>(
     m: usize,
     n: usize,
     wire_type: Lambda,
@@ -616,7 +659,7 @@ pub fn from_decomposition<Lambda, BlackBoxLabel>(
 ) -> FrobeniusMorphism<Lambda, BlackBoxLabel>
 where
     Lambda: Eq + Copy + Debug,
-    BlackBoxLabel: Eq + Copy,
+    BlackBoxLabel: Eq + Clone,
 {
     let (perm_part, surj_part, inj_part) = v.get_parts();
     let mut answer = FrobeniusMorphism::from_permutation(perm_part.clone(), source_types, true);
@@ -659,7 +702,7 @@ where
 }
 
 // TODO implement and test
-pub trait Frobenius<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Copy>:
+pub trait Frobenius<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Clone>:
     SymmetricMonoidalMutatingMorphism<Lambda> + HasIdentity<Vec<Lambda>>
 {
     /*
@@ -705,7 +748,7 @@ pub trait Frobenius<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Copy>:
         })
     }
 
-    fn interpret<F>(
+    fn interpret_frob<F>(
         morphism: &FrobeniusMorphism<Lambda, BlackBoxLabel>,
         black_box_interpreter: &F,
     ) -> Result<Self, String>
@@ -736,7 +779,7 @@ impl<Lambda, BlackBoxLabel> Frobenius<Lambda, BlackBoxLabel>
     for FrobeniusMorphism<Lambda, BlackBoxLabel>
 where
     Lambda: Eq + Copy + Debug,
-    BlackBoxLabel: Eq + Copy,
+    BlackBoxLabel: Eq + Clone,
 {
     /*
     the most obvious implementation of Frobenius is FrobeniusMorphism itself
@@ -768,7 +811,7 @@ where
         Ok(single_step.clone().into())
     }
 
-    fn interpret<F>(
+    fn interpret_frob<F>(
         morphism: &FrobeniusMorphism<Lambda, BlackBoxLabel>,
         _black_box_interpreter: &F,
     ) -> Result<Self, String>
@@ -780,6 +823,24 @@ where
         |label,src,tgt| Ok(FrobeniusOperation::UnSpecifiedBox(label, src, tgt))
         */
         Ok(morphism.clone())
+    }
+}
+
+impl<Lambda, BlackBoxLabel, T>
+    InterpretableMorphism<FrobeniusMorphism<Lambda, BlackBoxLabel>, Lambda, BlackBoxLabel> for T
+where
+    Lambda: Eq + Copy + Debug,
+    BlackBoxLabel: Eq + Clone,
+    T: Frobenius<Lambda, BlackBoxLabel>,
+{
+    fn interpret<F>(
+        gen: &FrobeniusMorphism<Lambda, BlackBoxLabel>,
+        black_box_interpreter: F,
+    ) -> Result<Self, String>
+    where
+        F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Result<Self, String>,
+    {
+        Frobenius::<_, _>::interpret_frob(gen, &black_box_interpreter)
     }
 }
 

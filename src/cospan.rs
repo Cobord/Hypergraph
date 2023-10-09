@@ -2,7 +2,7 @@ use {
     crate::{
         category::{Composable, HasIdentity},
         finset::FinSetMap,
-        monoidal::{GenericMonoidalInterpretable, Monoidal, MonoidalMorphism},
+        monoidal::{Monoidal, MonoidalMorphism},
         symmetric_monoidal::SymmetricMonoidalMorphism,
         utils::{in_place_permute, represents_id, EitherExt},
     },
@@ -408,8 +408,6 @@ where
 
 impl<Lambda> MonoidalMorphism<Vec<Lambda>> for Cospan<Lambda> where Lambda: Eq + Sized + Copy + Debug
 {}
-
-impl<Lambda> GenericMonoidalInterpretable<Lambda> for Cospan<Lambda> where Lambda: Eq + Copy + Debug {}
 
 impl<Lambda> SymmetricMonoidalMorphism<Lambda> for Cospan<Lambda>
 where

@@ -1,7 +1,7 @@
 use {
     crate::{
         category::{Composable, HasIdentity},
-        monoidal::{GenericMonoidalInterpretable, Monoidal, MonoidalMorphism},
+        monoidal::{Monoidal, MonoidalMorphism},
         symmetric_monoidal::SymmetricMonoidalMorphism,
         utils::{in_place_permute, represents_id},
     },
@@ -255,8 +255,6 @@ where
 
 impl<Lambda> MonoidalMorphism<Vec<Lambda>> for Span<Lambda> where Lambda: Sized + Eq + Copy + Debug {}
 
-impl<Lambda> GenericMonoidalInterpretable<Lambda> for Span<Lambda> where Lambda: Eq + Copy + Debug {}
-
 impl<Lambda> SymmetricMonoidalMorphism<Lambda> for Span<Lambda>
 where
     Lambda: Sized + Eq + Copy + Debug,
@@ -353,8 +351,6 @@ where
 }
 
 impl<Lambda> MonoidalMorphism<Vec<Lambda>> for Rel<Lambda> where Lambda: Sized + Eq + Copy + Debug {}
-
-impl<Lambda> GenericMonoidalInterpretable<Lambda> for Rel<Lambda> where Lambda: Eq + Copy + Debug {}
 
 impl<Lambda: Eq + Sized + Debug + Copy> Rel<Lambda> {
     fn new(x: Span<Lambda>, do_check: bool) -> Self {

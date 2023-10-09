@@ -1,3 +1,9 @@
+use std::marker::PhantomData;
+
+use itertools::Itertools;
+
+use crate::frobenius_system::{Contains, InterpretableMorphism};
+
 use {
     crate::category::{Composable, ComposableMutating, HasIdentity},
     std::fmt::Debug,
@@ -11,7 +17,11 @@ pub trait Monoidal {
 }
 
 #[derive(PartialEq, Eq, Clone)]
-pub struct GenericMonoidalMorphismLayer<BoxType, Lambda: Eq + Copy> {
+pub struct GenericMonoidalMorphismLayer<BoxType, Lambda>
+where
+    Lambda: Eq + Copy,
+    BoxType: Eq + Clone,
+{
     /*
     a single layer for a black box filled morphism
     in a monoidal category whose objects
@@ -23,9 +33,20 @@ pub struct GenericMonoidalMorphismLayer<BoxType, Lambda: Eq + Copy> {
     pub right_type: Vec<Lambda>,
 }
 
+impl<Lambda, BoxType> Contains<BoxType> for GenericMonoidalMorphismLayer<BoxType, Lambda>
+where
+    Lambda: Eq + Copy,
+    BoxType: Eq + Clone,
+{
+    fn contained_labels(&self) -> Vec<BoxType> {
+        self.blocks.clone()
+    }
+}
+
 impl<BoxType, Lambda> GenericMonoidalMorphismLayer<BoxType, Lambda>
 where
     Lambda: Eq + Copy,
+    BoxType: Eq + Clone,
 {
     #[allow(dead_code)]
     pub fn new() -> Self {
@@ -40,7 +61,7 @@ where
 impl<BoxType, Lambda> HasIdentity<Vec<Lambda>> for GenericMonoidalMorphismLayer<BoxType, Lambda>
 where
     Lambda: Eq + Copy,
-    BoxType: HasIdentity<Lambda>,
+    BoxType: Eq + Clone + HasIdentity<Lambda>,
 {
     fn identity(on_type: &Vec<Lambda>) -> Self {
         let mut answer = Self::new();
@@ -57,6 +78,7 @@ where
 impl<BoxType, Lambda> Monoidal for GenericMonoidalMorphismLayer<BoxType, Lambda>
 where
     Lambda: Eq + Copy,
+    BoxType: Eq + Clone,
 {
     fn monoidal(&mut self, other: Self) {
         self.blocks.extend(other.blocks);
@@ -66,7 +88,11 @@ where
 }
 
 #[derive(Clone, PartialEq, Eq)]
-pub struct GenericMonoidalMorphism<BoxType, Lambda: Eq + Copy> {
+pub struct GenericMonoidalMorphism<BoxType, Lambda>
+where
+    Lambda: Eq + Copy,
+    BoxType: Eq + Clone,
+{
     /*
     a black box filled morphism
     in a monoidal category whose objects
@@ -80,9 +106,23 @@ pub struct GenericMonoidalMorphism<BoxType, Lambda: Eq + Copy> {
     layers: Vec<GenericMonoidalMorphismLayer<BoxType, Lambda>>,
 }
 
+impl<Lambda, BoxType> Contains<BoxType> for GenericMonoidalMorphism<BoxType, Lambda>
+where
+    Lambda: Eq + Copy,
+    BoxType: Eq + Clone,
+{
+    fn contained_labels(&self) -> Vec<BoxType> {
+        self.layers
+            .iter()
+            .flat_map(|layer| layer.contained_labels())
+            .collect_vec()
+    }
+}
+
 impl<Lambda, BoxType> GenericMonoidalMorphism<BoxType, Lambda>
 where
     Lambda: Eq + Copy,
+    BoxType: Eq + Clone,
 {
     #[allow(dead_code)]
     pub fn new() -> Self {
@@ -123,7 +163,7 @@ where
 impl<Lambda, BoxType> HasIdentity<Vec<Lambda>> for GenericMonoidalMorphism<BoxType, Lambda>
 where
     Lambda: Eq + Copy,
-    BoxType: HasIdentity<Lambda>,
+    BoxType: Eq + Clone + HasIdentity<Lambda>,
 {
     fn identity(on_this: &Vec<Lambda>) -> Self {
         Self {
@@ -135,7 +175,7 @@ where
 impl<Lambda, BoxType> Monoidal for GenericMonoidalMorphism<BoxType, Lambda>
 where
     Lambda: Eq + Copy + Debug,
-    BoxType: Clone + HasIdentity<Lambda>,
+    BoxType: Eq + Clone + HasIdentity<Lambda>,
 {
     fn monoidal(&mut self, other: Self) {
         let self_len = self.layers.len();
@@ -159,10 +199,14 @@ where
     }
 }
 
-fn layers_composable<Lambda: Eq + Copy + Debug, BoxType>(
+fn layers_composable<Lambda, BoxType>(
     l: &[GenericMonoidalMorphismLayer<BoxType, Lambda>],
     r: &[GenericMonoidalMorphismLayer<BoxType, Lambda>],
-) -> Result<(), String> {
+) -> Result<(), String>
+where
+    Lambda: Eq + Copy + Debug,
+    BoxType: Eq + Clone,
+{
     if l.is_empty() || r.is_empty() {
         if l.is_empty() && r.is_empty() {
             return Ok(());
@@ -206,6 +250,7 @@ fn layers_composable<Lambda: Eq + Copy + Debug, BoxType>(
 impl<Lambda, BoxType> ComposableMutating<Vec<Lambda>> for GenericMonoidalMorphism<BoxType, Lambda>
 where
     Lambda: Eq + Copy + Debug,
+    BoxType: Eq + Clone,
 {
     fn composable(&self, other: &Self) -> Result<(), String> {
         layers_composable(&self.layers, &other.layers)
@@ -236,8 +281,89 @@ where
 pub trait MonoidalMorphism<T: Eq>: Monoidal + Composable<T> {}
 pub trait MonoidalMutatingMorphism<T: Eq>: Monoidal + ComposableMutating<T> {}
 
-pub trait GenericMonoidalInterpretableMut<Lambda: Eq + Copy + Debug>:
-    Monoidal + ComposableMutating<Vec<Lambda>> + HasIdentity<Vec<Lambda>>
+struct InterpretableNoMut<T, Lambda>
+where
+    Lambda: Eq,
+    T: Monoidal + Composable<Vec<Lambda>> + HasIdentity<Vec<Lambda>>,
+{
+    me: T,
+    dummy: PhantomData<Lambda>,
+}
+
+impl<T, Lambda> InterpretableNoMut<T, Lambda>
+where
+    Lambda: Eq,
+    T: Monoidal + Composable<Vec<Lambda>> + HasIdentity<Vec<Lambda>>,
+{
+    #[allow(dead_code)]
+    fn change_black_boxer<F1, BoxType>(
+        f1: F1,
+    ) -> impl Fn(&BoxType, &[Lambda], &[Lambda]) -> Result<Self, String>
+    where
+        F1: Fn(&BoxType) -> Result<T, String>,
+    {
+        move |bb, _, _| f1(bb).map(Self::from)
+    }
+}
+
+impl<T, Lambda> From<T> for InterpretableNoMut<T, Lambda>
+where
+    Lambda: Eq,
+    T: Monoidal + Composable<Vec<Lambda>> + HasIdentity<Vec<Lambda>>,
+{
+    fn from(me: T) -> Self {
+        Self {
+            me,
+            dummy: PhantomData,
+        }
+    }
+}
+
+struct InterpretableMut<T, Lambda>
+where
+    Lambda: Eq,
+    T: Monoidal + ComposableMutating<Vec<Lambda>> + HasIdentity<Vec<Lambda>>,
+{
+    me: T,
+    dummy: PhantomData<Lambda>,
+}
+
+impl<T, Lambda> InterpretableMut<T, Lambda>
+where
+    Lambda: Eq,
+    T: Monoidal + ComposableMutating<Vec<Lambda>> + HasIdentity<Vec<Lambda>>,
+{
+    #[allow(dead_code)]
+    fn change_black_boxer<F1, BoxType>(
+        f1: F1,
+    ) -> impl Fn(&BoxType, &[Lambda], &[Lambda]) -> Result<Self, String>
+    where
+        F1: Fn(&BoxType) -> Result<T, String>,
+    {
+        move |bb, _, _| f1(bb).map(Self::from)
+    }
+}
+
+impl<T, Lambda> From<T> for InterpretableMut<T, Lambda>
+where
+    Lambda: Eq,
+    T: Monoidal + ComposableMutating<Vec<Lambda>> + HasIdentity<Vec<Lambda>>,
+{
+    fn from(me: T) -> Self {
+        Self {
+            me,
+            dummy: PhantomData,
+        }
+    }
+}
+
+impl<Lambda, BoxType, T>
+    InterpretableMorphism<GenericMonoidalMorphism<BoxType, Lambda>, Lambda, BoxType>
+    for InterpretableMut<T, Lambda>
+where
+    Lambda: Eq + Copy + Debug,
+    BoxType: Eq + Clone,
+    T: Monoidal + ComposableMutating<Vec<Lambda>> + HasIdentity<Vec<Lambda>>,
 {
     /*
     given a function from BoxType to the
@@ -245,29 +371,35 @@ pub trait GenericMonoidalInterpretableMut<Lambda: Eq + Copy + Debug>:
         one can interpret a GenericaMonoidalMorphism as a Self
         by building up with composition and monoidal
     */
-    fn interpret<F, BoxType>(
+    fn interpret<F>(
         morphism: &GenericMonoidalMorphism<BoxType, Lambda>,
-        black_box_interpreter: &F,
+        black_box_interpreter: F,
     ) -> Result<Self, String>
     where
-        F: Fn(&BoxType) -> Result<Self, String>,
+        F: Fn(&BoxType, &[Lambda], &[Lambda]) -> Result<Self, String>,
     {
-        let mut answer = Self::identity(&morphism.domain());
+        let mut answer = T::identity(&morphism.domain());
         for layer in &morphism.layers {
             let Some(first) = &layer.blocks.first() else {
                 return Err("somehow an empty layer in a generica monoidal morphism???".to_string());
             };
-            let mut cur_layer = black_box_interpreter(first)?;
+            let mut cur_layer = black_box_interpreter(first, &[], &[]).map(|z| z.me)?;
             for block in &layer.blocks[1..] {
-                cur_layer.monoidal(black_box_interpreter(block)?);
+                cur_layer.monoidal(black_box_interpreter(block, &[], &[]).map(|z| z.me)?);
             }
             answer.compose(cur_layer)?;
         }
-        Ok(answer)
+        Ok(Self::from(answer))
     }
 }
-pub trait GenericMonoidalInterpretable<Lambda: Eq + Copy + Debug>:
-    Monoidal + Composable<Vec<Lambda>> + HasIdentity<Vec<Lambda>>
+
+impl<Lambda, BoxType, T>
+    InterpretableMorphism<GenericMonoidalMorphism<BoxType, Lambda>, Lambda, BoxType>
+    for InterpretableNoMut<T, Lambda>
+where
+    Lambda: Eq + Copy + Debug,
+    BoxType: Eq + Clone,
+    T: Monoidal + Composable<Vec<Lambda>> + HasIdentity<Vec<Lambda>>,
 {
     /*
     given a function from BoxType to the
@@ -278,25 +410,25 @@ pub trait GenericMonoidalInterpretable<Lambda: Eq + Copy + Debug>:
         that are done by modifying self to the composition self;other
         or that return a new self;other
     */
-    fn interpret<F, BoxType>(
+    fn interpret<F>(
         morphism: &GenericMonoidalMorphism<BoxType, Lambda>,
-        black_box_interpreter: &F,
+        black_box_interpreter: F,
     ) -> Result<Self, String>
     where
-        F: Fn(&BoxType) -> Result<Self, String>,
+        F: Fn(&BoxType, &[Lambda], &[Lambda]) -> Result<Self, String>,
     {
-        let mut answer = Self::identity(&morphism.domain());
+        let mut answer = T::identity(&morphism.domain());
         for layer in &morphism.layers {
             let Some(first) = &layer.blocks.first() else {
                 return Err("somehow an empty layer in a generica monoidal morphism???".to_string());
             };
-            let mut cur_layer = black_box_interpreter(first)?;
+            let mut cur_layer = black_box_interpreter(first, &[], &[]).map(|z| z.me)?;
             for block in &layer.blocks[1..] {
-                cur_layer.monoidal(black_box_interpreter(block)?);
+                cur_layer.monoidal(black_box_interpreter(block, &[], &[]).map(|z| z.me)?);
             }
             answer = answer.compose(&cur_layer)?;
         }
-        Ok(answer)
+        Ok(Self::from(answer))
     }
 }
 
@@ -304,25 +436,10 @@ impl<Lambda, BoxType> MonoidalMutatingMorphism<Vec<Lambda>>
     for GenericMonoidalMorphism<BoxType, Lambda>
 where
     Lambda: Eq + Copy + Debug,
-    BoxType: HasIdentity<Lambda> + Clone,
+    BoxType: Eq + HasIdentity<Lambda> + Clone,
 {
     /*
     the most obvious implementation of MonoidalMutatingMorphism is GenericMonoidalMorphism itself
     use all the structure of monoidal, compose, identity provided by concatenating blocks and layers appropriately
-    */
-}
-
-impl<Lambda, BoxType> GenericMonoidalInterpretableMut<Lambda>
-    for GenericMonoidalMorphism<BoxType, Lambda>
-where
-    Lambda: Eq + Copy + Debug,
-    BoxType: HasIdentity<Lambda> + Clone,
-{
-    /*
-    the most obvious implementation of GenericMonoidalInterpretableMut is GenericMonoidalMorphism itself
-    use the default implementation given in the trait itself
-    in Frobenius we override the default implementation with just a clone
-        because there we are only concerned with the case when black_box_interpreter
-        was just sending the black boxes with the same sort of black box
     */
 }
