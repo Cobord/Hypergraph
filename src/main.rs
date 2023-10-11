@@ -25,6 +25,7 @@ mod linear_combination;
 mod temperley_lieb;
 
 mod amalgamated;
+mod explicitly_gen;
 mod fp_gp;
 mod free_gp;
 
