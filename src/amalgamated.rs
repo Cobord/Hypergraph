@@ -67,8 +67,8 @@ pub enum FreeMonoidy<X1, X2> {
 
 impl<G1, G2, X1, X2> SimpleAmalgamater<G1, G2> for FreeMonoidy<X1, X2>
 where
-    G1: One + Clone + From<VecDeque<X1>> + Into<VecDeque<X1>>,
-    G2: One + Clone + From<VecDeque<X2>> + Into<VecDeque<X2>>,
+    G1: Clone + From<VecDeque<X1>> + Into<VecDeque<X1>>,
+    G2: Clone + From<VecDeque<X2>> + Into<VecDeque<X2>>,
 {
     fn swapper(&self, x: &G2, y: &G1) -> Option<(G1, G2, G1, G2)> {
         /*
@@ -204,8 +204,8 @@ where
 #[derive(PartialEq, Eq, Clone)]
 pub struct SimplyAmalgamatedProduct<G1, G2, SimpAmal>
 where
-    G1: One + MulAssign + Eq + Clone,
-    G2: One + MulAssign + Eq + Clone,
+    G1: MulAssign + Eq + Clone,
+    G2: MulAssign + Eq + Clone,
     SimpAmal: SimpleAmalgamater<G1, G2> + Eq + Clone,
 {
     pieces: Vec<(G1, G2)>,
@@ -214,62 +214,10 @@ where
 
 impl<G1, G2, SimpAmal> SimplyAmalgamatedProduct<G1, G2, SimpAmal>
 where
-    G1: One + MulAssign + Eq + Clone,
-    G2: One + MulAssign + Eq + Clone,
+    G1: MulAssign + Eq + Clone,
+    G2: MulAssign + Eq + Clone,
     SimpAmal: SimpleAmalgamater<G1, G2> + Eq + Clone,
 {
-    #[allow(dead_code)]
-    pub fn new(some_pieces: Vec<Either<(G1, G2), Either<G1, G2>>>, am_to_use: SimpAmal) -> Self {
-        /*
-        create a new G1 *_{AM} G2 group element
-        the entries of the vector can be (G1,G2) pairs like they are in self.pieces
-        or they can be either g1 g2 for a single part of the tuple
-        the either is inside the vec so they can be heterogeneous
-        */
-        let mut ret_val = Self::make_one(am_to_use);
-        for cur_piece in some_pieces.into_iter() {
-            match cur_piece {
-                Left(both_together) => {
-                    ret_val *= Left(both_together.0);
-                    ret_val *= Right(both_together.1);
-                }
-                Right(one_at_time) => {
-                    ret_val *= one_at_time;
-                }
-            }
-        }
-        ret_val
-    }
-
-    #[allow(dead_code)]
-    pub fn into_free_version(self) -> SimplyAmalgamatedProduct<G1, G2, FewAssum<G1, G2>> {
-        /*
-        forget the relations that self.my_am would impose
-        */
-        SimplyAmalgamatedProduct::<G1, G2, FewAssum<G1, G2>> {
-            pieces: self.pieces,
-            my_am: FewAssum::Free,
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn from_free_version(
-        free_version: SimplyAmalgamatedProduct<G1, G2, FewAssum<G1, G2>>,
-        am_to_use: SimpAmal,
-    ) -> Self {
-        /*
-        go from a free word alternating in G1 and G2 to the corresponding
-        element in G1 *_AM G2
-        */
-        assert!(free_version.my_am == FewAssum::Free);
-        let mut to_ret = Self {
-            pieces: free_version.pieces,
-            my_am: am_to_use,
-        };
-        let _ = to_ret.simplify(None);
-        to_ret
-    }
-
     pub fn make_one(my_am: SimpAmal) -> Self {
         /*
         the One trait but need to be able to input my_am
@@ -333,6 +281,65 @@ where
             g2_right_act(g2_part, target_point);
             g1_right_act(g1_part, target_point);
         });
+    }
+}
+
+impl<G1, G2, SimpAmal> SimplyAmalgamatedProduct<G1, G2, SimpAmal>
+where
+    G1: One + MulAssign + Eq + Clone,
+    G2: One + MulAssign + Eq + Clone,
+    SimpAmal: SimpleAmalgamater<G1, G2> + Eq + Clone,
+{
+    #[allow(dead_code)]
+    pub fn new(some_pieces: Vec<Either<(G1, G2), Either<G1, G2>>>, am_to_use: SimpAmal) -> Self {
+        /*
+        create a new G1 *_{AM} G2 group element
+        the entries of the vector can be (G1,G2) pairs like they are in self.pieces
+        or they can be either g1 g2 for a single part of the tuple
+        the either is inside the vec so they can be heterogeneous
+        */
+        let mut ret_val = Self::make_one(am_to_use);
+        for cur_piece in some_pieces.into_iter() {
+            match cur_piece {
+                Left(both_together) => {
+                    ret_val *= Left(both_together.0);
+                    ret_val *= Right(both_together.1);
+                }
+                Right(one_at_time) => {
+                    ret_val *= one_at_time;
+                }
+            }
+        }
+        ret_val
+    }
+
+    #[allow(dead_code)]
+    pub fn into_free_version(self) -> SimplyAmalgamatedProduct<G1, G2, FewAssum<G1, G2>> {
+        /*
+        forget the relations that self.my_am would impose
+        */
+        SimplyAmalgamatedProduct::<G1, G2, FewAssum<G1, G2>> {
+            pieces: self.pieces,
+            my_am: FewAssum::Free,
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn from_free_version(
+        free_version: SimplyAmalgamatedProduct<G1, G2, FewAssum<G1, G2>>,
+        am_to_use: SimpAmal,
+    ) -> Self {
+        /*
+        go from a free word alternating in G1 and G2 to the corresponding
+        element in G1 *_AM G2
+        */
+        assert!(free_version.my_am == FewAssum::Free);
+        let mut to_ret = Self {
+            pieces: free_version.pieces,
+            my_am: am_to_use,
+        };
+        let _ = to_ret.simplify(None);
+        to_ret
     }
 
     pub fn simplify(&mut self, idcs_to_look: Option<Vec<usize>>) -> bool {
@@ -398,8 +405,8 @@ where
             }
         }
         self.pieces.retain(|(g1, g2)| {
-            let g1_id = *g1 == G1::one();
-            let g2_id = *g2 == G2::one();
+            let g1_id = *g1 == g1_one;
+            let g2_id = *g2 == g2_one;
             !(g1_id && g2_id)
         });
         if changed {
@@ -499,7 +506,7 @@ where
         }
         let rhs_one = Self::make_one(rhs.my_am.clone());
         let mut rhs_inv = Self::make_one(rhs.my_am.clone());
-        for (g1_part, g2_part) in self.pieces.iter().rev() {
+        for (g1_part, g2_part) in rhs.pieces.iter().rev() {
             let mut g12_inv = rhs_one.clone();
             let mut g1_inv = G1::one();
             g1_inv /= g1_part.clone();
@@ -561,11 +568,11 @@ where
 
 struct AlternatingSimplifier<G1, G2, G3, G4, SimpAmal1, SimpAmal2, G5Letters>
 where
-    G1: One + MulAssign + Eq + Clone + Into<Vec<G5Letters>>,
-    G2: One + MulAssign + Eq + Clone + Into<Vec<G5Letters>>,
+    G1: MulAssign + Eq + Clone + Into<Vec<G5Letters>>,
+    G2: MulAssign + Eq + Clone + Into<Vec<G5Letters>>,
     SimpAmal1: SimpleAmalgamater<G1, G2> + Eq + Clone,
-    G3: One + MulAssign + Eq + Clone + Into<Vec<G5Letters>>,
-    G4: One + MulAssign + Eq + Clone + Into<Vec<G5Letters>>,
+    G3: MulAssign + Eq + Clone + Into<Vec<G5Letters>>,
+    G4: MulAssign + Eq + Clone + Into<Vec<G5Letters>>,
     SimpAmal2: SimpleAmalgamater<G3, G4> + Eq + Clone,
     G5Letters: Into<Either<G1, G2>> + Into<Either<G3, G4>>,
 {
@@ -880,9 +887,11 @@ mod test {
 
         type PSL2Z = SimplyAmalgamatedProduct<Z2Part, Z3Part, FewAssum<Z2Part, Z3Part>>;
         let x = PSL2Z::one();
+        assert!(x.my_am == FewAssum::Free);
         assert_eq!(x.pieces.len(), 0);
         let y = x.clone() * x.clone() * x.clone() * x.clone() * x.clone();
         assert_eq!(y.pieces.len(), 0);
+        assert!(y.my_am == FewAssum::Free);
 
         let mut s = PSL2Z::one();
         s.pieces.push((Z2Part(true), Z3Part::one()));
@@ -944,6 +953,19 @@ mod test {
 
         type Z6 = SimplyAmalgamatedProduct<Z2Part, Z3Part, FewAssum<Z2Part, Z3Part>>;
         let my_ident: Z6 = Z6::from_free_version(Z6::one(), FewAssum::SomeCommuting(|_, _| true));
+        assert!(match my_ident.my_am {
+            FewAssum::Free => false,
+            FewAssum::SomeCommuting(g) => {
+                let temp1 = g(&Z2Part(true), &Z3Part::STZero)
+                    && g(&Z2Part(true), &Z3Part::STOne)
+                    && g(&Z2Part(true), &Z3Part::STTwo);
+                let temp2 = g(&Z2Part(false), &Z3Part::STZero)
+                    && g(&Z2Part(false), &Z3Part::STOne)
+                    && g(&Z2Part(false), &Z3Part::STTwo);
+                temp1 && temp2
+            }
+            FewAssum::ResourceBasedCommuting(_) => false,
+        });
         assert_eq!(my_ident.pieces.len(), 0);
         let y: Z6 = my_ident.clone()
             * my_ident.clone()
@@ -958,6 +980,19 @@ mod test {
         assert_eq!(s.pieces[0], (Z2Part(true), Z3Part::one()));
         let y: Z6 = s.clone() * s.clone();
         assert_eq!(y.pieces.len(), 0);
+        assert!(match y.my_am {
+            FewAssum::Free => false,
+            FewAssum::SomeCommuting(g) => {
+                let temp1 = g(&Z2Part(true), &Z3Part::STZero)
+                    && g(&Z2Part(true), &Z3Part::STOne)
+                    && g(&Z2Part(true), &Z3Part::STTwo);
+                let temp2 = g(&Z2Part(false), &Z3Part::STZero)
+                    && g(&Z2Part(false), &Z3Part::STOne)
+                    && g(&Z2Part(false), &Z3Part::STTwo);
+                temp1 && temp2
+            }
+            FewAssum::ResourceBasedCommuting(_) => false,
+        });
 
         let mut st: Z6 = my_ident.clone();
         st.pieces.push((Z2Part::one(), Z3Part::STOne));
