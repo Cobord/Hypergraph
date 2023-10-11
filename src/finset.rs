@@ -371,6 +371,15 @@ fn permutation_sort<T: Ord>(x: &mut [T]) -> Permutation {
     Permutation::try_from(answer).unwrap()
 }
 
+#[allow(dead_code)]
+pub fn from_cycle(n: usize, cycle: &[usize]) -> Permutation {
+    if cycle.len() < 2 {
+        return Permutation::identity(n);
+    }
+    let part1 = Permutation::transposition(n, cycle[0], cycle[1]);
+    from_cycle(n, &cycle[1..]) * part1
+}
+
 pub struct Decomposition {
     permutation_part: Permutation,
     order_preserving_surjection: OrderPresSurj,
@@ -955,6 +964,41 @@ mod test {
                 assert_eq!(decomp_2.apply(after_first), after_second);
                 assert_eq!(decomp_12.apply(idx), after_second);
             }
+        }
+    }
+
+    #[test]
+    fn cycle_test() {
+        use crate::finset::from_cycle;
+        use itertools::Itertools;
+        use rand::distributions::Uniform;
+        use rand::Rng;
+
+        let fin_set_size: usize = 20;
+        let mut rng = rand::thread_rng();
+        let u = Uniform::new(0, fin_set_size);
+        for _ in 0..10 {
+            let cycle_len = rng.sample(u);
+            let cycle = (0..cycle_len).map(|_| rng.sample(u)).collect_vec();
+            let mut cycle_sorted = cycle.clone();
+            cycle_sorted.sort();
+            cycle_sorted.dedup();
+            if cycle_sorted.len() < cycle.len() {
+                continue;
+            }
+            let p = from_cycle(fin_set_size, &cycle);
+            for (a, b) in cycle.iter().tuple_windows() {
+                assert_eq!(
+                    p.apply(*a),
+                    *b,
+                    "{:?} should take {} to {} but it is {:?}",
+                    cycle,
+                    *a,
+                    *b,
+                    p
+                );
+            }
+            break;
         }
     }
 }
