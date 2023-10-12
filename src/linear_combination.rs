@@ -13,9 +13,9 @@ a formal linear combination of terms from Target with coefficients drawn from Co
 */
 #[repr(transparent)]
 #[derive(PartialEq, Eq, Debug, Default, Clone)]
-pub struct LinearCombination<Coeffs: Copy, Target: Eq + Hash>(HashMap<Target, Coeffs>);
+pub struct LinearCombination<Coeffs, Target: Eq + Hash>(HashMap<Target, Coeffs>);
 
-impl<Coeffs: Copy, Target: Eq + Hash> FromIterator<(Target, Coeffs)>
+impl<Coeffs, Target: Eq + Hash> FromIterator<(Target, Coeffs)>
     for LinearCombination<Coeffs, Target>
 {
     fn from_iter<T: IntoIterator<Item = (Target, Coeffs)>>(iter: T) -> Self {
@@ -23,9 +23,9 @@ impl<Coeffs: Copy, Target: Eq + Hash> FromIterator<(Target, Coeffs)>
     }
 }
 
-impl<Coeffs: Copy, Target: Eq + Hash> Add for LinearCombination<Coeffs, Target>
+impl<Coeffs, Target: Eq + Hash> Add for LinearCombination<Coeffs, Target>
 where
-    Coeffs: AddAssign,
+    Coeffs: Copy + AddAssign,
 {
     /*
     add two formal sums
@@ -44,9 +44,9 @@ where
     }
 }
 
-impl<Coeffs: Copy, Target: Eq + Hash> AddAssign for LinearCombination<Coeffs, Target>
+impl<Coeffs, Target: Eq + Hash> AddAssign for LinearCombination<Coeffs, Target>
 where
-    Coeffs: AddAssign,
+    Coeffs: Copy + AddAssign,
 {
     /*
     add two formal sums
@@ -61,9 +61,9 @@ where
     }
 }
 
-impl<Coeffs: Copy, Target: Eq + Hash> Sub for LinearCombination<Coeffs, Target>
+impl<Coeffs, Target: Eq + Hash> Sub for LinearCombination<Coeffs, Target>
 where
-    Coeffs: SubAssign + Neg<Output = Coeffs>,
+    Coeffs: Copy + SubAssign + Neg<Output = Coeffs>,
 {
     /*
     subtract two formal sums
@@ -82,9 +82,9 @@ where
     }
 }
 
-impl<Coeffs: Copy, Target: Eq + Hash> Neg for LinearCombination<Coeffs, Target>
+impl<Coeffs, Target: Eq + Hash> Neg for LinearCombination<Coeffs, Target>
 where
-    Coeffs: Neg<Output = Coeffs>,
+    Coeffs: Copy + Neg<Output = Coeffs>,
 {
     /*
     negate a formal sum
@@ -100,9 +100,9 @@ where
     }
 }
 
-impl<Coeffs: Copy, Target: Eq + Hash> Mul<Coeffs> for LinearCombination<Coeffs, Target>
+impl<Coeffs, Target: Eq + Hash> Mul<Coeffs> for LinearCombination<Coeffs, Target>
 where
-    Coeffs: MulAssign,
+    Coeffs: Copy + MulAssign,
 {
     /*
     multiply a formal sum by a coefficient
@@ -118,9 +118,9 @@ where
     }
 }
 
-impl<Coeffs: Copy, Target: Eq + Hash + Clone> Mul for LinearCombination<Coeffs, Target>
+impl<Coeffs, Target: Eq + Hash + Clone> Mul for LinearCombination<Coeffs, Target>
 where
-    Coeffs: AddAssign + Mul<Output = Coeffs> + MulAssign + One,
+    Coeffs: Copy + AddAssign + Mul<Output = Coeffs> + MulAssign + One,
     Target: Mul<Output = Target>,
 {
     /*
@@ -144,6 +144,8 @@ This would be a conflicting implementation of Mul for two LinearCombination's
 We like to choose the Target type so that it is a nice basis
 which when multiplied doesn't produce a complicated linear combination
 but instead just some Target again
+For that reason, we choose the simpler implementation of Mul
+instead of this more general one
 */
 /*
 impl<Coeffs: Copy, Target: Eq + Hash + Clone> Mul for LinearCombination<Coeffs, Target>
@@ -169,9 +171,9 @@ where
 }
 */
 
-impl<Coeffs: Copy, Target: Eq + Hash> MulAssign<Coeffs> for LinearCombination<Coeffs, Target>
+impl<Coeffs, Target: Eq + Hash> MulAssign<Coeffs> for LinearCombination<Coeffs, Target>
 where
-    Coeffs: MulAssign,
+    Coeffs: Copy + MulAssign,
 {
     /*
     multiply a formal sum by a coefficient
@@ -183,7 +185,7 @@ where
     }
 }
 
-impl<Coeffs: Copy, Target: Eq + Hash> LinearCombination<Coeffs, Target> {
+impl<Coeffs, Target: Eq + Hash> LinearCombination<Coeffs, Target> {
     pub fn linear_combine<U, V, F>(
         &self,
         rhs: LinearCombination<Coeffs, U>,
@@ -210,21 +212,10 @@ impl<Coeffs: Copy, Target: Eq + Hash> LinearCombination<Coeffs, Target> {
         }
         ret_val
     }
-}
-
-impl<Coeffs: Copy, Target: Eq + Hash> LinearCombination<Coeffs, Target>
-where
-    Coeffs: One,
-{
-    pub fn singleton(t: Target) -> Self {
-        /*
-        a single term with coefficient 1
-        */
-        Self([(t, <_>::one())].into())
-    }
 
     pub fn change_coeffs<F>(&mut self, coeff_changer: F)
     where
+        Coeffs: Copy,
         F: Fn(Coeffs) -> Coeffs,
     {
         /*
@@ -249,7 +240,19 @@ where
     }
 }
 
-impl<Coeffs: Copy + Zero, Target: Eq + Hash> LinearCombination<Coeffs, Target> {
+impl<Coeffs, Target: Eq + Hash> LinearCombination<Coeffs, Target>
+where
+    Coeffs: One,
+{
+    pub fn singleton(t: Target) -> Self {
+        /*
+        a single term with coefficient 1
+        */
+        Self([(t, <_>::one())].into())
+    }
+}
+
+impl<Coeffs: Zero, Target: Eq + Hash> LinearCombination<Coeffs, Target> {
     pub fn simplify(&mut self) {
         /*
         get rid of all the terms that have 0 coefficient
@@ -258,13 +261,14 @@ impl<Coeffs: Copy + Zero, Target: Eq + Hash> LinearCombination<Coeffs, Target> {
     }
 }
 
-impl<Coeffs: Copy + Zero, Target: Clone + Eq + Hash> LinearCombination<Coeffs, Target> {
+impl<Coeffs, Target: Clone + Eq + Hash> LinearCombination<Coeffs, Target> {
     pub fn inj_linearly_extend<Target2: Eq + Hash, F>(
         &self,
         injection: F,
     ) -> LinearCombination<Coeffs, Target2>
     where
         F: Fn(Target) -> Target2,
+        Coeffs: Copy,
     {
         /*
         do an injective map T1->T2 to induce a map
@@ -286,7 +290,7 @@ impl<Coeffs: Copy + Zero, Target: Clone + Eq + Hash> LinearCombination<Coeffs, T
     pub fn linearly_extend<Target2: Eq + Hash, F>(&self, f: F) -> LinearCombination<Coeffs, Target2>
     where
         F: Fn(Target) -> Target2,
-        Coeffs: Add<Output = Coeffs>,
+        Coeffs: Copy + Add<Output = Coeffs>,
     {
         /*
         do a map T1->T2 (but this time not necessarily injective) to induce a map
