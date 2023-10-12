@@ -7,10 +7,27 @@ pub trait Contains<BlackBoxLabel> {
     fn contained_labels(&self) -> Vec<BlackBoxLabel>;
 }
 
+#[derive(Clone, Debug)]
+pub enum InterpretError {
+    InterpretError(String),
+}
+
+impl From<String> for InterpretError {
+    fn from(value: String) -> Self {
+        Self::InterpretError(value)
+    }
+}
+
+impl From<&str> for InterpretError {
+    fn from(value: &str) -> Self {
+        Self::InterpretError(value.to_string())
+    }
+}
+
 pub trait InterpretableMorphism<GeneralVersion, Lambda, BlackBoxLabel>: Sized {
-    fn interpret<F>(gen: &GeneralVersion, black_box_interpreter: F) -> Result<Self, String>
+    fn interpret<F>(gen: &GeneralVersion, black_box_interpreter: F) -> Result<Self, InterpretError>
     where
-        F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Result<Self, String>;
+        F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Result<Self, InterpretError>;
 }
 
 #[allow(dead_code)]
@@ -60,7 +77,10 @@ where
     }
 
     #[allow(dead_code)]
-    fn interpret_nomut(&self, interpret_target: Option<BlackBoxLabel>) -> Result<T, String> {
+    fn interpret_nomut(
+        &self,
+        interpret_target: Option<BlackBoxLabel>,
+    ) -> Result<T, InterpretError> {
         let which_interpreting = interpret_target.unwrap_or(self.main.clone());
         if let Some(simple_answer) = self.simple_pieces.get(&which_interpreting) {
             return Ok(simple_answer.clone());
@@ -71,7 +91,7 @@ where
                 let simple_answer = self
                     .simple_pieces
                     .get(bb)
-                    .ok_or(format!("No filling for {:?}", bb.clone()))
+                    .ok_or(format!("No filling for {:?}", bb.clone()).into())
                     .map(|z| z.clone());
                 if simple_answer.is_err() {
                     self.interpret_nomut(Some(bb.clone()))
@@ -82,13 +102,14 @@ where
             T::interpret(complicated_answer_2, black_box_interpreter).map_err(
                 |internal_explanation| {
                     format!(
-                        "When doing {:?}\n{}",
+                        "When doing {:?}\n{:?}",
                         which_interpreting, internal_explanation
                     )
+                    .into()
                 },
             )
         } else {
-            Err(format!("No {:?} found", which_interpreting))
+            Err(format!("No {:?} found", which_interpreting).into())
         }
     }
 
@@ -96,7 +117,7 @@ where
     pub fn fill_black_boxes(
         &mut self,
         interpret_target: Option<BlackBoxLabel>,
-    ) -> Result<T, String> {
+    ) -> Result<T, InterpretError> {
         let which_interpreting = interpret_target.unwrap_or(self.main.clone());
         if let Some(simple_answer) = self.simple_pieces.get(&which_interpreting) {
             return Ok(simple_answer.clone());
@@ -115,18 +136,14 @@ where
                         return cur_answer;
                     }
                 } else {
-                    return Err(format!(
-                        "Node {:?} not found after topological sort",
-                        cur_node
-                    ));
+                    return Err(
+                        format!("Node {:?} not found after topological sort", cur_node).into(),
+                    );
                 }
             }
-            Err(format!(
-                "Through all but never found {:?}",
-                which_interpreting
-            ))
+            Err(format!("Through all but never found {:?}", which_interpreting).into())
         } else {
-            Err("Not acyclic dependencies".to_string())
+            Err("Not acyclic dependencies".into())
         }
     }
 }

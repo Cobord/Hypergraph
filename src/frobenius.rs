@@ -1,6 +1,9 @@
 use itertools::Itertools;
 
-use crate::frobenius_system::{Contains, InterpretableMorphism};
+use crate::{
+    category::CompositionError,
+    frobenius_system::{Contains, InterpretError, InterpretableMorphism},
+};
 
 use {
     crate::{
@@ -251,6 +254,11 @@ where
             target_side_placement,
         ));
     }
+
+    fn two_layer_simplify(&mut self, _next_layer: &mut Self) -> (bool, bool, bool) {
+        //todo!("Frobenius laws of two layers");
+        (false, false, false)
+    }
 }
 
 impl<Lambda, BlackBoxLabel> HasIdentity<Vec<Lambda>> for FrobeniusLayer<Lambda, BlackBoxLabel>
@@ -334,17 +342,38 @@ where
     fn append_layer(
         &mut self,
         next_layer: FrobeniusLayer<Lambda, BlackBoxLabel>,
-    ) -> Result<(), String> {
+    ) -> Result<(), CompositionError> {
         /*
         composition with one more layer
         */
-        if let Some(v) = self.layers.pop() {
+        if let Some(mut v) = self.layers.pop() {
             if v.right_type != next_layer.left_type {
-                return Err("type mismatch in frobenius morphims composition".to_string());
+                return Err("type mismatch in frobenius morphims composition".into());
             }
-            self.layers.push(v);
+            let mut temp_next_layer = next_layer.clone();
+            let (v_id, temp_id, v_change) = v.two_layer_simplify(&mut temp_next_layer);
+            if !v_id {
+                if v_change && !self.layers.is_empty() {
+                    /*
+                    just 1 more step with the second to last layer
+                    don't worry about if this exposes even more simplifications
+                    with even earlier layers
+                    */
+                    let last_idx = self.layers.len() - 1;
+                    let (_, v_now_id, _) = self.layers[last_idx].two_layer_simplify(&mut v);
+                    if !v_now_id {
+                        self.layers.push(v);
+                    }
+                } else {
+                    self.layers.push(v);
+                }
+            }
+            if !temp_id {
+                self.layers.push(temp_next_layer);
+            }
+        } else {
+            self.layers.push(next_layer);
         }
-        self.layers.push(next_layer);
         Ok(())
     }
 
@@ -408,7 +437,7 @@ where
     Lambda: Eq + Copy + Debug,
     BlackBoxLabel: Eq + Clone,
 {
-    fn composable(&self, other: &Self) -> Result<(), String> {
+    fn composable(&self, other: &Self) -> Result<(), CompositionError> {
         if self.layers.is_empty() || other.layers.is_empty() {
             if self.layers.is_empty() && other.layers.is_empty() {
                 return Ok(());
@@ -417,39 +446,41 @@ where
                 if other_interface.is_empty() {
                     return Ok(());
                 } else {
-                    return Err("Mismatch in cardinalities of common interface".to_string());
+                    return Err("Mismatch in cardinalities of common interface".into());
                 }
             } else {
                 let self_interface = &self.layers.last().unwrap().right_type;
                 if self_interface.is_empty() {
                     return Ok(());
                 } else {
-                    return Err("Mismatch in cardinalities of common interface".to_string());
+                    return Err("Mismatch in cardinalities of common interface".into());
                 }
             }
         }
         let self_interface = &self.layers.last().unwrap().right_type;
         let other_interface = &other.layers[0].left_type;
         if self_interface.len() != other_interface.len() {
-            Err("Mismatch in cardinalities of common interface".to_string())
+            Err("Mismatch in cardinalities of common interface".into())
         } else if self_interface != other_interface {
             for idx in 0..self_interface.len() {
                 let w1 = self_interface[idx];
                 let w2 = other_interface[idx];
                 if w1 != w2 {
                     return Err(format!(
-                        "Mismatch in labels of common interface. At some index there was {:?} vs {:?}",
-                        w1, w2
-                    ));
+                        "Mismatch in labels of common interface. At index {} there was {:?} vs {:?}",
+                        idx, w1, w2
+                    ).into());
                 }
             }
-            Err("Mismatch in labels of common interface at some unknown index.".to_string())
+            Err("Mismatch in labels of common interface at some unknown index.".into())
         } else {
             Ok(())
         }
     }
 
-    fn compose(&mut self, other: Self) -> Result<(), String> {
+    fn compose(&mut self, other: Self) -> Result<(), CompositionError> {
+        self.composable(&other)?;
+        // composable has better error message than append_layer
         for next_layer in other.layers {
             self.append_layer(next_layer)?;
         }
@@ -719,9 +750,9 @@ pub trait Frobenius<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Clone>:
     fn basic_interpret<F>(
         single_step: &FrobeniusOperation<Lambda, BlackBoxLabel>,
         black_box_interpreter: &F,
-    ) -> Result<Self, String>
+    ) -> Result<Self, InterpretError>
     where
-        F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Result<Self, String>,
+        F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Result<Self, InterpretError>,
     {
         /*
         interpret a single frobenius operation as a Self
@@ -751,9 +782,9 @@ pub trait Frobenius<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Clone>:
     fn interpret_frob<F>(
         morphism: &FrobeniusMorphism<Lambda, BlackBoxLabel>,
         black_box_interpreter: &F,
-    ) -> Result<Self, String>
+    ) -> Result<Self, InterpretError>
     where
-        F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Result<Self, String>,
+        F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Result<Self, InterpretError>,
     {
         /*
         interpret a complicated frobenius morphism as a Self
@@ -762,14 +793,14 @@ pub trait Frobenius<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Clone>:
         let mut answer = Self::identity(&morphism.domain());
         for layer in &morphism.layers {
             if layer.blocks.is_empty() {
-                return Err("somehow an empty layer in a frobenius morphism???".to_string());
+                return Err("somehow an empty layer in a frobenius morphism???".into());
             }
             let first = &layer.blocks[0];
             let mut cur_layer = Self::basic_interpret(&first.op, black_box_interpreter)?;
             for block in &layer.blocks[1..] {
                 cur_layer.monoidal(Self::basic_interpret(&block.op, black_box_interpreter)?);
             }
-            answer.compose(cur_layer)?;
+            answer.compose(cur_layer).map_err(|e| format!("{:?}", e))?;
         }
         Ok(answer)
     }
@@ -800,9 +831,9 @@ where
     fn basic_interpret<F>(
         single_step: &FrobeniusOperation<Lambda, BlackBoxLabel>,
         _black_box_interpreter: &F,
-    ) -> Result<Self, String>
+    ) -> Result<Self, InterpretError>
     where
-        F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Result<Self, String>,
+        F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Result<Self, InterpretError>,
     {
         /*
         ignores black_box_interpreter as if it was just the simple
@@ -814,9 +845,9 @@ where
     fn interpret_frob<F>(
         morphism: &FrobeniusMorphism<Lambda, BlackBoxLabel>,
         _black_box_interpreter: &F,
-    ) -> Result<Self, String>
+    ) -> Result<Self, InterpretError>
     where
-        F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Result<Self, String>,
+        F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Result<Self, InterpretError>,
     {
         /*
         ignores black_box_interpreter as if it was just the simple
@@ -836,9 +867,9 @@ where
     fn interpret<F>(
         gen: &FrobeniusMorphism<Lambda, BlackBoxLabel>,
         black_box_interpreter: F,
-    ) -> Result<Self, String>
+    ) -> Result<Self, InterpretError>
     where
-        F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Result<Self, String>,
+        F: Fn(&BlackBoxLabel, &[Lambda], &[Lambda]) -> Result<Self, InterpretError>,
     {
         Self::interpret_frob(gen, &black_box_interpreter)
     }

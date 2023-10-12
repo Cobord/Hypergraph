@@ -1,3 +1,20 @@
+#[derive(PartialEq, Eq, Debug)]
+pub enum OperadicError {
+    OperadicError(String),
+}
+
+impl From<String> for OperadicError {
+    fn from(value: String) -> Self {
+        Self::OperadicError(value)
+    }
+}
+
+impl From<&str> for OperadicError {
+    fn from(value: &str) -> Self {
+        Self::OperadicError(value.to_string())
+    }
+}
+
 pub trait Operadic<InputLabel> {
     /*
     change the n-ary operation self to the one where
@@ -15,5 +32,5 @@ pub trait Operadic<InputLabel> {
         &mut self,
         which_input: InputLabel,
         other_obj: Self,
-    ) -> Result<(), String>;
+    ) -> Result<(), OperadicError>;
 }

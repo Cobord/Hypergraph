@@ -1,6 +1,6 @@
 use either::Either::{Left, Right};
 
-use crate::operadic::Operadic;
+use crate::operadic::{Operadic, OperadicError};
 
 use {
     crate::{
@@ -163,7 +163,7 @@ where
         &mut self,
         which_circle: InterCircle,
         mut internal_other: Self,
-    ) -> Result<(), String> {
+    ) -> Result<(), OperadicError> {
         /*
         replace the internal circle of self labelled by which_circle (call it C)
         with the contents of internal_other
@@ -220,7 +220,10 @@ where
         )?;
         internal_other.0.permute_side(&p, true);
 
-        self.0 = internal_other.0.compose(&self.0)?;
+        self.0 = internal_other
+            .0
+            .compose(&self.0)
+            .map_err(|z| format!("{:?}", z))?;
         Ok(())
     }
 }

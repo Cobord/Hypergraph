@@ -1,3 +1,5 @@
+use crate::category::CompositionError;
+
 use {
     crate::{
         category::{Composable, HasIdentity},
@@ -32,13 +34,14 @@ impl Monoidal for FinSetMorphism {
 }
 
 impl Composable<usize> for FinSetMorphism {
-    fn compose(&self, other: &Self) -> Result<Self, String> {
+    fn compose(&self, other: &Self) -> Result<Self, CompositionError> {
         if self.composable(other).is_err() {
             return Err(format!(
                 "Not composable. The codomain of self was {}. The domain of other was {}",
                 self.codomain(),
                 other.domain()
-            ));
+            )
+            .into());
         }
         let other_codomain = other.codomain();
         let composite: Vec<_> = (0..self.domain()).map(|s| other.0[self.0[s]]).collect();
@@ -88,13 +91,14 @@ impl Monoidal for OrderPresSurj {
 }
 
 impl Composable<usize> for OrderPresSurj {
-    fn compose(&self, other: &Self) -> Result<Self, String> {
+    fn compose(&self, other: &Self) -> Result<Self, CompositionError> {
         if self.composable(other).is_err() {
             return Err(format!(
                 "Not composable. The codomain of self was {}. The domain of other was {}",
                 self.codomain(),
                 other.domain()
-            ));
+            )
+            .into());
         }
         let codomain = other.codomain();
         let mut answer = Vec::with_capacity(codomain);
@@ -168,18 +172,19 @@ impl Monoidal for OrderPresInj {
 }
 
 impl Composable<usize> for OrderPresInj {
-    fn compose(&self, other: &Self) -> Result<Self, String> {
+    fn compose(&self, other: &Self) -> Result<Self, CompositionError> {
         if self.composable(other).is_err() {
             return Err(format!(
                 "Not composable. The codomain of self was {}. The domain of other was {}",
                 self.codomain(),
                 other.domain()
-            ));
+            )
+            .into());
         }
         let ord_self = self.to_ordinary();
         let ord_other = other.to_ordinary();
         let composite = ord_self.compose(&ord_other)?;
-        Self::try_from(composite).map_err(|_| "???".to_string())
+        Self::try_from(composite).map_err(|_| "???".into())
     }
 
     fn domain(&self) -> usize {
@@ -414,13 +419,14 @@ impl Monoidal for Decomposition {
 }
 
 impl Composable<usize> for Decomposition {
-    fn compose(&self, other: &Self) -> Result<Self, String> {
+    fn compose(&self, other: &Self) -> Result<Self, CompositionError> {
         if self.composable(other).is_err() {
             return Err(format!(
                 "Not composable. The codomain of self was {}. The domain of other was {}",
                 self.codomain(),
                 other.domain()
-            ));
+            )
+            .into());
         }
         let other_codomain = other.codomain();
         let ord_self = self.to_ordinary();
@@ -429,9 +435,9 @@ impl Composable<usize> for Decomposition {
         let pos_max = argmax(&composite.0);
         if let Some(max_val) = pos_max.map(|z| composite.0[z]) {
             let leftover_needed = (other_codomain - max_val - 1).max(0);
-            Self::try_from((composite.0, leftover_needed)).map_err(|_| "???".to_string())
+            Self::try_from((composite.0, leftover_needed)).map_err(|_| "???".into())
         } else {
-            Self::try_from(composite).map_err(|_| "???".to_string())
+            Self::try_from(composite).map_err(|_| "???".into())
         }
     }
 

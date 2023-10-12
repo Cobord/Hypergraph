@@ -2,7 +2,10 @@ use std::marker::PhantomData;
 
 use itertools::Itertools;
 
-use crate::frobenius_system::{Contains, InterpretableMorphism};
+use crate::{
+    category::CompositionError,
+    frobenius_system::{Contains, InterpretError, InterpretableMorphism},
+};
 
 use {
     crate::category::{Composable, ComposableMutating, HasIdentity},
@@ -138,7 +141,7 @@ where
     fn append_layer(
         &mut self,
         next_layer: GenericMonoidalMorphismLayer<BoxType, Lambda>,
-    ) -> Result<(), String> {
+    ) -> Result<(), CompositionError> {
         let last_so_far = self.layers.pop();
         match last_so_far {
             None => {
@@ -146,7 +149,7 @@ where
             }
             Some(v) => {
                 if v.right_type != next_layer.left_type {
-                    return Err("type mismatch in morphims composition".to_string());
+                    return Err("type mismatch in morphims composition".into());
                 }
                 self.layers.push(v);
                 self.layers.push(next_layer);
@@ -202,7 +205,7 @@ where
 fn layers_composable<Lambda, BoxType>(
     l: &[GenericMonoidalMorphismLayer<BoxType, Lambda>],
     r: &[GenericMonoidalMorphismLayer<BoxType, Lambda>],
-) -> Result<(), String>
+) -> Result<(), CompositionError>
 where
     Lambda: Eq + Copy + Debug,
     BoxType: Eq + Clone,
@@ -215,21 +218,21 @@ where
             if other_interface.is_empty() {
                 return Ok(());
             } else {
-                return Err("Mismatch in cardinalities of common interface".to_string());
+                return Err("Mismatch in cardinalities of common interface".into());
             }
         } else {
             let self_interface = &l.last().unwrap().right_type;
             if self_interface.is_empty() {
                 return Ok(());
             } else {
-                return Err("Mismatch in cardinalities of common interface".to_string());
+                return Err("Mismatch in cardinalities of common interface".into());
             }
         }
     }
     let self_interface = &l.last().unwrap().right_type;
     let other_interface = &r[0].left_type;
     if self_interface.len() != other_interface.len() {
-        Err("Mismatch in cardinalities of common interface".to_string())
+        Err("Mismatch in cardinalities of common interface".into())
     } else if self_interface != other_interface {
         for idx in 0..self_interface.len() {
             let w1 = self_interface[idx];
@@ -238,10 +241,11 @@ where
                 return Err(format!(
                     "Mismatch in labels of common interface. At some index there was {:?} vs {:?}",
                     w1, w2
-                ));
+                )
+                .into());
             }
         }
-        Err("Mismatch in labels of common interface at some unknown index.".to_string())
+        Err("Mismatch in labels of common interface at some unknown index.".into())
     } else {
         Ok(())
     }
@@ -252,11 +256,11 @@ where
     Lambda: Eq + Copy + Debug,
     BoxType: Eq + Clone,
 {
-    fn composable(&self, other: &Self) -> Result<(), String> {
+    fn composable(&self, other: &Self) -> Result<(), CompositionError> {
         layers_composable(&self.layers, &other.layers)
     }
 
-    fn compose(&mut self, other: Self) -> Result<(), String> {
+    fn compose(&mut self, other: Self) -> Result<(), CompositionError> {
         for next_layer in other.layers {
             self.append_layer(next_layer)?;
         }
@@ -281,6 +285,18 @@ where
 pub trait MonoidalMorphism<T: Eq>: Monoidal + Composable<T> {}
 pub trait MonoidalMutatingMorphism<T: Eq>: Monoidal + ComposableMutating<T> {}
 
+impl<Lambda, BoxType> MonoidalMutatingMorphism<Vec<Lambda>>
+    for GenericMonoidalMorphism<BoxType, Lambda>
+where
+    Lambda: Eq + Copy + Debug,
+    BoxType: Eq + HasIdentity<Lambda> + Clone,
+{
+    /*
+    the most obvious implementation of MonoidalMutatingMorphism is GenericMonoidalMorphism itself
+    use all the structure of monoidal, compose, identity provided by concatenating blocks and layers appropriately
+    */
+}
+
 struct InterpretableNoMut<T, Lambda>
 where
     Lambda: Eq,
@@ -298,9 +314,9 @@ where
     #[allow(dead_code)]
     fn change_black_boxer<F1, BoxType>(
         f1: F1,
-    ) -> impl Fn(&BoxType, &[Lambda], &[Lambda]) -> Result<Self, String>
+    ) -> impl Fn(&BoxType, &[Lambda], &[Lambda]) -> Result<Self, InterpretError>
     where
-        F1: Fn(&BoxType) -> Result<T, String>,
+        F1: Fn(&BoxType) -> Result<T, InterpretError>,
     {
         move |bb, _, _| f1(bb).map(Self::from)
     }
@@ -336,9 +352,9 @@ where
     #[allow(dead_code)]
     fn change_black_boxer<F1, BoxType>(
         f1: F1,
-    ) -> impl Fn(&BoxType, &[Lambda], &[Lambda]) -> Result<Self, String>
+    ) -> impl Fn(&BoxType, &[Lambda], &[Lambda]) -> Result<Self, InterpretError>
     where
-        F1: Fn(&BoxType) -> Result<T, String>,
+        F1: Fn(&BoxType) -> Result<T, InterpretError>,
     {
         move |bb, _, _| f1(bb).map(Self::from)
     }
@@ -374,20 +390,20 @@ where
     fn interpret<F>(
         morphism: &GenericMonoidalMorphism<BoxType, Lambda>,
         black_box_interpreter: F,
-    ) -> Result<Self, String>
+    ) -> Result<Self, InterpretError>
     where
-        F: Fn(&BoxType, &[Lambda], &[Lambda]) -> Result<Self, String>,
+        F: Fn(&BoxType, &[Lambda], &[Lambda]) -> Result<Self, InterpretError>,
     {
         let mut answer = T::identity(&morphism.domain());
         for layer in &morphism.layers {
             let Some(first) = &layer.blocks.first() else {
-                return Err("somehow an empty layer in a generica monoidal morphism???".to_string());
+                return Err("somehow an empty layer in a generica monoidal morphism???".into());
             };
             let mut cur_layer = black_box_interpreter(first, &[], &[]).map(|z| z.me)?;
             for block in &layer.blocks[1..] {
                 cur_layer.monoidal(black_box_interpreter(block, &[], &[]).map(|z| z.me)?);
             }
-            answer.compose(cur_layer)?;
+            answer.compose(cur_layer).map_err(|e| format!("{:?}", e))?;
         }
         Ok(Self::from(answer))
     }
@@ -413,33 +429,21 @@ where
     fn interpret<F>(
         morphism: &GenericMonoidalMorphism<BoxType, Lambda>,
         black_box_interpreter: F,
-    ) -> Result<Self, String>
+    ) -> Result<Self, InterpretError>
     where
-        F: Fn(&BoxType, &[Lambda], &[Lambda]) -> Result<Self, String>,
+        F: Fn(&BoxType, &[Lambda], &[Lambda]) -> Result<Self, InterpretError>,
     {
         let mut answer = T::identity(&morphism.domain());
         for layer in &morphism.layers {
             let Some(first) = &layer.blocks.first() else {
-                return Err("somehow an empty layer in a generica monoidal morphism???".to_string());
+                return Err("somehow an empty layer in a generica monoidal morphism???".into());
             };
             let mut cur_layer = black_box_interpreter(first, &[], &[]).map(|z| z.me)?;
             for block in &layer.blocks[1..] {
                 cur_layer.monoidal(black_box_interpreter(block, &[], &[]).map(|z| z.me)?);
             }
-            answer = answer.compose(&cur_layer)?;
+            answer = answer.compose(&cur_layer).map_err(|e| format!("{:?}", e))?;
         }
         Ok(Self::from(answer))
     }
-}
-
-impl<Lambda, BoxType> MonoidalMutatingMorphism<Vec<Lambda>>
-    for GenericMonoidalMorphism<BoxType, Lambda>
-where
-    Lambda: Eq + Copy + Debug,
-    BoxType: Eq + HasIdentity<Lambda> + Clone,
-{
-    /*
-    the most obvious implementation of MonoidalMutatingMorphism is GenericMonoidalMorphism itself
-    use all the structure of monoidal, compose, identity provided by concatenating blocks and layers appropriately
-    */
 }

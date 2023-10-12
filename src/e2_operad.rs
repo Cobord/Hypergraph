@@ -2,10 +2,15 @@ use std::collections::HashSet;
 
 use itertools::Itertools;
 
-use crate::{category::HasIdentity, e1_operad::E1, operadic::Operadic};
+use crate::{
+    category::HasIdentity,
+    e1_operad::E1,
+    operadic::{Operadic, OperadicError},
+};
 
 type PointCenter = (f32, f32);
 type Radius = f32;
+type CoalesceError = String;
 
 fn disk_contains(
     c: PointCenter,
@@ -75,7 +80,7 @@ where
     pub fn coalesce_boxes(
         &mut self,
         all_in_this_circle: (Name, PointCenter, Radius),
-    ) -> Result<(), String> {
+    ) -> Result<(), CoalesceError> {
         self.can_coalesce_boxes((all_in_this_circle.1, all_in_this_circle.2))?;
         let (a, b, c) = all_in_this_circle;
         self.sub_circles
@@ -88,7 +93,7 @@ where
     pub fn can_coalesce_boxes(
         &self,
         all_in_this_disk: (PointCenter, Radius),
-    ) -> Result<(), String> {
+    ) -> Result<(), CoalesceError> {
         let (a, b) = all_in_this_disk;
         if disk_contains((0.0, 0.0), 1.0, a, Some(b)) {
             return Err("The coalescing disk must be contained in the unit disk".to_string());
@@ -171,7 +176,11 @@ impl<Name> Operadic<Name> for E2<Name>
 where
     Name: Eq + std::hash::Hash + Clone + std::fmt::Debug,
 {
-    fn operadic_substitution(&mut self, which_input: Name, other_obj: Self) -> Result<(), String> {
+    fn operadic_substitution(
+        &mut self,
+        which_input: Name,
+        other_obj: Self,
+    ) -> Result<(), OperadicError> {
         let idx_of_input = self
             .sub_circles
             .iter()
@@ -188,7 +197,7 @@ where
                 .iter()
                 .any(|cur| selfnames.contains(&cur.0));
             if not_still_unique {
-                return Err("each subcircle must have a unique name".to_string());
+                return Err("each subcircle must have a unique name".into());
             }
             let new_circles = other_obj.sub_circles.into_iter().map(|cur| {
                 let new_center = (
@@ -201,7 +210,7 @@ where
             self.arity = self.sub_circles.len();
             Ok(())
         } else {
-            Err(format!("No such input {:?} found", which_input))
+            Err(format!("No such input {:?} found", which_input).into())
         }
     }
 }
@@ -230,9 +239,9 @@ mod test {
         let id = E2::identity(&0);
         let mut x = E2::new(vec![], true);
         let composed = x.operadic_substitution(0, id);
-        assert_eq!(composed, Err("No such input 0 found".to_string()));
+        assert_eq!(composed, Err("No such input 0 found".into()));
         let id = E2::identity(&0);
         let composed = x.operadic_substitution(5, id);
-        assert_eq!(composed, Err("No such input 5 found".to_string()));
+        assert_eq!(composed, Err("No such input 5 found".into()));
     }
 }

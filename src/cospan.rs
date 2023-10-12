@@ -1,6 +1,6 @@
 use {
     crate::{
-        category::{Composable, HasIdentity},
+        category::{Composable, CompositionError, HasIdentity},
         finset::FinSetMap,
         monoidal::{Monoidal, MonoidalMorphism},
         symmetric_monoidal::SymmetricMonoidalMorphism,
@@ -357,14 +357,15 @@ impl<Lambda> Composable<Vec<Lambda>> for Cospan<Lambda>
 where
     Lambda: Eq + Sized + Copy + Debug,
 {
-    fn composable(&self, other: &Self) -> Result<(), String> {
+    fn composable(&self, other: &Self) -> Result<(), CompositionError> {
         let self_interface = self.right.iter().map(|mid| self.middle[*mid]);
         let other_interface = other.left.iter().map(|mid| other.middle[*mid]);
 
         crate::utils::same_labels_check(self_interface, other_interface)
+            .map_err(CompositionError::from)
     }
 
-    fn compose(&self, other: &Self) -> Result<Self, String> {
+    fn compose(&self, other: &Self) -> Result<Self, CompositionError> {
         self.composable(other)?;
         let (pushout_target, left_to_pushout, right_to_pushout, representative) =
             perform_pushout::<crate::QuickUnionUf<crate::UnionBySize>>(

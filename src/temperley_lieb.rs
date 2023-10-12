@@ -1,3 +1,5 @@
+use crate::category::CompositionError;
+
 use {
     crate::{
         category::{Composable, HasIdentity},
@@ -364,7 +366,7 @@ impl<T> Composable<usize> for BrauerMorphism<T>
 where
     T: Add<Output = T> + Zero + One + Copy + AddAssign + Mul<Output = T> + MulAssign,
 {
-    fn compose(&self, other: &Self) -> Result<Self, String> {
+    fn compose(&self, other: &Self) -> Result<Self, CompositionError> {
         /*
         put the domain and codomain information into each term to get ExtendedPerfectMatching
         the multiplication implementation on ExtendedPerfectMatching
@@ -576,6 +578,8 @@ where
 mod test {
     use std::ops::{AddAssign, MulAssign};
 
+    use crate::category::CompositionError;
+
     use super::BrauerMorphism;
     use either::Either;
     use num::{One, Zero};
@@ -586,7 +590,7 @@ mod test {
         s_i: &[BrauerMorphism<T>],
         prod_these: &[Either<usize, usize>],
         delta_poly_coeffs: &[T],
-    ) -> Result<BrauerMorphism<T>, String> {
+    ) -> Result<BrauerMorphism<T>, CompositionError> {
         fn get_generator<T: Clone>(l_gens: &[T], r_gens: &[T], which: Either<usize, usize>) -> T {
             use crate::utils::EitherExt;
             which.join(|n| l_gens[n].clone(), |n| r_gens[n].clone())
@@ -809,7 +813,8 @@ mod test {
         let one_poly_coeffs = [Complex::<i32>::one()];
         for idx in 0..n - 1 {
             let e_is_i = e_i[idx].compose(&s_i[idx]);
-            let s_ie_i: Result<BrauerMorphism<Complex<i32>>, String> = s_i[idx].compose(&e_i[idx]);
+            let s_ie_i: Result<BrauerMorphism<Complex<i32>>, CompositionError> =
+                s_i[idx].compose(&e_i[idx]);
             test_asserter(
                 e_is_i,
                 Ok(e_i[idx].clone()),

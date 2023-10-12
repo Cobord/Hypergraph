@@ -1,3 +1,5 @@
+use crate::category::CompositionError;
+
 use {
     crate::{
         category::{Composable, HasIdentity},
@@ -560,11 +562,11 @@ where
     LeftPortName: Eq + Clone,
     RightPortName: Eq + Clone,
 {
-    fn composable(&self, other: &Self) -> Result<(), String> {
+    fn composable(&self, other: &Self) -> Result<(), CompositionError> {
         self.cospan.composable(&other.cospan)
     }
 
-    fn compose(&self, other: &Self) -> Result<Self, String> {
+    fn compose(&self, other: &Self) -> Result<Self, CompositionError> {
         Ok(Self {
             cospan: self.cospan.compose(&other.cospan)?,
             left_names: self.left_names.clone(),

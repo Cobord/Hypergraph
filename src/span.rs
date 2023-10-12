@@ -1,3 +1,5 @@
+use crate::category::CompositionError;
+
 use {
     crate::{
         category::{Composable, HasIdentity},
@@ -196,11 +198,12 @@ impl<Lambda> Composable<Vec<Lambda>> for Span<Lambda>
 where
     Lambda: Sized + Eq + Copy + Debug,
 {
-    fn composable(&self, other: &Self) -> Result<(), String> {
+    fn composable(&self, other: &Self) -> Result<(), CompositionError> {
         crate::utils::same_labels_check(self.right.iter(), other.left.iter())
+            .map_err(CompositionError::from)
     }
 
-    fn compose(&self, other: &Self) -> Result<Self, String> {
+    fn compose(&self, other: &Self) -> Result<Self, CompositionError> {
         self.composable(other)?;
         // could shortuct if self.is_right_id or other.is_left_id, but unnecessary
         let max_middle = self.middle.len().max(other.middle.len());
@@ -216,7 +219,7 @@ where
                     match mid_added {
                         Ok(_) => {}
                         Err(z) => {
-                            return Err(format!("{}\nShould be unreachable if composability already said it was all okay.",z));
+                            return Err(format!("{}\nShould be unreachable if composability already said it was all okay.",z).into());
                         }
                     }
                 }
@@ -324,7 +327,7 @@ impl<Lambda> Composable<Vec<Lambda>> for Rel<Lambda>
 where
     Lambda: Sized + Eq + Copy + Debug,
 {
-    fn compose(&self, other: &Self) -> Result<Self, String> {
+    fn compose(&self, other: &Self) -> Result<Self, CompositionError> {
         self.0.compose(&other.0).map(|x| Self(x))
     }
 
@@ -336,7 +339,7 @@ where
         self.0.codomain()
     }
 
-    fn composable(&self, other: &Self) -> Result<(), String> {
+    fn composable(&self, other: &Self) -> Result<(), CompositionError> {
         self.0.composable(&other.0)
     }
 }

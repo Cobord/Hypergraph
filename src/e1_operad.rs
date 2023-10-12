@@ -4,9 +4,13 @@ use itertools::Itertools;
 use num::One;
 use rand::{rngs::ThreadRng, Rng};
 
-use crate::{category::HasIdentity, operadic::Operadic};
+use crate::{
+    category::HasIdentity,
+    operadic::{Operadic, OperadicError},
+};
 
 type IntervalCoord = f32;
+type CoalesceError = String;
 
 #[allow(dead_code)]
 pub struct E1 {
@@ -78,7 +82,7 @@ impl E1 {
     pub fn coalesce_boxes(
         &mut self,
         all_in_this_interval: (IntervalCoord, IntervalCoord),
-    ) -> Result<(), String> {
+    ) -> Result<(), CoalesceError> {
         self.can_coalesce_boxes(all_in_this_interval)?;
         let (a, b) = all_in_this_interval;
         self.sub_intervals.retain(|(c, d)| *d <= a || *c >= b);
@@ -90,7 +94,7 @@ impl E1 {
     pub fn can_coalesce_boxes(
         &self,
         all_in_this_interval: (IntervalCoord, IntervalCoord),
-    ) -> Result<(), String> {
+    ) -> Result<(), CoalesceError> {
         let (a, b) = all_in_this_interval;
         if a >= b || a < 0.0 || b > 1.0 {
             return Err(
@@ -138,12 +142,17 @@ impl E1 {
 }
 
 impl Operadic<usize> for E1 {
-    fn operadic_substitution(&mut self, which_input: usize, other_obj: Self) -> Result<(), String> {
+    fn operadic_substitution(
+        &mut self,
+        which_input: usize,
+        other_obj: Self,
+    ) -> Result<(), OperadicError> {
         if which_input >= self.arity {
             return Err(format!(
                 "There aren't enough inputs to graft onto the {}'th one",
                 which_input + 1
-            ));
+            )
+            .into());
         }
         self.canonicalize();
         let (a, b) = self.sub_intervals[which_input];
@@ -200,13 +209,13 @@ mod test {
         let composed = x.operadic_substitution(0, id);
         assert_eq!(
             composed,
-            Err("There aren't enough inputs to graft onto the 1'th one".to_string())
+            Err("There aren't enough inputs to graft onto the 1'th one".into())
         );
         let id = E1::identity(&());
         let composed = x.operadic_substitution(5, id);
         assert_eq!(
             composed,
-            Err("There aren't enough inputs to graft onto the 6'th one".to_string())
+            Err("There aren't enough inputs to graft onto the 6'th one".into())
         );
     }
 
