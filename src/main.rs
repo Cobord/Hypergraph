@@ -32,6 +32,8 @@ mod free_gp;
 mod e1_operad;
 mod e2_operad;
 
+mod petri;
+
 fn main() {
     let mut x = NamedCospan::<u32, &'static str, &'static str>::empty();
     x.add_boundary_node_unknown_target(0, Right("out1"));
