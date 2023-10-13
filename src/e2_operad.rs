@@ -1,6 +1,6 @@
-use std::collections::HashSet;
-
 use itertools::Itertools;
+use num::pow;
+use std::collections::HashSet;
 
 use crate::{
     category::HasIdentity,
@@ -21,9 +21,12 @@ fn disk_contains(
     let displace: PointCenter = (c.0 - query_center.0, c.1 - query_center.1);
     let center_contained = displace.0 * displace.0 + displace.1 * displace.1 <= r * r;
     if center_contained {
-        if let Some(_real_rad) = query_radius {
-            todo!("disk containment")
+        if let Some(real_rad) = query_radius {
+            let dist_c_qc_squared = pow(c.0 - query_center.0, 2) + pow(c.1 - query_center.1, 2);
+            let dist_c_qc = dist_c_qc_squared.sqrt();
+            dist_c_qc + real_rad <= r
         } else {
+            // D(c,r) contains the point query_center
             true
         }
     } else {
@@ -31,8 +34,14 @@ fn disk_contains(
     }
 }
 
-fn disk_overlaps(_a: PointCenter, _b: Radius, _c: PointCenter, _d: Radius) -> bool {
-    todo!("disk overlapping")
+fn disk_closeness(a: PointCenter, b: Radius, c: PointCenter, d: Radius) -> Radius {
+    let dist_a_c_squared = pow(c.0 - a.0, 2) + pow(c.1 - a.1, 2);
+    let dist_a_c = dist_a_c_squared.sqrt();
+    dist_a_c - (b + d)
+}
+
+fn disk_overlaps(a: PointCenter, b: Radius, c: PointCenter, d: Radius) -> bool {
+    disk_closeness(a, b, c, d).is_sign_negative()
 }
 
 #[allow(dead_code)]
@@ -115,7 +124,16 @@ where
         if self.arity < 2 {
             return None;
         }
-        todo!("disk closeness")
+        let mut min_seen = 2.0;
+        for circle_pair in self.sub_circles.iter().combinations(2) {
+            let circ_0 = circle_pair[0];
+            let circ_1 = circle_pair[1];
+            let cur_dist = disk_closeness(circ_0.1, circ_0.2, circ_1.1, circ_1.2);
+            if cur_dist < min_seen {
+                min_seen = cur_dist;
+            }
+        }
+        Some(min_seen)
     }
 
     #[allow(dead_code)]
