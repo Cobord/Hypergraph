@@ -53,8 +53,14 @@ where
     GeneralBlackBoxed: Contains<BlackBoxLabel>,
 {
     #[allow(dead_code)]
-    pub fn new(_main_name: BlackBoxLabel) -> Self {
-        todo!("new system")
+    pub fn new(main_name: BlackBoxLabel) -> Self {
+        Self {
+            composite_pieces: HashMap::new(),
+            simple_pieces: HashMap::new(),
+            main: main_name,
+            dag: DiGraph::new(),
+            dummy: PhantomData,
+        }
     }
 
     #[allow(dead_code)]
