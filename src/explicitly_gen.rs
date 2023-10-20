@@ -228,12 +228,34 @@ where
 
 impl<T> Iterator for ExplicitlyGenerated<T>
 where
-    T: Mul<Output = T> + DivAssign + Clone + Eq,
+    T: MulAssign + Mul<Output = T> + DivAssign + Clone + Eq,
 {
     type Item = (T, Vec<(GeneratorLabel, GeneratorPower)>);
 
     fn next(&mut self) -> Option<Self::Item> {
-        todo!()
+        if self.gens.is_empty() {
+            return None;
+        }
+        if self.as_word.is_empty() {
+            self.as_word.push((0, 1));
+            self.underlying *= self.gens[0].0.clone();
+            return Some((self.underlying.clone(), self.as_word.clone()));
+        }
+        let word_len = self.as_word.len();
+        let last_step: (GeneratorLabel, GeneratorPower) = self.as_word[word_len - 1];
+        if let Some(last_step_order) = self.gens[0].1 {
+            if last_step.0 < last_step_order - 1 {
+                self.as_word[word_len - 1].1 += 1;
+                self.underlying *= self.gens[last_step.0].0.clone();
+                Some((self.underlying.clone(), self.as_word.clone()))
+            } else {
+                todo!();
+            }
+        } else {
+            self.as_word[word_len - 1].1 += 1;
+            self.underlying *= self.gens[last_step.0].0.clone();
+            Some((self.underlying.clone(), self.as_word.clone()))
+        }
     }
 }
 
