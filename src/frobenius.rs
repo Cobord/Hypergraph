@@ -439,23 +439,23 @@ where
 {
     fn composable(&self, other: &Self) -> Result<(), CompositionError> {
         if self.layers.is_empty() || other.layers.is_empty() {
-            if self.layers.is_empty() && other.layers.is_empty() {
-                return Ok(());
+            return if self.layers.is_empty() && other.layers.is_empty() {
+                Ok(())
             } else if self.layers.is_empty() {
                 let other_interface = &other.layers[0].left_type;
                 if other_interface.is_empty() {
-                    return Ok(());
+                    Ok(())
                 } else {
-                    return Err("Mismatch in cardinalities of common interface".into());
+                    Err("Mismatch in cardinalities of common interface".into())
                 }
             } else {
                 let self_interface = &self.layers.last().unwrap().right_type;
                 if self_interface.is_empty() {
-                    return Ok(());
+                    Ok(())
                 } else {
-                    return Err("Mismatch in cardinalities of common interface".into());
+                    Err("Mismatch in cardinalities of common interface".into())
                 }
-            }
+            };
         }
         let self_interface = &self.layers.last().unwrap().right_type;
         let other_interface = &other.layers[0].left_type;

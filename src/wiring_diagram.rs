@@ -32,7 +32,7 @@ impl Dir {
 }
 
 type Pair<T> = (T, T);
-type DoubledEither<T, U> = Either<Pair<T>, Pair<U>>;
+type EitherPair<T, U> = Either<Pair<T>, Pair<U>>;
 
 /*
 a wiring diagram with wires labelled using Lambda
@@ -68,7 +68,7 @@ where
     #[allow(dead_code)]
     pub fn change_boundary_node_name(
         &mut self,
-        name_pair: DoubledEither<(Dir, InterCircle, IntraCircle), (Dir, IntraCircle)>,
+        name_pair: EitherPair<(Dir, InterCircle, IntraCircle), (Dir, IntraCircle)>,
     ) {
         /*
         change a name of a boundary node
