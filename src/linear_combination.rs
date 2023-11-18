@@ -299,11 +299,10 @@ impl<Coeffs, Target: Clone + Eq + Hash> LinearCombination<Coeffs, Target> {
         let mut new_map = HashMap::with_capacity(self.0.len());
         for (k, v) in self.0.iter() {
             let new_key = f(k.clone());
-            if let Some(old_val) = new_map.get(&new_key) {
-                new_map.insert(new_key, *old_val + *v);
-            } else {
-                new_map.insert(new_key, *v);
-            }
+            new_map
+                .entry(new_key)
+                .and_modify(|old| *old = *old + *v)
+                .or_insert(*v);
         }
         LinearCombination(new_map)
     }
