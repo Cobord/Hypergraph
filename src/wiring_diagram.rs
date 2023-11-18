@@ -15,13 +15,13 @@ use {
 };
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
-pub enum InOut {
+pub enum Dir {
     In,
     Out,
     Undirected,
 }
 
-impl InOut {
+impl Dir {
     pub fn flipped(self) -> Self {
         match self {
             Self::In => Self::Out,
@@ -31,18 +31,18 @@ impl InOut {
     }
 }
 
-type Doubled<T> = (T, T);
-type DoubledEither<T, U> = Either<Doubled<T>, Doubled<U>>;
+type Pair<T> = (T, T);
+type DoubledEither<T, U> = Either<Pair<T>, Pair<U>>;
 
 /*
 a wiring diagram with wires labelled using Lambda
 is a cospan between sets A and B
 A describes a set of nodes on internal circles each one being labelled with
-    an InOut for orientation
+    an Dir for orientation
     an InterCircle for which of multiple internal circles we are on
     an IntraCircle to label which node on that circle it is
 B describes a set of nodes on the single external circle
-    an InOut for orientation
+    an Dir for orientation
     an IntraCircle to label which node on that circle it is
 */
 #[derive(Clone)]
@@ -51,7 +51,7 @@ pub struct WiringDiagram<
     Lambda: Eq + Copy + Debug,
     InterCircle: Eq + Clone,
     IntraCircle: Eq + Clone,
->(NamedCospan<Lambda, (InOut, InterCircle, IntraCircle), (InOut, IntraCircle)>);
+>(NamedCospan<Lambda, (Dir, InterCircle, IntraCircle), (Dir, IntraCircle)>);
 
 impl<Lambda, InterCircle, IntraCircle> WiringDiagram<Lambda, InterCircle, IntraCircle>
 where
@@ -60,7 +60,7 @@ where
     IntraCircle: Eq + Clone,
 {
     pub fn new(
-        inside: NamedCospan<Lambda, (InOut, InterCircle, IntraCircle), (InOut, IntraCircle)>,
+        inside: NamedCospan<Lambda, (Dir, InterCircle, IntraCircle), (Dir, IntraCircle)>,
     ) -> Self {
         Self(inside)
     }
@@ -68,12 +68,12 @@ where
     #[allow(dead_code)]
     pub fn change_boundary_node_name(
         &mut self,
-        name_pair: DoubledEither<(InOut, InterCircle, IntraCircle), (InOut, IntraCircle)>,
+        name_pair: DoubledEither<(Dir, InterCircle, IntraCircle), (Dir, IntraCircle)>,
     ) {
         /*
         change a name of a boundary node
         specific to LeftPortName and RightPortName of WiringDiagram being in the specific format
-            with InOut,InterCircle and IntraCircle
+            with Dir,InterCircle and IntraCircle
         gives warning and makes no change when there is no node with the desired name
         */
         self.0.change_boundary_node_name(name_pair);
@@ -82,11 +82,11 @@ where
     #[allow(dead_code)]
     pub fn toggle_orientation(&mut self, of_left_side: bool) {
         let toggler = if of_left_side {
-            Left(|z: &mut (InOut, InterCircle, IntraCircle)| {
+            Left(|z: &mut (Dir, InterCircle, IntraCircle)| {
                 z.0 = z.0.flipped();
             })
         } else {
-            Right(|z: &mut (InOut, IntraCircle)| {
+            Right(|z: &mut (Dir, IntraCircle)| {
                 z.0 = z.0.flipped();
             })
         };
@@ -97,7 +97,7 @@ where
     pub fn add_boundary_node_unconnected(
         &mut self,
         type_: Lambda,
-        new_name: Either<(InOut, InterCircle, IntraCircle), (InOut, IntraCircle)>,
+        new_name: Either<(Dir, InterCircle, IntraCircle), (Dir, IntraCircle)>,
     ) {
         /*
         add a new boundary node that maps to a new middle node of specified label type_
@@ -112,8 +112,8 @@ where
     #[allow(dead_code)]
     pub fn connect_pair(
         &mut self,
-        node_1: Either<(InOut, InterCircle, IntraCircle), (InOut, IntraCircle)>,
-        node_2: Either<(InOut, InterCircle, IntraCircle), (InOut, IntraCircle)>,
+        node_1: Either<(Dir, InterCircle, IntraCircle), (Dir, IntraCircle)>,
+        node_2: Either<(Dir, InterCircle, IntraCircle), (Dir, IntraCircle)>,
     ) {
         /*
         first find node_1 and node_2 by their names
@@ -129,7 +129,7 @@ where
     #[allow(dead_code)]
     pub fn delete_boundary_node(
         &mut self,
-        which_node: Either<(InOut, InterCircle, IntraCircle), (InOut, IntraCircle)>,
+        which_node: Either<(Dir, InterCircle, IntraCircle), (Dir, IntraCircle)>,
     ) {
         /*
         find a node by it's name
@@ -232,15 +232,15 @@ mod test {
 
     #[test]
     fn no_input_example() {
-        use super::{InOut, WiringDiagram};
+        use super::{Dir, WiringDiagram};
         use crate::named_cospan::NamedCospan;
         use either::Right;
         let unchanged_right_names = vec![
-            (InOut::In, 0),
-            (InOut::Out, 1),
-            (InOut::In, 2),
-            (InOut::Out, 3),
-            (InOut::Out, 4),
+            (Dir::In, 0),
+            (Dir::Out, 1),
+            (Dir::In, 2),
+            (Dir::Out, 3),
+            (Dir::Out, 4),
         ];
         let mut example: WiringDiagram<_, (), _> = WiringDiagram::new(NamedCospan::new(
             vec![],
@@ -250,15 +250,15 @@ mod test {
             unchanged_right_names.clone(),
         ));
         assert_eq!(*example.0.right_names(), unchanged_right_names);
-        example.change_boundary_node_name(Right(((InOut::In, 0), (InOut::Out, 0))));
+        example.change_boundary_node_name(Right(((Dir::In, 0), (Dir::Out, 0))));
         let changed_names = example.0.right_names();
-        assert_eq!(changed_names[0], (InOut::Out, 0));
+        assert_eq!(changed_names[0], (Dir::Out, 0));
         assert_eq!(changed_names[1..], unchanged_right_names[1..]);
     }
 
     #[test]
     fn operadic() {
-        use super::{InOut, WiringDiagram};
+        use super::{Dir, WiringDiagram};
         use crate::assert_ok;
         use crate::category::Composable;
         use crate::named_cospan::NamedCospan;
@@ -269,17 +269,17 @@ mod test {
         type WireName = usize;
         type CircleName = i32;
         let inner_right_names: Vec<(_, WireName)> = vec![
-            (InOut::In, 0),
-            (InOut::Out, 1),
-            (InOut::In, 2),
-            (InOut::Out, 3),
-            (InOut::Out, 4),
+            (Dir::In, 0),
+            (Dir::Out, 1),
+            (Dir::In, 2),
+            (Dir::Out, 3),
+            (Dir::Out, 4),
         ];
         let mut outer_left_names: Vec<(_, CircleName, _)> = inner_right_names
             .iter()
             .map(|(orient, name)| (orient.flipped(), 0, *name))
             .collect();
-        outer_left_names.push((InOut::Undirected, 1, 500));
+        outer_left_names.push((Dir::Undirected, 1, 500));
 
         /*
         inner circle has no further inner circles
@@ -311,7 +311,7 @@ mod test {
             vec![0],
             vec![true, false],
             outer_left_names.clone(),
-            vec![(InOut::Out, 0)],
+            vec![(Dir::Out, 0)],
         ));
         /*
         permuting the domain of outer doesn't matter because the
@@ -326,7 +326,7 @@ mod test {
         example_outer.0.permute_side(&p, false);
         example_outer.0.assert_valid_nohash(false);
         assert_eq!(*example_outer.0.left_names(), p.permute(&outer_left_names));
-        assert_eq!(*example_outer.0.right_names(), vec![(InOut::Out, 0)]);
+        assert_eq!(*example_outer.0.right_names(), vec![(Dir::Out, 0)]);
         assert_eq!(
             example_outer.0.domain(),
             p.permute(&vec![true, true, false, false, true, false])
@@ -338,16 +338,16 @@ mod test {
         example_outer.0.assert_valid_nohash(false);
         assert_eq!(
             *example_outer.0.left_names(),
-            vec![(InOut::Undirected, 1, 500)]
+            vec![(Dir::Undirected, 1, 500)]
         );
         assert_eq!(*example_outer.0.domain(), vec![false]);
-        assert_eq!(*example_outer.0.right_names(), vec![(InOut::Out, 0)]);
+        assert_eq!(*example_outer.0.right_names(), vec![(Dir::Out, 0)]);
         assert_eq!(*example_outer.0.codomain(), vec![true]);
     }
 
     #[test]
     fn operadic_multiple() {
-        use super::{InOut, WiringDiagram};
+        use super::{Dir, WiringDiagram};
         use crate::assert_err;
         use crate::assert_ok;
         use crate::category::Composable;
@@ -360,13 +360,13 @@ mod test {
         type WireName = char;
         type CircleName = i32;
 
-        let outer_label = |c: WireName| (InOut::Undirected, c);
+        let outer_label = |c: WireName| (Dir::Undirected, c);
         let outer_right_names: Vec<(_, WireName)> = ['a', 'b', 'c', 'd', 'e']
             .into_iter()
             .map(outer_label)
             .collect();
 
-        let inner_label = |(w, c): (WireName, CircleName)| (InOut::Undirected, c, w);
+        let inner_label = |(w, c): (WireName, CircleName)| (Dir::Undirected, c, w);
         let outer_left_names: Vec<(_, CircleName, WireName)> = [
             ('r', 1),
             ('s', 1),
@@ -436,7 +436,7 @@ mod test {
                 }
             })
             .collect();
-        let inner_1_left_names: Vec<(InOut, CircleName, WireName)> = vec![];
+        let inner_1_left_names: Vec<(Dir, CircleName, WireName)> = vec![];
 
         /*
         first inner circle gets substituted for the r,s,t circle
@@ -457,23 +457,23 @@ mod test {
 
         example_outer.0.assert_valid_nohash(false);
         let expected_left_names = [
-            (InOut::Undirected, 2, 'u'),
-            (InOut::Undirected, 2, 'v'),
-            (InOut::Undirected, 3, 'w'),
-            (InOut::Undirected, 3, 'x'),
-            (InOut::Undirected, 3, 'y'),
-            (InOut::Undirected, 3, 'z'),
+            (Dir::Undirected, 2, 'u'),
+            (Dir::Undirected, 2, 'v'),
+            (Dir::Undirected, 3, 'w'),
+            (Dir::Undirected, 3, 'x'),
+            (Dir::Undirected, 3, 'y'),
+            (Dir::Undirected, 3, 'z'),
         ];
         let mut obs_left_names = example_outer.0.left_names().clone();
         obs_left_names.sort();
         assert_eq!(obs_left_names, expected_left_names.to_vec());
         assert_eq!(*example_outer.0.domain(), vec![(); 9 - 3]);
         let expected_right_names = [
-            (InOut::Undirected, 'a'),
-            (InOut::Undirected, 'b'),
-            (InOut::Undirected, 'c'),
-            (InOut::Undirected, 'd'),
-            (InOut::Undirected, 'e'),
+            (Dir::Undirected, 'a'),
+            (Dir::Undirected, 'b'),
+            (Dir::Undirected, 'c'),
+            (Dir::Undirected, 'd'),
+            (Dir::Undirected, 'e'),
         ];
         let mut obs_right_names = example_outer.0.right_names().clone();
         obs_right_names.sort();
@@ -567,22 +567,22 @@ mod test {
 
         example_outer.0.assert_valid_nohash(false);
         let expected_left_names = [
-            (InOut::Undirected, 3, 'w'),
-            (InOut::Undirected, 3, 'x'),
-            (InOut::Undirected, 3, 'y'),
-            (InOut::Undirected, 3, 'z'),
-            (InOut::Undirected, 4, 'q'),
+            (Dir::Undirected, 3, 'w'),
+            (Dir::Undirected, 3, 'x'),
+            (Dir::Undirected, 3, 'y'),
+            (Dir::Undirected, 3, 'z'),
+            (Dir::Undirected, 4, 'q'),
         ];
         let mut obs_left_names = example_outer.0.left_names().clone();
         obs_left_names.sort();
         assert_eq!(obs_left_names, expected_left_names.to_vec());
         assert_eq!(*example_outer.0.domain(), vec![(); 9 - 3 - 2 + 1]);
         let expected_right_names = [
-            (InOut::Undirected, 'a'),
-            (InOut::Undirected, 'b'),
-            (InOut::Undirected, 'c'),
-            (InOut::Undirected, 'd'),
-            (InOut::Undirected, 'e'),
+            (Dir::Undirected, 'a'),
+            (Dir::Undirected, 'b'),
+            (Dir::Undirected, 'c'),
+            (Dir::Undirected, 'd'),
+            (Dir::Undirected, 'e'),
         ];
         let mut obs_right_names = example_outer.0.right_names().clone();
         obs_right_names.sort();
