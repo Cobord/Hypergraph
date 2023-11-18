@@ -73,6 +73,14 @@ pub struct OrderPresSurj {
     preimage_card_minus_1: Vec<usize>,
 }
 
+impl<const N: usize> From<[usize; N]> for OrderPresSurj {
+    fn from(value: [usize; N]) -> Self {
+        Self {
+            preimage_card_minus_1: value.to_vec(),
+        }
+    }
+}
+
 impl HasIdentity<usize> for OrderPresSurj {
     fn identity(on_this: &usize) -> Self {
         Self {
@@ -624,9 +632,7 @@ mod test {
         assert_eq!(cur_result, OrderPresSurj::try_from((cur_test, 0)));
 
         cur_test = vec![0];
-        cur_result = Ok(OrderPresSurj {
-            preimage_card_minus_1: vec![0],
-        });
+        cur_result = Ok([0].into());
         assert_eq!(cur_result, OrderPresSurj::try_from((cur_test.clone(), 0)));
         let cur_result_unwrapped = cur_result.unwrap();
         for (n, v) in cur_test.iter().enumerate() {
@@ -649,9 +655,8 @@ mod test {
         assert_eq!(cur_result, OrderPresSurj::try_from((cur_test, 0)));
 
         cur_test = vec![0, 1, 2];
-        cur_result = Ok(OrderPresSurj {
-            preimage_card_minus_1: vec![0, 0, 0],
-        });
+
+        cur_result = Ok([0, 0, 0].into());
         assert_eq!(cur_result, OrderPresSurj::try_from((cur_test.clone(), 0)));
         let cur_result_unwrapped = cur_result.unwrap();
         for (n, v) in cur_test.iter().enumerate() {
@@ -680,12 +685,8 @@ mod test {
         assert_eq!(cur_result_unwrapped.domain(), 8);
         assert_eq!(cur_result_unwrapped.codomain(), 5);
 
-        let compose_3_after = OrderPresSurj {
-            preimage_card_minus_1: vec![1, 2],
-        };
-        let compose_3_exp = OrderPresSurj {
-            preimage_card_minus_1: vec![2, 4],
-        };
+        let compose_3_after: OrderPresSurj = [1, 2].into();
+        let compose_3_exp: OrderPresSurj = [2, 4].into();
         let cur_composed_3 = cur_result_unwrapped.compose(&compose_3_after).unwrap();
         assert_eq!(cur_composed_3, compose_3_exp);
     }
@@ -897,9 +898,7 @@ mod test {
             let cur_test: FinSetMap = vec![0, 1, 1, 1, 2, 3, 4, 7, 8, 9, 11, 20, 18, 19];
             let exp_perm =
                 Permutation::try_from(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 11, 12]).unwrap();
-            let exp_surj = OrderPresSurj {
-                preimage_card_minus_1: vec![0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            };
+            let exp_surj: OrderPresSurj = [0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].into();
             let exp_inj = OrderPresInj {
                 counts_iden_unit_alternating: if leftovers > 0 {
                     vec![5, 2, 3, 1, 1, 6, 3, leftovers]
