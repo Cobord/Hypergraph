@@ -211,23 +211,19 @@ where
     BoxType: Eq + Clone,
 {
     if l.is_empty() || r.is_empty() {
-        return if l.is_empty() && r.is_empty() {
-            Ok(())
-        } else if l.is_empty() {
-            let other_interface = &r[0].left_type;
-            if other_interface.is_empty() {
-                Ok(())
-            } else {
-                Err("Mismatch in cardinalities of common interface".into())
-            }
+        if l.is_empty() && r.is_empty() {
+            return Ok(());
+        }
+        let interface = if l.is_empty() {
+            &r[0].left_type
         } else {
-            let self_interface = &l.last().unwrap().right_type;
-            if self_interface.is_empty() {
-                Ok(())
-            } else {
-                Err("Mismatch in cardinalities of common interface".into())
-            }
+            &l.last().unwrap().right_type
         };
+        return if interface.is_empty() {
+            Ok(())
+        } else {
+            Err("Mismatch in cardinalities of common interface".into())
+        }
     }
     let self_interface = &l.last().unwrap().right_type;
     let other_interface = &r[0].left_type;
