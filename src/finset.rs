@@ -142,6 +142,7 @@ impl OrderPresSurj {
         for (cur_target, v) in self.preimage_card_minus_1.iter().enumerate() {
             answer.extend(std::iter::repeat(cur_target).take(v + 1));
         }
+
         (answer, 0)
     }
 
@@ -673,9 +674,7 @@ mod test {
         assert_eq!(cur_result, OrderPresSurj::try_from((cur_test, 0)));
 
         cur_test = vec![0, 1, 1, 2, 3, 3, 3, 4];
-        cur_result = Ok(OrderPresSurj {
-            preimage_card_minus_1: vec![0, 1, 0, 2, 0],
-        });
+        cur_result = Ok([0, 1, 0, 2, 0].into());
         assert_eq!(cur_result, OrderPresSurj::try_from((cur_test.clone(), 0)));
         let cur_result_unwrapped = cur_result.unwrap();
         for (n, v) in cur_test.iter().enumerate() {
