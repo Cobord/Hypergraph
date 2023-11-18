@@ -68,7 +68,7 @@ impl Composable<usize> for FinSetMorphism {
 
 impl MonoidalMorphism<usize> for FinSetMorphism {}
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct OrderPresSurj {
     preimage_card_minus_1: Vec<usize>,
 }
@@ -286,9 +286,7 @@ impl TryFrom<FinSetMorphism> for OrderPresSurj {
             return Err(TryFromSurjError);
         }
         if v.is_empty() {
-            return Ok(Self {
-                preimage_card_minus_1: vec![],
-            });
+            return Ok(Self::default());
         }
         let mut cur_i = 0;
         let mut count_of_cur_i = 0;
@@ -622,9 +620,7 @@ mod test {
         use super::{FinSetMap, OrderPresSurj, TryFromSurjError};
         use crate::category::Composable;
         let mut cur_test: FinSetMap = vec![];
-        let mut cur_result = Ok(OrderPresSurj {
-            preimage_card_minus_1: vec![],
-        });
+        let mut cur_result = Ok(OrderPresSurj::default());
         assert_eq!(cur_result, OrderPresSurj::try_from((cur_test, 0)));
 
         cur_test = vec![0];
