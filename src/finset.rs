@@ -490,7 +490,7 @@ impl Decomposition {
         let wanted_codomain = self.codomain();
         let map_part: FinSetMap = (0..self.domain()).map(|z| self.apply(z)).collect();
         if let Some(max_val) = map_part.iter().max() {
-            let leftover_needed = wanted_codomain - max_val - 1.max(0);
+            let leftover_needed = (wanted_codomain - max_val - 1).max(0);
             (map_part, leftover_needed)
         } else {
             (map_part, wanted_codomain)
@@ -942,12 +942,18 @@ mod test {
             let leftover_needed = (fin_set_size - max_first - 1).max(0);
             let decomp_1 =
                 Decomposition::try_from((first_int_map.clone(), leftover_needed)).unwrap();
-            let decomp_2 = Decomposition::try_from((second_int_map.clone(), 0)).unwrap();
-            let actual_codomain = *second_int_map.iter().max().unwrap() + 1;
             assert_eq!(decomp_1.domain(), fin_set_size);
             assert_eq!(decomp_1.codomain(), fin_set_size);
+            let (decomp_1_ord, decomp_1_left) = decomp_1.to_ordinary();
+            assert_eq!(decomp_1_ord, first_int_map);
+            assert_eq!(decomp_1_left, leftover_needed);
+            let decomp_2 = Decomposition::try_from((second_int_map.clone(), 0)).unwrap();
+            let actual_codomain = *second_int_map.iter().max().unwrap() + 1;
             assert_eq!(decomp_2.domain(), fin_set_size);
             assert_eq!(decomp_2.codomain(), actual_codomain);
+            let (decomp_2_ord, decomp_2_left) = decomp_2.to_ordinary();
+            assert_eq!(decomp_2_ord, second_int_map);
+            assert_eq!(decomp_2_left, 0);
             let decomp_12 = decomp_1.compose(&decomp_2).unwrap();
             assert_eq!(decomp_12.domain(), fin_set_size);
             assert_eq!(decomp_12.codomain(), actual_codomain);

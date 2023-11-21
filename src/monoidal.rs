@@ -223,7 +223,7 @@ where
             Ok(())
         } else {
             Err("Mismatch in cardinalities of common interface".into())
-        }
+        };
     }
     let self_interface = &l.last().unwrap().right_type;
     let other_interface = &r[0].left_type;
