@@ -35,10 +35,6 @@ pub fn represents_id(it: impl Iterator<Item = usize>) -> bool {
     (0..).zip(it).all(|(l, r)| l == r)
 }
 
-pub fn argmax<T: Ord>(s: &[T]) -> Option<usize> {
-    s.iter().enumerate().max_by_key(|x| x.1).map(|(idx, _)| idx)
-}
-
 pub fn remove_multiple<T>(me: &mut Vec<T>, mut to_remove: Vec<usize>) {
     to_remove.sort_unstable();
     to_remove.reverse();

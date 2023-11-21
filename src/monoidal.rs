@@ -213,20 +213,16 @@ where
     if l.is_empty() || r.is_empty() {
         if l.is_empty() && r.is_empty() {
             return Ok(());
-        } else if l.is_empty() {
-            let other_interface = &r[0].left_type;
-            if other_interface.is_empty() {
-                return Ok(());
-            } else {
-                return Err("Mismatch in cardinalities of common interface".into());
-            }
+        }
+        let interface = if l.is_empty() {
+            &r[0].left_type
         } else {
-            let self_interface = &l.last().unwrap().right_type;
-            if self_interface.is_empty() {
-                return Ok(());
-            } else {
-                return Err("Mismatch in cardinalities of common interface".into());
-            }
+            &l.last().unwrap().right_type
+        };
+        return if interface.is_empty() {
+            Ok(())
+        } else {
+            Err("Mismatch in cardinalities of common interface".into())
         }
     }
     let self_interface = &l.last().unwrap().right_type;

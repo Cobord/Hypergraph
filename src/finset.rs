@@ -5,7 +5,6 @@ use {
         category::{Composable, HasIdentity},
         monoidal::{Monoidal, MonoidalMorphism},
         symmetric_monoidal::SymmetricMonoidalDiscreteMorphism,
-        utils::argmax,
     },
     permutations::Permutation,
     std::{collections::HashSet, error, fmt},
@@ -45,8 +44,7 @@ impl Composable<usize> for FinSetMorphism {
         }
         let other_codomain = other.codomain();
         let composite: Vec<_> = (0..self.domain()).map(|s| other.0[self.0[s]]).collect();
-        let pos_max = argmax(&composite);
-        let ret = if let Some(max_val) = pos_max.map(|z| composite[z]) {
+        let ret = if let Some(max_val) = composite.iter().max() {
             (other_codomain - max_val - 1).max(0)
         } else {
             other_codomain
@@ -59,20 +57,28 @@ impl Composable<usize> for FinSetMorphism {
     }
 
     fn codomain(&self) -> usize {
-        let pos_max = argmax(&self.0);
-        if let Some(max_val) = pos_max.map(|z| self.0[z]) {
-            max_val + self.1 + 1
-        } else {
-            self.1
-        }
+        self.1
+            + if let Some(max_val) = self.0.iter().max() {
+                max_val + 1
+            } else {
+                0
+            }
     }
 }
 
 impl MonoidalMorphism<usize> for FinSetMorphism {}
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct OrderPresSurj {
     preimage_card_minus_1: Vec<usize>,
+}
+
+impl<const N: usize> From<[usize; N]> for OrderPresSurj {
+    fn from(value: [usize; N]) -> Self {
+        Self {
+            preimage_card_minus_1: value.to_vec(),
+        }
+    }
 }
 
 impl HasIdentity<usize> for OrderPresSurj {
@@ -136,6 +142,7 @@ impl OrderPresSurj {
         for (cur_target, v) in self.preimage_card_minus_1.iter().enumerate() {
             answer.extend(std::iter::repeat(cur_target).take(v + 1));
         }
+
         (answer, 0)
     }
 
@@ -243,9 +250,8 @@ impl OrderPresInj {
 }
 
 fn is_surjective(v: &[usize]) -> bool {
-    let pos_max = argmax(v);
     // empty set to empty set
-    let Some(max_val) = pos_max.map(|z| v[z]) else {
+    let Some(max_val) = v.iter().max() else {
         return true;
     };
     if v.len() < max_val + 1 {
@@ -257,9 +263,8 @@ fn is_surjective(v: &[usize]) -> bool {
 }
 
 fn is_injective(v: &[usize]) -> bool {
-    let pos_max = argmax(v);
     // empty set to empty set
-    let Some(max_val) = pos_max.map(|z| v[z]) else {
+    let Some(max_val) = v.iter().max() else {
         return true;
     };
     if v.len() > max_val + 1 {
@@ -290,9 +295,7 @@ impl TryFrom<FinSetMorphism> for OrderPresSurj {
             return Err(TryFromSurjError);
         }
         if v.is_empty() {
-            return Ok(Self {
-                preimage_card_minus_1: vec![],
-            });
+            return Ok(Self::default());
         }
         let mut cur_i = 0;
         let mut count_of_cur_i = 0;
@@ -432,8 +435,7 @@ impl Composable<usize> for Decomposition {
         let ord_self = self.to_ordinary();
         let ord_other = other.to_ordinary();
         let composite = ord_self.compose(&ord_other)?;
-        let pos_max = argmax(&composite.0);
-        if let Some(max_val) = pos_max.map(|z| composite.0[z]) {
+        if let Some(max_val) = composite.0.iter().max() {
             let leftover_needed = (other_codomain - max_val - 1).max(0);
             Self::try_from((composite.0, leftover_needed)).map_err(|_| "???".into())
         } else {
@@ -487,8 +489,7 @@ impl Decomposition {
     fn to_ordinary(&self) -> FinSetMorphism {
         let wanted_codomain = self.codomain();
         let map_part: FinSetMap = (0..self.domain()).map(|z| self.apply(z)).collect();
-        let pos_max = argmax(&map_part);
-        if let Some(max_val) = pos_max.map(|z| map_part[z]) {
+        if let Some(max_val) = map_part.iter().max() {
             let leftover_needed = wanted_codomain - max_val - 1.max(0);
             (map_part, leftover_needed)
         } else {
@@ -628,15 +629,11 @@ mod test {
         use super::{FinSetMap, OrderPresSurj, TryFromSurjError};
         use crate::category::Composable;
         let mut cur_test: FinSetMap = vec![];
-        let mut cur_result = Ok(OrderPresSurj {
-            preimage_card_minus_1: vec![],
-        });
+        let mut cur_result = Ok(OrderPresSurj::default());
         assert_eq!(cur_result, OrderPresSurj::try_from((cur_test, 0)));
 
         cur_test = vec![0];
-        cur_result = Ok(OrderPresSurj {
-            preimage_card_minus_1: vec![0],
-        });
+        cur_result = Ok([0].into());
         assert_eq!(cur_result, OrderPresSurj::try_from((cur_test.clone(), 0)));
         let cur_result_unwrapped = cur_result.unwrap();
         for (n, v) in cur_test.iter().enumerate() {
@@ -659,9 +656,8 @@ mod test {
         assert_eq!(cur_result, OrderPresSurj::try_from((cur_test, 0)));
 
         cur_test = vec![0, 1, 2];
-        cur_result = Ok(OrderPresSurj {
-            preimage_card_minus_1: vec![0, 0, 0],
-        });
+
+        cur_result = Ok([0, 0, 0].into());
         assert_eq!(cur_result, OrderPresSurj::try_from((cur_test.clone(), 0)));
         let cur_result_unwrapped = cur_result.unwrap();
         for (n, v) in cur_test.iter().enumerate() {
@@ -678,9 +674,7 @@ mod test {
         assert_eq!(cur_result, OrderPresSurj::try_from((cur_test, 0)));
 
         cur_test = vec![0, 1, 1, 2, 3, 3, 3, 4];
-        cur_result = Ok(OrderPresSurj {
-            preimage_card_minus_1: vec![0, 1, 0, 2, 0],
-        });
+        cur_result = Ok([0, 1, 0, 2, 0].into());
         assert_eq!(cur_result, OrderPresSurj::try_from((cur_test.clone(), 0)));
         let cur_result_unwrapped = cur_result.unwrap();
         for (n, v) in cur_test.iter().enumerate() {
@@ -690,12 +684,8 @@ mod test {
         assert_eq!(cur_result_unwrapped.domain(), 8);
         assert_eq!(cur_result_unwrapped.codomain(), 5);
 
-        let compose_3_after = OrderPresSurj {
-            preimage_card_minus_1: vec![1, 2],
-        };
-        let compose_3_exp = OrderPresSurj {
-            preimage_card_minus_1: vec![2, 4],
-        };
+        let compose_3_after: OrderPresSurj = [1, 2].into();
+        let compose_3_exp: OrderPresSurj = [2, 4].into();
         let cur_composed_3 = cur_result_unwrapped.compose(&compose_3_after).unwrap();
         assert_eq!(cur_composed_3, compose_3_exp);
     }
@@ -907,9 +897,7 @@ mod test {
             let cur_test: FinSetMap = vec![0, 1, 1, 1, 2, 3, 4, 7, 8, 9, 11, 20, 18, 19];
             let exp_perm =
                 Permutation::try_from(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 11, 12]).unwrap();
-            let exp_surj = OrderPresSurj {
-                preimage_card_minus_1: vec![0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            };
+            let exp_surj: OrderPresSurj = [0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].into();
             let exp_inj = OrderPresInj {
                 counts_iden_unit_alternating: if leftovers > 0 {
                     vec![5, 2, 3, 1, 1, 6, 3, leftovers]
