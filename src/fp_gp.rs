@@ -7,8 +7,10 @@ use itertools::{
     Itertools,
 };
 
+type GeneratorLabel = usize;
+
 pub trait FinitelyPresentedGroup: MulAssign + One + DivAssign {
-    fn generator(n: usize) -> Self;
+    fn generator(n: GeneratorLabel) -> Self;
     fn num_generators() -> usize;
 }
 
@@ -16,7 +18,7 @@ pub struct FinitelyPresentedWords<T>
 where
     T: FinitelyPresentedGroup,
 {
-    current_word: Vec<usize>,
+    current_word: Vec<GeneratorLabel>,
     current_element: T,
     num_generators: usize,
 }
@@ -46,11 +48,11 @@ impl<T> Iterator for FinitelyPresentedWords<T>
 where
     T: FinitelyPresentedGroup + Clone,
 {
-    type Item = T;
+    type Item = (T, Vec<GeneratorLabel>);
 
     fn next(&mut self) -> Option<Self::Item> {
         let num_generators = self.num_generators;
-        let to_yield = Some(self.current_element.clone());
+        let to_yield = Some((self.current_element.clone(), self.current_word.clone()));
         if let Some(current_last) = self.current_word.pop() {
             if current_last < num_generators - 1 {
                 self.current_word.push(current_last + 1);
@@ -166,7 +168,7 @@ mod test {
         }
 
         let gen = FinitelyPresentedWords::<Z>::new();
-        for (idx, current) in gen.take(10).enumerate() {
+        for (idx, current) in gen.take(10).map(|z| z.0).enumerate() {
             assert_eq!(current.0 as usize, idx);
         }
     }
@@ -238,7 +240,7 @@ mod test {
             Z2(0, 3),
         ];
         let num_expected = expected.len();
-        for (idx, current) in gen.unique().take(num_expected).enumerate() {
+        for (idx, current) in gen.map(|z| z.0).unique().take(num_expected).enumerate() {
             assert_eq!(current, expected[idx], "on idx {}", idx);
         }
     }
@@ -283,7 +285,7 @@ mod test {
             a.clone(),
         ];
         let num_expected = expected.len();
-        for (idx, current) in gen.take(num_expected).enumerate() {
+        for (idx, current) in gen.take(num_expected).map(|z| z.0).enumerate() {
             assert_eq!(current, expected[idx], "on idx {}", idx);
         }
     }

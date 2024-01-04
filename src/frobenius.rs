@@ -186,6 +186,14 @@ where
         self.source_side_placement = self.target_side_placement;
         self.target_side_placement = temp;
     }
+
+    fn is_identity(&self) -> bool {
+        match self.op {
+            FrobeniusOperation::Identity(_) => true,
+            FrobeniusOperation::Spider(_, in_arms, out_arms) => in_arms == out_arms && in_arms == 1,
+            _ => false,
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Clone)]
@@ -255,9 +263,19 @@ where
         ));
     }
 
+    #[allow(dead_code)]
+    fn is_identity(&self) -> bool {
+        self.blocks.iter().all(|cur_block| cur_block.is_identity())
+    }
+
     fn two_layer_simplify(&mut self, _next_layer: &mut Self) -> (bool, bool, bool) {
         //todo!("Frobenius laws of two layers");
-        (false, false, false)
+        let mutations_occured = false;
+        (
+            false,//self.is_identity(),
+            false,//next_layer.is_identity(),
+            mutations_occured,
+        )
     }
 }
 
@@ -942,6 +960,7 @@ mod test {
 
     #[test]
     fn basic_typed_spiders() {
+        use crate::category::ComposableMutating;
         use super::{special_frobenius_morphism, FrobeniusMorphism, FrobeniusOperation};
         let counit_spider: FrobeniusMorphism<bool, ()> = special_frobenius_morphism(1, 0, true);
         let exp_counit_spider: FrobeniusMorphism<_, _> = FrobeniusOperation::Counit(true).into();
@@ -979,6 +998,18 @@ mod test {
         let exp_id_spider: FrobeniusMorphism<_, _> =
             FrobeniusOperation::Identity(Color::Blue).into();
         assert!(exp_id_spider != id_spider);
+
+        let zero_zero_spider: FrobeniusMorphism<Color, ()> =
+            special_frobenius_morphism(0, 0, Color::Green);
+        let mut exp_zero_zero_spider: FrobeniusMorphism<_, _> =
+            FrobeniusOperation::Unit(Color::Green).into();
+        let composition_worked = exp_zero_zero_spider.compose(FrobeniusOperation::Counit(Color::Green).into());
+        if let Ok(_) = composition_worked {
+            assert!(exp_zero_zero_spider == zero_zero_spider);
+        } else {
+            assert!(false, "Unit and counit do compose");
+        }
+        
     }
 
     #[test]

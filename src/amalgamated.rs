@@ -922,13 +922,13 @@ mod test {
 
         let mut psl2z_iter = FinitelyPresentedWords::<PSL2Z>::new();
         let should_iden = psl2z_iter.next();
-        assert!(should_iden.is_some_and(|g| g.is_one()));
+        assert!(should_iden.is_some_and(|g| g.0.is_one()));
         let should_s = psl2z_iter.next();
-        assert!(should_s.is_some_and(|g| g == s));
+        assert!(should_s.is_some_and(|g| g.0 == s));
         let should_st = psl2z_iter.next();
-        assert!(should_st.is_some_and(|g| g == st));
+        assert!(should_st.is_some_and(|g| g.0 == st));
         let should_ss = psl2z_iter.next();
-        assert!(should_ss.is_some_and(|g| g == s.clone() * s));
+        assert!(should_ss.is_some_and(|g| g.0 == s.clone() * s));
         let mut farey = (1, 0);
         s_action(&Z2Part(true), &mut farey);
         assert_eq!(farey, (0, 1));
@@ -940,7 +940,7 @@ mod test {
         assert_eq!(farey, (0, -1));
         s_action(&Z2Part(true), &mut farey);
         assert_eq!(farey, (1, 0));
-        for temp in psl2z_iter.take(10) {
+        for temp in psl2z_iter.take(10).map(|z| z.0) {
             temp.right_act(s_action, st_action, &mut farey);
         }
     }

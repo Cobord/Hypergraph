@@ -64,6 +64,42 @@ where
         self.gens.iter().map(|z| z.1).collect_vec()
     }
 
+    fn has_obvious_reductions(&self, where_to_look: Option<Vec<usize>>) -> bool {
+        if let Some(mut real_where_to_look) = where_to_look {
+            real_where_to_look.sort();
+            real_where_to_look.dedup();
+            while let Some(cur_look) = real_where_to_look.pop() {
+                if cur_look >= self.as_word.len() {
+                    continue;
+                }
+                let x = self.as_word[cur_look];
+                if x.1 == 0 {
+                    return true;
+                }
+                if cur_look + 1 >= self.as_word.len() {
+                    continue;
+                }
+                let y = self.as_word[cur_look + 1];
+                if y.1 == 0 {
+                    return true;
+                }
+                #[allow(clippy::if_same_then_else)]
+                if x.0 == y.0 {
+                    return true;
+                } else if x.0 > y.0
+                    && (self.commuting_gens.contains(&(y.0, x.0))
+                        || self.commuting_gens.contains(&(x.0, y.0)))
+                {
+                    return true;
+                }
+            }
+            false
+        } else {
+            let real_where_to_look = (0..self.as_word.len() - 1).collect_vec();
+            self.has_obvious_reductions(Some(real_where_to_look))
+        }
+    }
+
     #[allow(dead_code)]
     fn condense_word_full(&mut self, where_to_look: Option<Vec<usize>>, max_passes: i8) {
         let mut next_batch = self.condense_word(where_to_look);
@@ -243,11 +279,34 @@ where
         }
         let word_len = self.as_word.len();
         let last_step: (GeneratorLabel, GeneratorPower) = self.as_word[word_len - 1];
-        if let Some(last_step_order) = self.gens[0].1 {
-            if last_step.0 < last_step_order - 1 {
+        if let Some(last_step_order) = self.gens[last_step.0].1 {
+            if last_step.1 < last_step_order - 1 {
                 self.as_word[word_len - 1].1 += 1;
                 self.underlying *= self.gens[last_step.0].0.clone();
                 Some((self.underlying.clone(), self.as_word.clone()))
+            } else if last_step.0 < self.gens.len() - 1 {
+                self.as_word[word_len - 1] = (last_step.0 + 1, 1);
+                self.underlying *= self.gens[last_step.0].0.clone();
+                self.underlying *= self.gens[last_step.0 + 1].0.clone();
+                if !self.has_obvious_reductions(None) {
+                    Some((self.underlying.clone(), self.as_word.clone()))
+                } else {
+                    let mut found_via_increment = false;
+                    for increment in 2..self.gens.len() - last_step.0 {
+                        self.as_word[word_len - 1] = (last_step.0 + increment, 1);
+                        self.underlying /= self.gens[last_step.0 + increment - 1].0.clone();
+                        self.underlying *= self.gens[last_step.0 + increment].0.clone();
+                        if !self.has_obvious_reductions(None) {
+                            found_via_increment = true;
+                            break;
+                        }
+                    }
+                    if found_via_increment {
+                        Some((self.underlying.clone(), self.as_word.clone()))
+                    } else {
+                        todo!();
+                    }
+                }
             } else {
                 todo!();
             }
@@ -356,6 +415,17 @@ mod test {
         assert_eq!(dummy.as_word, vec![(1, 1), (0, 1), (1, 2), (0, 1)]);
         dummy /= dummy.clone();
         assert_eq!(dummy.as_word, vec![]);
-        for (_as_s24, _as_word) in iden.take(0) {}
+        for (which_iter, (as_s24, as_word)) in iden.take(22 + 4 + 1).enumerate() {
+            if which_iter + 1 < 23 {
+                assert_eq!(as_word, vec![(0, which_iter + 1)]);
+            } else if which_iter + 1 < 23 + 4 {
+                assert_eq!(as_word, vec![(1, (which_iter - 22) + 1)]);
+            } else {
+                assert_eq!(as_word, vec![(2, (which_iter - 22 - 4) + 1)]);
+            }
+            if which_iter == 0 {
+                assert_eq!(as_s24, gen1);
+            }
+        }
     }
 }
