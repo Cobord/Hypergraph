@@ -44,11 +44,11 @@ impl Pair {
         self.map(|v| if v < source { v + target } else { v - source })
     }
 
-    pub fn sort(&self) -> Self {
+    pub const fn sort(&self) -> Self {
         Self::sorted(self.0, self.1)
     }
 
-    pub fn sorted(x: usize, y: usize) -> Self {
+    pub const fn sorted(x: usize, y: usize) -> Self {
         if x < y {
             Self(x, y)
         } else {
@@ -56,7 +56,7 @@ impl Pair {
         }
     }
 
-    pub fn contains(&self, x: usize) -> bool {
+    pub const fn contains(&self, x: usize) -> bool {
         (x < self.0 && x > self.1) || (x < self.1 && x > self.0)
     }
 }

@@ -91,11 +91,11 @@ where
         Self::new(vec![], vec![], vec![], vec![], vec![])
     }
 
-    pub fn left_names(&self) -> &Vec<LeftPortName> {
+    pub const fn left_names(&self) -> &Vec<LeftPortName> {
         &self.left_names
     }
 
-    pub fn right_names(&self) -> &Vec<RightPortName> {
+    pub const fn right_names(&self) -> &Vec<RightPortName> {
         &self.right_names
     }
 

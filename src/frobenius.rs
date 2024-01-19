@@ -272,8 +272,8 @@ where
         //todo!("Frobenius laws of two layers");
         let mutations_occured = false;
         (
-            false,//self.is_identity(),
-            false,//next_layer.is_identity(),
+            false, //self.is_identity(),
+            false, //next_layer.is_identity(),
             mutations_occured,
         )
     }
@@ -960,8 +960,8 @@ mod test {
 
     #[test]
     fn basic_typed_spiders() {
-        use crate::category::ComposableMutating;
         use super::{special_frobenius_morphism, FrobeniusMorphism, FrobeniusOperation};
+        use crate::category::ComposableMutating;
         let counit_spider: FrobeniusMorphism<bool, ()> = special_frobenius_morphism(1, 0, true);
         let exp_counit_spider: FrobeniusMorphism<_, _> = FrobeniusOperation::Counit(true).into();
         assert!(exp_counit_spider == counit_spider);
@@ -1003,13 +1003,13 @@ mod test {
             special_frobenius_morphism(0, 0, Color::Green);
         let mut exp_zero_zero_spider: FrobeniusMorphism<_, _> =
             FrobeniusOperation::Unit(Color::Green).into();
-        let composition_worked = exp_zero_zero_spider.compose(FrobeniusOperation::Counit(Color::Green).into());
+        let composition_worked =
+            exp_zero_zero_spider.compose(FrobeniusOperation::Counit(Color::Green).into());
         if let Ok(_) = composition_worked {
             assert!(exp_zero_zero_spider == zero_zero_spider);
         } else {
             assert!(false, "Unit and counit do compose");
         }
-        
     }
 
     #[test]

@@ -497,7 +497,7 @@ impl Decomposition {
         }
     }
 
-    pub fn get_parts(&self) -> (&Permutation, &OrderPresSurj, &OrderPresInj) {
+    pub const fn get_parts(&self) -> (&Permutation, &OrderPresSurj, &OrderPresInj) {
         (
             &self.permutation_part,
             &self.order_preserving_surjection,
