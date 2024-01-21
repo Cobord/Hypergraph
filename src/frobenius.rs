@@ -711,7 +711,8 @@ where
 
     let mut surj_part_frob = FrobeniusMorphism::<Lambda, BlackBoxLabel>::new();
     let mut after_perm_number = 0;
-    for (_n, c) in surj_part.preimage_cardinalities().iter().enumerate() {
+    #[allow(clippy::unused_enumerate_index)]
+    for c in surj_part.preimage_cardinalities().iter() {
         let after_perm_types = &answer.codomain()[after_perm_number..after_perm_number + c];
         assert!(after_perm_types.iter().all(|l| *l == after_perm_types[0]));
         let cur_part = special_frobenius_morphism::<_, BlackBoxLabel>(*c, 1, after_perm_types[0]);

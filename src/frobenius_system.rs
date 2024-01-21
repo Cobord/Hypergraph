@@ -98,7 +98,7 @@ where
                     .simple_pieces
                     .get(bb)
                     .ok_or(format!("No filling for {:?}", bb.clone()).into())
-                    .map(|z| z.clone());
+                    .cloned();
                 if simple_answer.is_err() {
                     self.interpret_nomut(Some(bb.clone()))
                 } else {
