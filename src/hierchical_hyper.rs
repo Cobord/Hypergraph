@@ -3,7 +3,9 @@
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 
+use either::Either;
 use petgraph::stable_graph::{NodeIndex, StableDiGraph};
+use petgraph::Graph;
 
 enum HierarchicalHypergraphError<VLabel, ELabel> {
     VertexPresent(VLabel),
@@ -18,13 +20,16 @@ enum HierarchicalHypergraphError<VLabel, ELabel> {
 // TODO change to less overkill version
 type MyTree<T> = StableDiGraph<T, ()>;
 
+type HyperedgeSide<T> = Vec<T>;
+
 struct HierarchicalHypergraph<VType, EType, VLabel, ELabel>
 where
     VType: PartialEq + Eq + Hash + Clone,
     EType: PartialEq + Eq + Hash + Clone,
 {
     vertices: HashSet<VType>,
-    hyper_edges: HashMap<EType, (HashSet<VType>, HashSet<VType>)>,
+    hyper_edges: HashMap<EType, (HyperedgeSide<VType>, HyperedgeSide<VType>)>,
+    hyper_edges_src_sink: HashMap<EType, (HyperedgeSide<VType>,HyperedgeSide<VType>)>,
     v_label: fn(&VType) -> VLabel,
     e_label: fn(&EType) -> Option<ELabel>,
     constituent_hypergraphs: MyTree<Option<EType>>,
@@ -49,6 +54,7 @@ where
         Self {
             vertices: HashSet::new(),
             hyper_edges: HashMap::new(),
+            hyper_edges_src_sink: HashMap::new(),
             v_label,
             e_label,
             constituent_hypergraphs,
@@ -169,6 +175,40 @@ where
     }
 
     #[allow(dead_code)]
+    fn add_nullary_hyperedge(
+        &mut self,
+        new_hyperedge: EType,
+        parent_hyperedge: Option<EType>,
+    ) -> Result<(), HierarchicalHypergraphError<VLabel, ELabel>> {
+        if self.hyper_edges.contains_key(&new_hyperedge) {
+            let present_label = (self.e_label)(&new_hyperedge);
+            return Err(HierarchicalHypergraphError::<_, _>::EdgePresent(
+                present_label,
+            ));
+        }
+        if let Some(parent_hyperedge_loc) = self.hyperedge_to_constituent.get(&parent_hyperedge) {
+            self.hyper_edges
+                .insert(new_hyperedge.clone(), (Vec::new(), Vec::new()));
+            self.hyper_edges_src_sink
+                .insert(new_hyperedge.clone(), (Vec::new(), Vec::new()));
+            let new_idx = self
+                .constituent_hypergraphs
+                .add_node(Some(new_hyperedge.clone()));
+            self.constituent_hypergraphs
+                .add_edge(*parent_hyperedge_loc, new_idx, ());
+            self.hyperedge_to_constituent
+                .insert(Some(new_hyperedge), new_idx);
+            self.constituent_to_vertices.insert(new_idx, HashSet::new());
+            Ok(())
+        } else {
+            let missing_label = parent_hyperedge.and_then(|z| ((self.e_label)(&z)));
+            Err(HierarchicalHypergraphError::<_, _>::EdgeNotPresent(
+                missing_label,
+            ))
+        }
+    }
+
+    #[allow(dead_code)]
     fn add_hyperedge(
         &mut self,
         new_hyperedge: EType,
@@ -181,7 +221,7 @@ where
                 present_label,
             ));
         }
-        let mut real_sources = HashSet::with_capacity(sources.len());
+        let mut real_sources = Vec::with_capacity(sources.len());
         let mut common_component: Option<(NodeIndex, VLabel)> = None;
         for cur_source in sources {
             self.vertices.get(&cur_source).ok_or_else(|| {
@@ -217,9 +257,9 @@ where
                     );
                 }
             }
-            real_sources.insert(cur_source);
+            real_sources.push(cur_source);
         }
-        let mut real_targets = HashSet::with_capacity(targets.len());
+        let mut real_targets = Vec::with_capacity(targets.len());
         for cur_target in targets {
             self.vertices.get(&cur_target).ok_or_else(|| {
                 let missing_label = (self.v_label)(&cur_target);
@@ -254,7 +294,7 @@ where
                     );
                 }
             }
-            real_targets.insert(cur_target);
+            real_targets.push(cur_target);
         }
         if let Some((x, _)) = common_component {
             self.hyper_edges
@@ -356,7 +396,26 @@ where
         }
         Ok(())
     }
+
+    fn outermost_line_graph(&self, _keep_nullaries: bool) -> Graph<Either<VType, EType>, ()> {
+        todo!()
+    }
+
+    #[allow(dead_code)]
+    fn is_connected(&self) -> bool {
+        petgraph::algo::connected_components(&self.outermost_line_graph(false)) == 1
+    }
+
+    #[allow(dead_code)]
+    fn is_hypernet(&self) -> bool {
+        todo!()
+    }
 }
+
+// TODO compose with above and the L_a on each of the EType with e_label None
+// corresponds to some F equiv (L_a -o _) in order to give the correct in/outputs
+// from the ones that are determined purely from inside that hyperedge
+//struct WellTypedHierarchicalHypernet {}
 
 mod test_setup {
     #[derive(PartialEq, Eq, Hash, Clone)]
@@ -438,7 +497,7 @@ mod test {
         assert!(valid.is_ok());
         valid = example.add_hyperedge(
             EdgeLabel::EV,
-            [NodeLabels::B, NodeLabels::B2C(false)].into_iter(),
+            [NodeLabels::B2C(false), NodeLabels::B].into_iter(),
             [NodeLabels::C].into_iter(),
         );
         assert!(valid.is_ok());
@@ -488,7 +547,7 @@ mod test {
         assert!(valid.is_ok());
         valid = example_black.add_hyperedge(
             EdgeLabel::EV,
-            [NodeLabels::B, NodeLabels::B2C(false)].into_iter(),
+            [NodeLabels::B2C(false), NodeLabels::B].into_iter(),
             [NodeLabels::C].into_iter(),
         );
         assert!(valid.is_ok());
@@ -626,5 +685,21 @@ mod test {
         assert!(example.vertices_check());
         assert!(example.hyperedge_check());
         assert!(example.hyperedge_vertices_check());
+
+        assert!(
+            example.hyper_edges.get(&EdgeLabel::Black)
+                == Some(&(vec![NodeLabels::A(true)], vec![NodeLabels::B2C(true)]))
+        );
+        assert!(
+            example.hyper_edges.get(&EdgeLabel::EV)
+                == Some(&(
+                    vec![NodeLabels::B2C(false), NodeLabels::B],
+                    vec![NodeLabels::C]
+                ))
+        );
+        assert!(
+            example.hyper_edges.get(&EdgeLabel::F)
+                == Some(&(vec![NodeLabels::A(false)], vec![NodeLabels::B2C(false)]))
+        );
     }
 }
