@@ -291,6 +291,11 @@ where
                 if !self.has_obvious_reductions(None) {
                     Some((self.underlying.clone(), self.as_word.clone()))
                 } else {
+                    /*
+                    there was an obvious reduction, so this group element was covered by a shorter word
+                    on an earlier iteration
+                    first try incrementing the last generator more instead of just by 1
+                    */
                     let mut found_via_increment = false;
                     for increment in 2..self.gens.len() - last_step.0 {
                         self.as_word[word_len - 1] = (last_step.0 + increment, 1);
@@ -304,13 +309,14 @@ where
                     if found_via_increment {
                         Some((self.underlying.clone(), self.as_word.clone()))
                     } else {
-                        todo!();
+                        todo!("Next group element not found by just incrementing last part. They were all covered by earlier iterations");
                     }
                 }
             } else {
-                todo!();
+                todo!("The last step is the last generator and we are at it's order. What word to try next?");
             }
         } else {
+            // last step has infinite order, just keep incrementing it's power
             self.as_word[word_len - 1].1 += 1;
             self.underlying *= self.gens[last_step.0].0.clone();
             Some((self.underlying.clone(), self.as_word.clone()))
