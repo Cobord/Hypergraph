@@ -22,23 +22,25 @@ type MyTree<T> = StableDiGraph<T, ()>;
 
 type HyperedgeSide<T> = Vec<T>;
 
-struct HierarchicalHypergraph<VType, EType, VLabel, ELabel>
+struct HierarchicalHypergraph<VType, EType, VLabel, ELabel, LabelAux>
 where
     VType: PartialEq + Eq + Hash + Clone,
     EType: PartialEq + Eq + Hash + Clone,
 {
     vertices: HashSet<VType>,
     hyper_edges: HashMap<EType, (HyperedgeSide<VType>, HyperedgeSide<VType>)>,
-    hyper_edges_src_sink: HashMap<EType, (HyperedgeSide<VType>,HyperedgeSide<VType>)>,
-    v_label: fn(&VType) -> VLabel,
-    e_label: fn(&EType) -> Option<ELabel>,
+    hyper_edges_src_sink: HashMap<EType, (HyperedgeSide<VType>, HyperedgeSide<VType>)>,
+    v_label: fn(&VType, &LabelAux) -> VLabel,
+    e_label: fn(&EType, &LabelAux) -> Option<ELabel>,
     constituent_hypergraphs: MyTree<Option<EType>>,
     hyperedge_to_constituent: HashMap<Option<EType>, NodeIndex>,
     vertex_to_constituent: HashMap<VType, NodeIndex>,
     constituent_to_vertices: HashMap<NodeIndex, HashSet<VType>>,
+    label_aux: LabelAux,
 }
 
-impl<VType, EType, VLabel, ELabel> HierarchicalHypergraph<VType, EType, VLabel, ELabel>
+impl<VType, EType, VLabel, ELabel, LabelAux>
+    HierarchicalHypergraph<VType, EType, VLabel, ELabel, LabelAux>
 where
     VType: PartialEq + Eq + Hash + Clone,
     EType: PartialEq + Eq + Hash + Clone,
@@ -46,7 +48,11 @@ where
     ELabel: Clone,
 {
     #[allow(dead_code)]
-    fn new(v_label: fn(&VType) -> VLabel, e_label: fn(&EType) -> Option<ELabel>) -> Self {
+    fn new(
+        v_label: fn(&VType, &LabelAux) -> VLabel,
+        e_label: fn(&EType, &LabelAux) -> Option<ELabel>,
+        label_aux: LabelAux,
+    ) -> Self {
         let mut constituent_hypergraphs = StableDiGraph::with_capacity(1, 0);
         let top_node = constituent_hypergraphs.add_node(None);
         let mut hyperedge_to_constituent = HashMap::new();
@@ -61,6 +67,7 @@ where
             hyperedge_to_constituent,
             vertex_to_constituent: HashMap::new(),
             constituent_to_vertices: HashMap::new(),
+            label_aux,
         }
     }
 
@@ -149,7 +156,7 @@ where
         parent_hyper_edge: Option<EType>,
     ) -> Result<(), HierarchicalHypergraphError<VLabel, ELabel>> {
         if self.vertices.contains(&new_vertex) {
-            let present_label = (self.v_label)(&new_vertex);
+            let present_label = (self.v_label)(&new_vertex, &self.label_aux);
             return Err(HierarchicalHypergraphError::<_, ELabel>::VertexPresent(
                 present_label,
             ));
@@ -166,8 +173,9 @@ where
             Ok(())
         } else {
             // that black box is not actually present
-            let missing_edge_label = parent_hyper_edge
-                .and_then(|real_parent_hyper_edge| (self.e_label)(&real_parent_hyper_edge));
+            let missing_edge_label = parent_hyper_edge.and_then(|real_parent_hyper_edge| {
+                (self.e_label)(&real_parent_hyper_edge, &self.label_aux)
+            });
             Err(HierarchicalHypergraphError::<_, _>::EdgeNotPresent(
                 missing_edge_label,
             ))
@@ -181,7 +189,7 @@ where
         parent_hyperedge: Option<EType>,
     ) -> Result<(), HierarchicalHypergraphError<VLabel, ELabel>> {
         if self.hyper_edges.contains_key(&new_hyperedge) {
-            let present_label = (self.e_label)(&new_hyperedge);
+            let present_label = (self.e_label)(&new_hyperedge, &self.label_aux);
             return Err(HierarchicalHypergraphError::<_, _>::EdgePresent(
                 present_label,
             ));
@@ -201,7 +209,8 @@ where
             self.constituent_to_vertices.insert(new_idx, HashSet::new());
             Ok(())
         } else {
-            let missing_label = parent_hyperedge.and_then(|z| ((self.e_label)(&z)));
+            let missing_label =
+                parent_hyperedge.and_then(|z| ((self.e_label)(&z, &self.label_aux)));
             Err(HierarchicalHypergraphError::<_, _>::EdgeNotPresent(
                 missing_label,
             ))
@@ -216,7 +225,7 @@ where
         targets: impl Iterator<Item = VType> + ExactSizeIterator,
     ) -> Result<(), HierarchicalHypergraphError<VLabel, ELabel>> {
         if self.hyper_edges.contains_key(&new_hyperedge) {
-            let present_label = (self.e_label)(&new_hyperedge);
+            let present_label = (self.e_label)(&new_hyperedge, &self.label_aux);
             return Err(HierarchicalHypergraphError::<_, _>::EdgePresent(
                 present_label,
             ));
@@ -225,7 +234,7 @@ where
         let mut common_component: Option<(NodeIndex, VLabel)> = None;
         for cur_source in sources {
             self.vertices.get(&cur_source).ok_or_else(|| {
-                let missing_label = (self.v_label)(&cur_source);
+                let missing_label = (self.v_label)(&cur_source, &self.label_aux);
                 HierarchicalHypergraphError::<_, ELabel>::VertexNotPresent(missing_label)
             })?;
             if common_component.is_none() {
@@ -234,10 +243,10 @@ where
                     .get(&cur_source)
                     .copied()
                     .ok_or_else(|| {
-                        let missing_label = (self.v_label)(&cur_source);
+                        let missing_label = (self.v_label)(&cur_source, &self.label_aux);
                         HierarchicalHypergraphError::<_, ELabel>::VertexNotPresent(missing_label)
                     })?;
-                let my_first_vertex_label = (self.v_label)(&cur_source);
+                let my_first_vertex_label = (self.v_label)(&cur_source, &self.label_aux);
                 common_component = Some((component_idx, my_first_vertex_label));
             } else if let Some((component_idx, ref my_first_vertex_label)) = common_component {
                 if !(self
@@ -246,8 +255,8 @@ where
                     .copied()
                     .is_some_and(|z| z == component_idx))
                 {
-                    let edge_label = (self.e_label)(&new_hyperedge);
-                    let cur_vertex_label = (self.v_label)(&cur_source);
+                    let edge_label = (self.e_label)(&new_hyperedge, &self.label_aux);
+                    let cur_vertex_label = (self.v_label)(&cur_source, &self.label_aux);
                     return Err(
                         HierarchicalHypergraphError::<_, ELabel>::InconsistentComponents(
                             edge_label,
@@ -262,7 +271,7 @@ where
         let mut real_targets = Vec::with_capacity(targets.len());
         for cur_target in targets {
             self.vertices.get(&cur_target).ok_or_else(|| {
-                let missing_label = (self.v_label)(&cur_target);
+                let missing_label = (self.v_label)(&cur_target, &self.label_aux);
                 HierarchicalHypergraphError::<_, ELabel>::VertexNotPresent(missing_label)
             })?;
             if common_component.is_none() {
@@ -271,10 +280,10 @@ where
                     .get(&cur_target)
                     .copied()
                     .ok_or_else(|| {
-                        let missing_label = (self.v_label)(&cur_target);
+                        let missing_label = (self.v_label)(&cur_target, &self.label_aux);
                         HierarchicalHypergraphError::<_, ELabel>::VertexNotPresent(missing_label)
                     })?;
-                let my_first_vertex_label = (self.v_label)(&cur_target);
+                let my_first_vertex_label = (self.v_label)(&cur_target, &self.label_aux);
                 common_component = Some((component_idx, my_first_vertex_label));
             } else if let Some((component_idx, ref my_first_vertex_label)) = common_component {
                 if !(self
@@ -283,8 +292,8 @@ where
                     .copied()
                     .is_some_and(|z| z == component_idx))
                 {
-                    let edge_label = (self.e_label)(&new_hyperedge);
-                    let cur_vertex_label = (self.v_label)(&cur_target);
+                    let edge_label = (self.e_label)(&new_hyperedge, &self.label_aux);
+                    let cur_vertex_label = (self.v_label)(&cur_target, &self.label_aux);
                     return Err(
                         HierarchicalHypergraphError::<_, ELabel>::InconsistentComponents(
                             edge_label,
@@ -308,7 +317,7 @@ where
             self.constituent_to_vertices.insert(new_idx, HashSet::new());
             Ok(())
         } else {
-            let edge_label = (self.e_label)(&new_hyperedge);
+            let edge_label = (self.e_label)(&new_hyperedge, &self.label_aux);
             Err(HierarchicalHypergraphError::<_, _>::UnconnectedHyperedge(
                 edge_label,
             ))
@@ -319,19 +328,22 @@ where
     fn drain_internals(
         &mut self,
         which_hyperedge: EType,
-    ) -> Result<Self, HierarchicalHypergraphError<VLabel, ELabel>> {
+    ) -> Result<Self, HierarchicalHypergraphError<VLabel, ELabel>>
+    where
+        LabelAux: Clone,
+    {
         #[allow(unused_mut, unused_variables)]
-        let mut drained = Self::new(self.v_label, self.e_label);
+        let mut drained = Self::new(self.v_label, self.e_label, self.label_aux.clone());
         if !self
             .hyperedge_to_constituent
             .contains_key(&Some(which_hyperedge.clone()))
         {
-            let missing_edge_label = (self.e_label)(&which_hyperedge);
+            let missing_edge_label = (self.e_label)(&which_hyperedge, &self.label_aux);
             return Err(HierarchicalHypergraphError::<_, _>::EdgeNotPresent(
                 missing_edge_label,
             ));
         }
-        todo!()
+        todo!("drain a hierarchical hypergraph")
     }
 
     #[allow(dead_code)]
@@ -350,7 +362,7 @@ where
             .ok_or_else(|| {
                 let missing_edge_label = which_hyperedge_other
                     .clone()
-                    .and_then(|z| (other.e_label)(&z));
+                    .and_then(|z| (other.e_label)(&z, &self.label_aux));
                 HierarchicalHypergraphError::<_, _>::EdgeNotPresent(missing_edge_label)
             })?;
         let vertices_on_this_layer = other
@@ -359,7 +371,7 @@ where
             .ok_or_else(|| {
                 let missing_edge_label = which_hyperedge_other
                     .clone()
-                    .and_then(|z| (other.e_label)(&z));
+                    .and_then(|z| (other.e_label)(&z, &self.label_aux));
                 HierarchicalHypergraphError::<_, _>::EdgeNotPresent(missing_edge_label)
             })?;
         for cur_vertex in vertices_on_this_layer {
@@ -388,7 +400,7 @@ where
             } else {
                 let missing_edge_label = which_hyperedge_other
                     .clone()
-                    .and_then(|z| (other.e_label)(&z));
+                    .and_then(|z| (other.e_label)(&z, &self.label_aux));
                 return Err(HierarchicalHypergraphError::<_, _>::EdgeNotPresent(
                     missing_edge_label,
                 ));
@@ -397,8 +409,59 @@ where
         Ok(())
     }
 
-    fn outermost_line_graph(&self, _keep_nullaries: bool) -> Graph<Either<VType, EType>, ()> {
-        todo!()
+    fn component_line_graph(
+        &self,
+        keep_nullaries: bool,
+        real_constituent: &NodeIndex,
+    ) -> Graph<Either<VType, EType>, ()> {
+        let mut to_return = Graph::new();
+        let all_vertices = self.constituent_to_vertices.get(real_constituent);
+        let mut vert_to_idx = HashMap::new();
+        for v in all_vertices.unwrap_or(&HashSet::new()) {
+            let cur_idx = to_return.add_node(either::Left(v.clone()));
+            vert_to_idx.insert(v.clone(), cur_idx);
+        }
+        let child_hyperedges = self.constituent_hypergraphs.neighbors(*real_constituent);
+        for cur_hyper in child_hyperedges {
+            let cur_hyperedge = self.constituent_hypergraphs.node_weight(cur_hyper).expect(
+                "
+                    Already checked that it exists as a node",
+            );
+            if let Some(x) = cur_hyperedge {
+                if let Some((src_conn, tgt_conn)) = self.hyper_edges.get(x) {
+                    let nullary = src_conn.is_empty() && tgt_conn.is_empty();
+                    if nullary && keep_nullaries {
+                        to_return.add_node(either::Right(x.clone()));
+                    } else if !nullary {
+                        let hyperedge_idx = to_return.add_node(either::Right(x.clone()));
+                        for src in src_conn {
+                            let src_idx = vert_to_idx.get(src).expect("All the vertices have been added to the graph already. So any src/tgt of the hyperedges have node index already.");
+                            to_return.add_edge(*src_idx, hyperedge_idx, ());
+                        }
+                        for tgt in tgt_conn {
+                            let tgt_idx = vert_to_idx.get(tgt).expect("All the vertices have been added to the graph already. So any src/tgt of the hyperedges have node index already.");
+                            to_return.add_edge(hyperedge_idx, *tgt_idx, ());
+                        }
+                    }
+                } else {
+                    unreachable!("Every hyperedge in the graph has it's (possibly empty) sources and targets");
+                }
+            } else {
+                unreachable!("The None hyperedge was the parent, it is not a neighbor of anything");
+            }
+        }
+        to_return
+    }
+
+    fn outermost_line_graph(&self, keep_nullaries: bool) -> Graph<Either<VType, EType>, ()> {
+        let which_constituent = self.hyperedge_to_constituent.get(&None);
+        if let Some(real_constituent) = which_constituent {
+            self.component_line_graph(keep_nullaries, real_constituent)
+        } else {
+            unreachable!(
+                "There is at least the outermost hyperedge which was present since construction"
+            );
+        }
     }
 
     #[allow(dead_code)]
@@ -406,9 +469,80 @@ where
         petgraph::algo::connected_components(&self.outermost_line_graph(false)) == 1
     }
 
+    fn in_out_isolated(&self, which_hyperedge: Option<EType>) -> Option<[Vec<VType>; 3]> {
+        let which_constituent = self.hyperedge_to_constituent.get(&which_hyperedge)?;
+        Some(self.in_out_isolated_helper(which_constituent))
+    }
+
+    fn in_out_isolated_helper(&self, which_constituent: &NodeIndex) -> [Vec<VType>; 3] {
+        let graph = self.component_line_graph(false, which_constituent);
+        let mut in_idces = graph
+            .node_indices()
+            .filter(|z| {
+                graph[*z].is_left()
+                    && graph
+                        .neighbors_directed(*z, petgraph::Direction::Incoming)
+                        .count()
+                        == 0
+            })
+            .collect::<Vec<_>>();
+        let mut out_idces = graph
+            .node_indices()
+            .filter(|z| {
+                graph[*z].is_left()
+                    && graph
+                        .neighbors_directed(*z, petgraph::Direction::Outgoing)
+                        .count()
+                        == 0
+            })
+            .collect::<Vec<_>>();
+        let mut isolated_vs =
+            Vec::with_capacity(std::cmp::min(in_idces.len(), out_idces.len()) >> 2);
+        for cur_in in &in_idces {
+            if out_idces.contains(cur_in) {
+                isolated_vs.push(*cur_in);
+            }
+        }
+        in_idces.retain(|z| !out_idces.contains(z));
+        out_idces.retain(|z| !in_idces.contains(z));
+        [in_idces, out_idces, isolated_vs].map(|idx_list| {
+            idx_list
+                .into_iter()
+                .map(|idx| {
+                    graph
+                        .node_weight(idx)
+                        .expect("They are all indices in graph by construction")
+                        .to_owned()
+                })
+                .map(|z| z.left().expect("Already chose only the left"))
+                .collect()
+        })
+    }
+
     #[allow(dead_code)]
-    fn is_hypernet(&self) -> bool {
-        todo!()
+    fn is_hypernetable(&self) -> [bool; 5] {
+        todo!("
+        - Acyclic,
+        - all vertices occur as a source for at most one hyperedge (even with multiplicity),
+        - all vertices occur as a target for at most one hyperedge (even with multiplicity),
+        - labels of hyperedge cur_e has (self.e_label)(&cur_e,self.label_aux)=Some(_) -> the sub(hierarchical hypergraph) is empty
+        - labels of hyperedge cur_e has (self.e_label)(&cur_e,self.label_aux)=Some(_) <- the sub(hierarchical hypergraph) is empty
+        ");
+        /*
+        to turn into a hypernet need to give the total ordering on the outermost
+        inputs and outputs (that is one that is sure to effectively have a None label)
+        that is to say those vertices in the outermost layer which only occur as sources if at all
+        or only occur as targets if at all
+        (the ones that don't occur on any hyperedge are both inputs and outputs, they are isolated vertices)
+        */
+        /*
+        let is_acyclic = false;
+        let any_vertex_multisource = false;
+        let any_vertex_multitarget = false;
+        let all_some_labelled_are_empty = false;
+        let all_none_labelled_are_nonempty = false;
+        [is_acyclic, !any_vertex_multisource, !any_vertex_multitarget, all_some_labelled_are_empty, all_none_labelled_are_nonempty]
+        */
     }
 }
 
@@ -426,7 +560,7 @@ mod test_setup {
         C,
     }
     #[allow(dead_code)]
-    pub fn v_label(x: &NodeLabels) -> String {
+    pub fn v_label(x: &NodeLabels, _: &()) -> String {
         match x {
             NodeLabels::A(_) => "A".to_string(),
             NodeLabels::B2C(_) => "B -o C".to_string(),
@@ -441,7 +575,7 @@ mod test_setup {
         Black,
     }
     #[allow(dead_code)]
-    pub fn e_label(x: &EdgeLabel) -> Option<String> {
+    pub fn e_label(x: &EdgeLabel, _: &()) -> Option<String> {
         match x {
             EdgeLabel::F => Some("f".to_string()),
             EdgeLabel::EV => Some("ev".to_string()),
@@ -462,7 +596,7 @@ mod test {
         use super::HierarchicalHypergraph;
         use crate::assert_err;
 
-        let mut example = HierarchicalHypergraph::new(v_label, e_label);
+        let mut example = HierarchicalHypergraph::new(v_label, e_label, ());
         let mut valid;
         valid = example.add_vertex(NodeLabels::A(true), None);
         assert!(valid.is_ok());
@@ -511,7 +645,7 @@ mod test {
         use super::HierarchicalHypergraph;
         use crate::assert_err;
 
-        let mut example = HierarchicalHypergraph::new(v_label, e_label);
+        let mut example = HierarchicalHypergraph::new(v_label, e_label, ());
         let mut valid;
         valid = example.add_vertex(NodeLabels::A(true), None);
         assert!(valid.is_ok());
@@ -530,7 +664,7 @@ mod test {
         assert!(valid.is_ok());
         assert!(example.vertices_check());
 
-        let mut example_black = HierarchicalHypergraph::new(v_label, e_label);
+        let mut example_black = HierarchicalHypergraph::new(v_label, e_label, ());
         valid = example_black.add_vertex(NodeLabels::A(false), None);
         assert!(valid.is_ok());
         valid = example_black.add_vertex(NodeLabels::B, None);
@@ -560,7 +694,7 @@ mod test {
 
     #[allow(dead_code)]
     fn check_paper_example(
-        example: &HierarchicalHypergraph<NodeLabels, EdgeLabel, String, String>,
+        example: &HierarchicalHypergraph<NodeLabels, EdgeLabel, String, String, ()>,
     ) {
         let outside_idx = *example.hyperedge_to_constituent.get(&None).unwrap();
         let f_idx = *example
@@ -701,5 +835,92 @@ mod test {
             example.hyper_edges.get(&EdgeLabel::F)
                 == Some(&(vec![NodeLabels::A(false)], vec![NodeLabels::B2C(false)]))
         );
+
+        let outer_graph = example.outermost_line_graph(true);
+        let my_node_identifiers = outer_graph
+            .raw_nodes()
+            .iter()
+            .map(|z| z.weight.clone())
+            .collect::<Vec<_>>();
+        for cur_v in [NodeLabels::B2C(true), NodeLabels::A(true)] {
+            assert!(my_node_identifiers.contains(&either::Left(cur_v)));
+        }
+        for (cur_e, (cur_e_srcs, cur_e_tgts)) in [(
+            EdgeLabel::Black,
+            (vec![NodeLabels::A(true)], vec![NodeLabels::B2C(true)]),
+        )] {
+            assert!(my_node_identifiers.contains(&either::Right(cur_e.clone())));
+            let cur_e_idx = outer_graph
+                .node_indices()
+                .find(|z| outer_graph[*z] == either::Right(cur_e.clone()))
+                .unwrap();
+            for cur_e_src in cur_e_srcs.clone() {
+                let cur_e_src_idx = outer_graph
+                    .node_indices()
+                    .find(|z| outer_graph[*z] == either::Left(cur_e_src.clone()))
+                    .unwrap();
+                assert!(outer_graph.contains_edge(cur_e_src_idx, cur_e_idx));
+            }
+            for cur_e_tgt in cur_e_tgts.clone() {
+                let cur_e_tgt_idx = outer_graph
+                    .node_indices()
+                    .find(|z| outer_graph[*z] == either::Left(cur_e_tgt.clone()))
+                    .unwrap();
+                assert!(outer_graph.contains_edge(cur_e_idx, cur_e_tgt_idx));
+            }
+            assert_eq!(
+                outer_graph
+                    .neighbors_directed(cur_e_idx, petgraph::Direction::Incoming)
+                    .count(),
+                cur_e_srcs.len()
+            );
+            assert_eq!(
+                outer_graph
+                    .neighbors_directed(cur_e_idx, petgraph::Direction::Outgoing)
+                    .count(),
+                cur_e_tgts.len()
+            );
+        }
+        assert_eq!(my_node_identifiers.len(), 3);
+        assert_eq!(outer_graph.edge_count(), 2);
+        assert_eq!(outer_graph.node_count(), 3);
+        assert!(example.is_connected());
+
+        if let Some([ins_seen, outs_seen, isolated_seen]) = example.in_out_isolated(None) {
+            assert!(ins_seen == [NodeLabels::A(true)]);
+            assert!(outs_seen == [NodeLabels::B2C(true)]);
+            assert!(isolated_seen.is_empty());
+        } else {
+            unreachable!("This is a hyperedge in example");
+        }
+        if let Some([ins_seen, outs_seen, isolated_seen]) =
+            example.in_out_isolated(Some(EdgeLabel::Black))
+        {
+            assert_eq!(ins_seen.len(), 2);
+            assert!(ins_seen.contains(&NodeLabels::B));
+            assert!(ins_seen.contains(&NodeLabels::A(false)));
+            assert!(outs_seen == [NodeLabels::C]);
+            assert!(isolated_seen.is_empty());
+        } else {
+            unreachable!("This is a hyperedge in example");
+        }
+        if let Some([ins_seen, outs_seen, isolated_seen]) =
+            example.in_out_isolated(Some(EdgeLabel::F))
+        {
+            assert!(ins_seen.is_empty());
+            assert!(outs_seen.is_empty());
+            assert!(isolated_seen.is_empty());
+        } else {
+            unreachable!("This is a hyperedge in example");
+        }
+        if let Some([ins_seen, outs_seen, isolated_seen]) =
+            example.in_out_isolated(Some(EdgeLabel::EV))
+        {
+            assert!(ins_seen.is_empty());
+            assert!(outs_seen.is_empty());
+            assert!(isolated_seen.is_empty());
+        } else {
+            unreachable!("This is a hyperedge in example");
+        }
     }
 }
