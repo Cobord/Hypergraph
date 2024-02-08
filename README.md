@@ -70,6 +70,10 @@ general monoidal/general Frobenius as above where they have black boxes that nee
 by plugging in all the black boxes with other morphisms in the collection as their name indicates. How the black boxed portions are organized is required
 to be acyclic, so that if desired we may substitute them all as much as possible (though we usually leave them not so inlined).
 
+## Hierarchical Hypergraph
+
+This is also for morphisms that are black boxed and put into other morphisms. For details, see [the following paper](https://arxiv.org/pdf/2107.13433.pdf).
+
 ## Monoid Utilities
 
 One such utility is an iterator for finitely generated groups. The next iterate is produced from the previous with a similar word in such a way that we
