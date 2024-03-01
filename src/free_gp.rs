@@ -175,7 +175,7 @@ impl FreeGenerator for FreeZ2_3 {
             0 => Self::A,
             1 => Self::B,
             2 => Self::C,
-            _ => panic!("modulo 3 not giving 0,1,2"),
+            _ => unreachable!("modulo 3 not giving 0,1,2"),
         }
     }
 }
