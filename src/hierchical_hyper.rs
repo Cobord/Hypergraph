@@ -29,7 +29,6 @@ where
 {
     vertices: HashSet<VType>,
     hyper_edges: HashMap<EType, (HyperedgeSide<VType>, HyperedgeSide<VType>)>,
-    hyper_edges_src_sink: HashMap<EType, (HyperedgeSide<VType>, HyperedgeSide<VType>)>,
     v_label: fn(&VType, &LabelAux) -> VLabel,
     e_label: fn(&EType, &LabelAux) -> Option<ELabel>,
     constituent_hypergraphs: MyTree<Option<EType>>,
@@ -60,7 +59,6 @@ where
         Self {
             vertices: HashSet::new(),
             hyper_edges: HashMap::new(),
-            hyper_edges_src_sink: HashMap::new(),
             v_label,
             e_label,
             constituent_hypergraphs,
@@ -132,9 +130,12 @@ where
                     if sources
                         .iter()
                         .all(|z| self.vertex_to_constituent.get(z).cloned() != Some(real_my_parent))
-                        || targets.iter().all(|z| {
-                            self.vertex_to_constituent.get(z).cloned() != Some(real_my_parent)
-                        })
+                    {
+                        return false;
+                    }
+                    if targets
+                        .iter()
+                        .all(|z| self.vertex_to_constituent.get(z).cloned() != Some(real_my_parent))
                     {
                         return false;
                     }
@@ -196,8 +197,6 @@ where
         }
         if let Some(parent_hyperedge_loc) = self.hyperedge_to_constituent.get(&parent_hyperedge) {
             self.hyper_edges
-                .insert(new_hyperedge.clone(), (Vec::new(), Vec::new()));
-            self.hyper_edges_src_sink
                 .insert(new_hyperedge.clone(), (Vec::new(), Vec::new()));
             let new_idx = self
                 .constituent_hypergraphs
@@ -352,8 +351,14 @@ where
         other: &Self,
         which_hyperedge_me: EType,
         which_hyperedge_other: Option<EType>,
-    ) -> Result<(), HierarchicalHypergraphError<VLabel, ELabel>> {
-        if self.e_label != other.e_label || self.v_label != other.v_label {
+    ) -> Result<(), HierarchicalHypergraphError<VLabel, ELabel>>
+    where
+        LabelAux: Eq,
+    {
+        if self.e_label != other.e_label
+            || self.v_label != other.v_label
+            || self.label_aux != other.label_aux
+        {
             return Err(HierarchicalHypergraphError::<_, _>::LabellersMismatch);
         }
         let cur_idx_other = *other
@@ -466,7 +471,7 @@ where
 
     #[allow(dead_code)]
     fn is_connected(&self) -> bool {
-        petgraph::algo::connected_components(&self.outermost_line_graph(false)) == 1
+        petgraph::algo::connected_components(&self.outermost_line_graph(true)) == 1
     }
 
     fn in_out_isolated(&self, which_hyperedge: Option<EType>) -> Option<[Vec<VType>; 3]> {
@@ -519,6 +524,45 @@ where
         })
     }
 
+    fn times_as_interface_with_multiplicity(
+        &self,
+        vertex: VType,
+        as_src: bool,
+    ) -> Vec<(EType, usize)> {
+        let which_constituent = self.vertex_to_constituent.get(&vertex);
+        which_constituent.map_or(vec![], |&z| {
+            let possible_hyperedges = self
+                .constituent_hypergraphs
+                .neighbors_directed(z, petgraph::Direction::Outgoing);
+            possible_hyperedges
+                .filter_map(|f| {
+                    if let Some(cur_edge) = self
+                        .constituent_hypergraphs
+                        .node_weight(f)
+                        .expect("Already checked that it exists as a node")
+                    {
+                        let (srcs, tgts) = self
+                            .hyper_edges
+                            .get(cur_edge)
+                            .expect("Already checked that it is a hyperedge");
+                        let apt_vec = if as_src { srcs } else { tgts };
+                        let cur_edges_count_vertex =
+                            apt_vec.iter().filter(|&cur_src| *cur_src == vertex).count();
+                        if cur_edges_count_vertex == 0 {
+                            None
+                        } else {
+                            Some((cur_edge.clone(), cur_edges_count_vertex))
+                        }
+                    } else {
+                        unreachable!(
+                            "The None hyperedge was the parent, it is not a neighbor of anything"
+                        );
+                    }
+                })
+                .collect()
+        })
+    }
+
     #[allow(dead_code)]
     fn is_hypernetable(&self) -> [bool; 5] {
         todo!("
@@ -537,8 +581,18 @@ where
         */
         /*
         let is_acyclic = false;
-        let any_vertex_multisource = false;
-        let any_vertex_multitarget = false;
+        let any_vertex_multisource = self.vertices.iter().any(|vertex| {
+            let count_with_mult = self.times_as_interface_with_multiplicity(*vertex, true)
+                .iter()
+                .fold(0, |acc, elt| acc+elt.1);
+            count_with_mult>1
+        });
+        let any_vertex_multitarget = self.vertices.iter().any(|vertex| {
+            let count_with_mult = self.times_as_interface_with_multiplicity(*vertex, false)
+                .iter()
+                .fold(0, |acc, elt| acc+elt.1);
+            count_with_mult>1
+        });
         let all_some_labelled_are_empty = false;
         let all_none_labelled_are_nonempty = false;
         [is_acyclic, !any_vertex_multisource, !any_vertex_multitarget, all_some_labelled_are_empty, all_none_labelled_are_nonempty]
@@ -742,9 +796,21 @@ mod test {
             example.vertex_to_constituent.get(&NodeLabels::A(true)),
             Some(&outside_idx)
         );
+        assert!(
+            example.times_as_interface_with_multiplicity(NodeLabels::A(true), true)
+                == vec![(EdgeLabel::Black, 1)]
+        );
+        assert!(example.times_as_interface_with_multiplicity(NodeLabels::A(true), false) == vec![]);
         assert_eq!(
             example.vertex_to_constituent.get(&NodeLabels::B2C(true)),
             Some(&outside_idx)
+        );
+        assert!(
+            example.times_as_interface_with_multiplicity(NodeLabels::B2C(true), true) == vec![]
+        );
+        assert!(
+            example.times_as_interface_with_multiplicity(NodeLabels::B2C(true), false)
+                == vec![(EdgeLabel::Black, 1)]
         );
         assert!(example
             .constituent_to_vertices
@@ -768,17 +834,42 @@ mod test {
             example.vertex_to_constituent.get(&NodeLabels::A(false)),
             Some(&black_idx)
         );
+        assert!(
+            example.times_as_interface_with_multiplicity(NodeLabels::A(false), true)
+                == vec![(EdgeLabel::F, 1)]
+        );
+        assert!(
+            example.times_as_interface_with_multiplicity(NodeLabels::A(false), false) == vec![]
+        );
         assert_eq!(
             example.vertex_to_constituent.get(&NodeLabels::B2C(false)),
             Some(&black_idx)
+        );
+        assert!(
+            example.times_as_interface_with_multiplicity(NodeLabels::B2C(false), true)
+                == vec![(EdgeLabel::EV, 1)]
+        );
+        assert!(
+            example.times_as_interface_with_multiplicity(NodeLabels::B2C(false), false)
+                == vec![(EdgeLabel::F, 1)]
         );
         assert_eq!(
             example.vertex_to_constituent.get(&NodeLabels::B),
             Some(&black_idx)
         );
+        assert!(
+            example.times_as_interface_with_multiplicity(NodeLabels::B, true)
+                == vec![(EdgeLabel::EV, 1)]
+        );
+        assert!(example.times_as_interface_with_multiplicity(NodeLabels::B, false) == vec![]);
         assert_eq!(
             example.vertex_to_constituent.get(&NodeLabels::C),
             Some(&black_idx)
+        );
+        assert!(example.times_as_interface_with_multiplicity(NodeLabels::C, true) == vec![]);
+        assert!(
+            example.times_as_interface_with_multiplicity(NodeLabels::C, false)
+                == vec![(EdgeLabel::EV, 1)]
         );
         assert!(example
             .constituent_to_vertices
