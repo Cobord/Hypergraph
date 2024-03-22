@@ -4,6 +4,7 @@ use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 
 use either::Either;
+use petgraph::algo::is_cyclic_directed;
 use petgraph::stable_graph::{NodeIndex, StableDiGraph};
 use petgraph::Graph;
 
@@ -526,28 +527,30 @@ where
 
     fn times_as_interface_with_multiplicity(
         &self,
-        vertex: VType,
+        vertex: &VType,
         as_src: bool,
     ) -> Vec<(EType, usize)> {
-        let which_constituent = self.vertex_to_constituent.get(&vertex);
+        let which_constituent = self.vertex_to_constituent.get(vertex);
         which_constituent.map_or(vec![], |&z| {
             let possible_hyperedges = self
                 .constituent_hypergraphs
                 .neighbors_directed(z, petgraph::Direction::Outgoing);
             possible_hyperedges
-                .filter_map(|f| {
-                    if let Some(cur_edge) = self
+                .filter_map(|cur_hyperedge_idx| {
+                    let cur_hyperedge_type = self
                         .constituent_hypergraphs
-                        .node_weight(f)
-                        .expect("Already checked that it exists as a node")
-                    {
+                        .node_weight(cur_hyperedge_idx)
+                        .expect("Already checked that it exists as a node");
+                    if let Some(cur_edge) = cur_hyperedge_type {
                         let (srcs, tgts) = self
                             .hyper_edges
                             .get(cur_edge)
                             .expect("Already checked that it is a hyperedge");
                         let apt_vec = if as_src { srcs } else { tgts };
-                        let cur_edges_count_vertex =
-                            apt_vec.iter().filter(|&cur_src| *cur_src == vertex).count();
+                        let cur_edges_count_vertex = apt_vec
+                            .iter()
+                            .filter(|&cur_vertex| *cur_vertex == *vertex)
+                            .count();
                         if cur_edges_count_vertex == 0 {
                             None
                         } else {
@@ -563,15 +566,22 @@ where
         })
     }
 
+    fn has_no_internals(&self, which_constituent: &NodeIndex) -> bool {
+        let has_no_vertices = self
+            .constituent_to_vertices
+            .get(which_constituent)
+            .expect("Should have already checked that this is an index of a hyperedge")
+            .is_empty();
+        let has_no_hyperedges = self
+            .constituent_hypergraphs
+            .neighbors(*which_constituent)
+            .count()
+            == 0;
+        has_no_vertices && has_no_hyperedges
+    }
+
     #[allow(dead_code)]
     fn is_hypernetable(&self) -> [bool; 5] {
-        todo!("
-        - Acyclic,
-        - all vertices occur as a source for at most one hyperedge (even with multiplicity),
-        - all vertices occur as a target for at most one hyperedge (even with multiplicity),
-        - labels of hyperedge cur_e has (self.e_label)(&cur_e,self.label_aux)=Some(_) -> the sub(hierarchical hypergraph) is empty
-        - labels of hyperedge cur_e has (self.e_label)(&cur_e,self.label_aux)=Some(_) <- the sub(hierarchical hypergraph) is empty
-        ");
         /*
         to turn into a hypernet need to give the total ordering on the outermost
         inputs and outputs (that is one that is sure to effectively have a None label)
@@ -579,24 +589,51 @@ where
         or only occur as targets if at all
         (the ones that don't occur on any hyperedge are both inputs and outputs, they are isolated vertices)
         */
-        /*
-        let is_acyclic = false;
+        // TODO check acyclic
+        let is_acyclic = self
+            .hyperedge_to_constituent
+            .values()
+            .all(|cur_hyperedge_idx| {
+                let line_graph = self.component_line_graph(false, cur_hyperedge_idx);
+                !is_cyclic_directed(&line_graph)
+            });
         let any_vertex_multisource = self.vertices.iter().any(|vertex| {
-            let count_with_mult = self.times_as_interface_with_multiplicity(*vertex, true)
+            let count_with_mult = self
+                .times_as_interface_with_multiplicity(vertex, true)
                 .iter()
-                .fold(0, |acc, elt| acc+elt.1);
-            count_with_mult>1
+                .fold(0, |acc, elt| acc + elt.1);
+            count_with_mult > 1
         });
         let any_vertex_multitarget = self.vertices.iter().any(|vertex| {
-            let count_with_mult = self.times_as_interface_with_multiplicity(*vertex, false)
+            let count_with_mult = self
+                .times_as_interface_with_multiplicity(vertex, false)
                 .iter()
-                .fold(0, |acc, elt| acc+elt.1);
-            count_with_mult>1
+                .fold(0, |acc, elt| acc + elt.1);
+            count_with_mult > 1
         });
-        let all_some_labelled_are_empty = false;
-        let all_none_labelled_are_nonempty = false;
-        [is_acyclic, !any_vertex_multisource, !any_vertex_multitarget, all_some_labelled_are_empty, all_none_labelled_are_nonempty]
-        */
+        let (some_labelled_idces, none_labelled_idces): (Vec<_>, Vec<_>) = self
+            .hyperedge_to_constituent
+            .iter()
+            .partition(|(edge_type, _edge_idx)| match edge_type {
+                Some(real_edge_type) => {
+                    let my_label = (self.e_label)(real_edge_type, &self.label_aux);
+                    my_label.is_some()
+                }
+                None => false,
+            });
+        let all_some_labelled_are_empty = some_labelled_idces
+            .into_iter()
+            .all(|(_edge_type, edge_idx)| self.has_no_internals(edge_idx));
+        let all_none_labelled_are_nonempty = !none_labelled_idces
+            .into_iter()
+            .any(|(_edge_type, edge_idx)| self.has_no_internals(edge_idx));
+        [
+            is_acyclic,
+            !any_vertex_multisource,
+            !any_vertex_multitarget,
+            all_some_labelled_are_empty,
+            all_none_labelled_are_nonempty,
+        ]
     }
 }
 
@@ -797,19 +834,21 @@ mod test {
             Some(&outside_idx)
         );
         assert!(
-            example.times_as_interface_with_multiplicity(NodeLabels::A(true), true)
+            example.times_as_interface_with_multiplicity(&NodeLabels::A(true), true)
                 == vec![(EdgeLabel::Black, 1)]
         );
-        assert!(example.times_as_interface_with_multiplicity(NodeLabels::A(true), false) == vec![]);
+        assert!(
+            example.times_as_interface_with_multiplicity(&NodeLabels::A(true), false) == vec![]
+        );
         assert_eq!(
             example.vertex_to_constituent.get(&NodeLabels::B2C(true)),
             Some(&outside_idx)
         );
         assert!(
-            example.times_as_interface_with_multiplicity(NodeLabels::B2C(true), true) == vec![]
+            example.times_as_interface_with_multiplicity(&NodeLabels::B2C(true), true) == vec![]
         );
         assert!(
-            example.times_as_interface_with_multiplicity(NodeLabels::B2C(true), false)
+            example.times_as_interface_with_multiplicity(&NodeLabels::B2C(true), false)
                 == vec![(EdgeLabel::Black, 1)]
         );
         assert!(example
@@ -835,22 +874,22 @@ mod test {
             Some(&black_idx)
         );
         assert!(
-            example.times_as_interface_with_multiplicity(NodeLabels::A(false), true)
+            example.times_as_interface_with_multiplicity(&NodeLabels::A(false), true)
                 == vec![(EdgeLabel::F, 1)]
         );
         assert!(
-            example.times_as_interface_with_multiplicity(NodeLabels::A(false), false) == vec![]
+            example.times_as_interface_with_multiplicity(&NodeLabels::A(false), false) == vec![]
         );
         assert_eq!(
             example.vertex_to_constituent.get(&NodeLabels::B2C(false)),
             Some(&black_idx)
         );
         assert!(
-            example.times_as_interface_with_multiplicity(NodeLabels::B2C(false), true)
+            example.times_as_interface_with_multiplicity(&NodeLabels::B2C(false), true)
                 == vec![(EdgeLabel::EV, 1)]
         );
         assert!(
-            example.times_as_interface_with_multiplicity(NodeLabels::B2C(false), false)
+            example.times_as_interface_with_multiplicity(&NodeLabels::B2C(false), false)
                 == vec![(EdgeLabel::F, 1)]
         );
         assert_eq!(
@@ -858,17 +897,17 @@ mod test {
             Some(&black_idx)
         );
         assert!(
-            example.times_as_interface_with_multiplicity(NodeLabels::B, true)
+            example.times_as_interface_with_multiplicity(&NodeLabels::B, true)
                 == vec![(EdgeLabel::EV, 1)]
         );
-        assert!(example.times_as_interface_with_multiplicity(NodeLabels::B, false) == vec![]);
+        assert!(example.times_as_interface_with_multiplicity(&NodeLabels::B, false) == vec![]);
         assert_eq!(
             example.vertex_to_constituent.get(&NodeLabels::C),
             Some(&black_idx)
         );
-        assert!(example.times_as_interface_with_multiplicity(NodeLabels::C, true) == vec![]);
+        assert!(example.times_as_interface_with_multiplicity(&NodeLabels::C, true) == vec![]);
         assert!(
-            example.times_as_interface_with_multiplicity(NodeLabels::C, false)
+            example.times_as_interface_with_multiplicity(&NodeLabels::C, false)
                 == vec![(EdgeLabel::EV, 1)]
         );
         assert!(example
@@ -1013,5 +1052,8 @@ mod test {
         } else {
             unreachable!("This is a hyperedge in example");
         }
+
+        let hypernetable = example.is_hypernetable();
+        assert_eq!(hypernetable, [true, true, true, true, true]);
     }
 }
