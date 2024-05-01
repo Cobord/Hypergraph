@@ -580,7 +580,6 @@ where
         has_no_vertices && has_no_hyperedges
     }
 
-    #[allow(dead_code)]
     fn is_hypernetable(&self) -> [bool; 5] {
         /*
         to turn into a hypernet need to give the total ordering on the outermost
@@ -589,7 +588,6 @@ where
         or only occur as targets if at all
         (the ones that don't occur on any hyperedge are both inputs and outputs, they are isolated vertices)
         */
-        // TODO check acyclic
         let is_acyclic = self
             .hyperedge_to_constituent
             .values()
@@ -637,10 +635,72 @@ where
     }
 }
 
-// TODO compose with above and the L_a on each of the EType with e_label None
-// corresponds to some F equiv (L_a -o _) in order to give the correct in/outputs
-// from the ones that are determined purely from inside that hyperedge
-//struct WellTypedHierarchicalHypernet {}
+#[allow(dead_code)]
+struct WellTypedHierarchicalHypernet<VType, EType, VLabel, ELabel, LabelAux>
+where
+    VType: PartialEq + Eq + Hash + Clone,
+    EType: PartialEq + Eq + Hash + Clone,
+{
+    underlying: HierarchicalHypergraph<VType, EType, VLabel, ELabel, LabelAux>,
+    same_level_interface: HashMap<Option<EType>, (Vec<VType>, Vec<VType>)>,
+    parents_interface: HashMap<EType, (Vec<VType>, Vec<VType>)>,
+    none_labelled_lsuba_s: HashMap<EType, HyperedgeSide<VType>>,
+}
+
+#[allow(dead_code)]
+enum HierarchicalHypernetError<VLabel, ELabel> {
+    HasCycle,
+    MultiSourceVertex,
+    MultiTargetVertex,
+    ASomeLabelledFull,
+    ANoneLabelledEmpty,
+    EdgeWithoutSameInterface(Option<ELabel>),
+    EdgeWithoutParentInterface(ELabel),
+    UnderlyingError(HierarchicalHypergraphError<VLabel, ELabel>),
+}
+
+impl<VType, EType, VLabel, ELabel, LabelAux>
+    WellTypedHierarchicalHypernet<VType, EType, VLabel, ELabel, LabelAux>
+where
+    VType: PartialEq + Eq + Hash + Clone,
+    EType: PartialEq + Eq + Hash + Clone,
+    VLabel: Clone,
+    ELabel: Clone,
+{
+    #[allow(dead_code)]
+    fn new(
+        underlying: HierarchicalHypergraph<VType, EType, VLabel, ELabel, LabelAux>,
+        same_level_interface: HashMap<Option<EType>, (Vec<VType>, Vec<VType>)>,
+        parents_interface: HashMap<EType, (Vec<VType>, Vec<VType>)>,
+    ) -> Result<Self, HierarchicalHypernetError<VLabel, ELabel>> {
+        let [is_acyclic, no_vertex_multisource, no_vertex_multitarget, all_some_labelled_are_empty, all_none_labelled_are_nonempty] =
+            underlying.is_hypernetable();
+        if !is_acyclic {
+            return Err(HierarchicalHypernetError::<VLabel, ELabel>::HasCycle);
+        }
+        if !no_vertex_multisource {
+            return Err(HierarchicalHypernetError::<VLabel, ELabel>::MultiSourceVertex);
+        }
+        if !no_vertex_multitarget {
+            return Err(HierarchicalHypernetError::<VLabel, ELabel>::MultiTargetVertex);
+        }
+        if !all_some_labelled_are_empty {
+            return Err(HierarchicalHypernetError::<VLabel, ELabel>::ASomeLabelledFull);
+        }
+        if !all_none_labelled_are_nonempty {
+            return Err(HierarchicalHypernetError::<VLabel, ELabel>::ANoneLabelledEmpty);
+        }
+        for (_a, _b) in underlying.hyperedge_to_constituent.iter() {
+            todo!("Check the interfaces making sure what said is on same level is and what is on parent's is actually on parents");
+        }
+        Ok(Self {
+            underlying,
+            same_level_interface,
+            parents_interface,
+            none_labelled_lsuba_s: HashMap::new(),
+        })
+    }
+}
 
 mod test_setup {
     #[derive(PartialEq, Eq, Hash, Clone)]
