@@ -221,8 +221,8 @@ where
     fn add_hyperedge(
         &mut self,
         new_hyperedge: EType,
-        sources: impl Iterator<Item = VType> + ExactSizeIterator,
-        targets: impl Iterator<Item = VType> + ExactSizeIterator,
+        sources: impl ExactSizeIterator<Item = VType>,
+        targets: impl ExactSizeIterator<Item = VType>,
     ) -> Result<(), HierarchicalHypergraphError<VLabel, ELabel>> {
         if self.hyper_edges.contains_key(&new_hyperedge) {
             let present_label = (self.e_label)(&new_hyperedge, &self.label_aux);

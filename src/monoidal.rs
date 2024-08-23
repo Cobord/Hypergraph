@@ -278,6 +278,7 @@ where
     }
 }
 
+#[allow(dead_code)]
 pub trait MonoidalMorphism<T: Eq>: Monoidal + Composable<T> {}
 pub trait MonoidalMutatingMorphism<T: Eq>: Monoidal + ComposableMutating<T> {}
 

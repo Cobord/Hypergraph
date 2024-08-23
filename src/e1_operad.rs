@@ -119,10 +119,10 @@ impl E1 {
             return None;
         }
         assert!(
-            !self
+            self
                 .sub_intervals
                 .iter()
-                .is_sorted_by(|i1, i2| i1.0.partial_cmp(&i2.0)),
+                .is_sorted_by(|i1, i2| i1.0.partial_cmp(&i2.0).expect("No incomparable IntervalCoord issues with NaN etc").is_le()),
             "Should be in canonical form already"
         );
         let mut min_closeness = 1.0;

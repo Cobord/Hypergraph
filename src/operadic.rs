@@ -28,6 +28,7 @@ pub trait Operadic<InputLabel> {
             - the which_input of self
         don't line up
     */
+    #[allow(dead_code)]
     fn operadic_substitution(
         &mut self,
         which_input: InputLabel,

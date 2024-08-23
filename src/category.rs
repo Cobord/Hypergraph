@@ -2,6 +2,7 @@ pub trait HasIdentity<T>: Sized {
     fn identity(on_this: &T) -> Self;
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub enum CompositionError {
     CompositionError(String),

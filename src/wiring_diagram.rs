@@ -159,6 +159,7 @@ where
     InterCircle: Eq + Copy,
     IntraCircle: Eq + Copy,
 {
+    #[allow(dead_code)]
     fn operadic_substitution(
         &mut self,
         which_circle: InterCircle,

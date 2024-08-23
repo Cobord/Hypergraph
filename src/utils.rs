@@ -16,6 +16,7 @@ pub trait EitherExt<T, U> {
 }
 
 impl<T, U> EitherExt<T, U> for Either<T, U> {
+    #[allow(refining_impl_trait)]
     fn bimap<V, W>(self, f1: impl Fn(T) -> V, f2: impl Fn(U) -> W) -> Either<V, W> {
         match self {
             Left(t) => Left(f1(t)),

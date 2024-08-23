@@ -4,9 +4,11 @@ use {
 };
 
 pub trait Contains<BlackBoxLabel> {
+    #[allow(dead_code)]
     fn contained_labels(&self) -> Vec<BlackBoxLabel>;
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub enum InterpretError {
     InterpretError(String),
