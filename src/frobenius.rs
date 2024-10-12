@@ -20,6 +20,7 @@ use {
     std::{convert::identity, fmt::Debug},
 };
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(PartialEq, Eq, Clone)]
 pub enum FrobeniusOperation<Lambda: Eq + Copy, BlackBoxLabel: Eq + Clone> {
     Unit(Lambda),
@@ -209,6 +210,7 @@ where
     BlackBoxLabel: Eq + Clone,
 {
     fn contained_labels(&self) -> Vec<BlackBoxLabel> {
+        #[allow(clippy::redundant_closure_for_method_calls)]
         self.blocks
             .iter()
             .flat_map(|block| block.contained_labels())
@@ -237,7 +239,7 @@ where
         horizontal flip where the diagram is drawn left to right
         sources and targets switched
         */
-        for block in self.blocks.iter_mut() {
+        for block in &mut self.blocks {
             block.hflip(black_box_changer);
         }
         let temp = self.left_type.clone();
@@ -265,9 +267,11 @@ where
 
     #[allow(dead_code)]
     fn is_identity(&self) -> bool {
+        #[allow(clippy::redundant_closure_for_method_calls)]
         self.blocks.iter().all(|cur_block| cur_block.is_identity())
     }
 
+    #[allow(clippy::unused_self)]
     fn two_layer_simplify(&mut self, _next_layer: &mut Self) -> (bool, bool, bool) {
         //todo!("Frobenius laws of two layers");
         let mutations_occured = false;
@@ -305,6 +309,7 @@ where
     }
 }
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Clone, PartialEq, Eq)]
 pub struct FrobeniusMorphism<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Clone> {
     layers: Vec<FrobeniusLayer<Lambda, BlackBoxLabel>>,
@@ -315,6 +320,7 @@ where
     Lambda: Eq + Copy + Debug,
     BlackBoxLabel: Eq + Clone,
 {
+    #[allow(clippy::redundant_closure_for_method_calls)]
     fn contained_labels(&self) -> Vec<BlackBoxLabel> {
         self.layers
             .iter()
@@ -403,7 +409,7 @@ where
         horizontal flip where the diagram is drawn left to right
         sources and targets switched
         */
-        for layer in self.layers.iter_mut() {
+        for layer in &mut self.layers {
             layer.hflip(black_box_changer);
         }
         self.layers.reverse();
@@ -427,6 +433,7 @@ where
     Lambda: Eq + Copy + Debug,
     BlackBoxLabel: Eq + Clone,
 {
+    #[allow(clippy::assigning_clones)]
     fn monoidal(&mut self, other: Self) {
         let self_len = self.layers.len();
         let others_len = other.layers.len();
@@ -481,8 +488,7 @@ where
                 let w2 = other_interface[idx];
                 if w1 != w2 {
                     return Err(format!(
-                        "Mismatch in labels of common interface. At index {} there was {:?} vs {:?}",
-                        idx, w1, w2
+                        "Mismatch in labels of common interface. At index {idx} there was {w1:?} vs {w2:?}"
                     ).into());
                 }
             }
@@ -587,7 +593,7 @@ where
         } else {
             self.hflip(&identity);
             self.permute_side(&p.inv(), true);
-            self.hflip(&identity)
+            self.hflip(&identity);
         }
     }
 
@@ -696,6 +702,7 @@ pub fn special_frobenius_morphism<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq +
     }
 }
 
+#[allow(clippy::needless_pass_by_value)]
 #[allow(dead_code)]
 pub fn from_decomposition<Lambda, BlackBoxLabel>(
     v: Decomposition,
@@ -712,7 +719,7 @@ where
     let mut surj_part_frob = FrobeniusMorphism::<Lambda, BlackBoxLabel>::new();
     let mut after_perm_number = 0;
     #[allow(clippy::unused_enumerate_index)]
-    for c in surj_part.preimage_cardinalities().iter() {
+    for c in &surj_part.preimage_cardinalities() {
         let after_perm_types = &answer.codomain()[after_perm_number..after_perm_number + c];
         assert!(after_perm_types.iter().all(|l| *l == after_perm_types[0]));
         let cur_part = special_frobenius_morphism::<_, BlackBoxLabel>(*c, 1, after_perm_types[0]);
@@ -815,7 +822,7 @@ pub trait Frobenius<Lambda: Eq + Copy + Debug, BlackBoxLabel: Eq + Clone>:
             for block in &layer.blocks[1..] {
                 cur_layer.monoidal(Self::basic_interpret(&block.op, black_box_interpreter)?);
             }
-            answer.compose(cur_layer).map_err(|e| format!("{:?}", e))?;
+            answer.compose(cur_layer).map_err(|e| format!("{e:?}"))?;
         }
         Ok(answer)
     }
@@ -959,6 +966,7 @@ mod test {
         assert_eq!(id_spider.depth(), 1);
     }
 
+    #[allow(clippy::items_after_statements)]
     #[test]
     fn basic_typed_spiders() {
         use super::{special_frobenius_morphism, FrobeniusMorphism, FrobeniusOperation};
@@ -1006,7 +1014,8 @@ mod test {
             FrobeniusOperation::Unit(Color::Green).into();
         let composition_worked =
             exp_zero_zero_spider.compose(FrobeniusOperation::Counit(Color::Green).into());
-        if let Ok(_) = composition_worked {
+        #[allow(clippy::assertions_on_constants)]
+        if composition_worked.is_ok() {
             assert!(exp_zero_zero_spider == zero_zero_spider);
         } else {
             assert!(false, "Unit and counit do compose");
@@ -1061,6 +1070,7 @@ mod test {
         frob_prod.compose(frob_p3).unwrap();
         assert_eq!(frob_prod.domain(), domain_types);
         assert_eq!(frob_prod.codomain(), types_after_p3);
+        #[allow(clippy::match_same_arms, clippy::match_like_matches_macro)]
         let all_swaps = frob_prod.layers.iter().all(|layer| {
             layer.blocks.iter().all(|block| match block.op {
                 FrobeniusOperation::SymmetricBraiding(_, _) => true,
@@ -1094,6 +1104,7 @@ mod test {
             codomain_types[*idx_goes] = domain_types[idx];
         }
         let cur_res = Decomposition::try_from((cur_test.clone(), 0));
+        #[allow(clippy::assertions_on_constants)]
         if let Ok(cur_decomp) = cur_res {
             let _x: FrobeniusMorphism<_, ()> =
                 from_decomposition(cur_decomp, &domain_types, &codomain_types);

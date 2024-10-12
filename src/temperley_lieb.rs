@@ -109,14 +109,15 @@ impl From<Vec<Pair>> for PerfectMatching {
 impl PerfectMatching {
     #[allow(dead_code)]
     fn new(pair_prime: &[Pair]) -> Self {
-        Self::from_iter(pair_prime.iter().cloned())
+        #[allow(clippy::from_iter_instead_of_collect)]
+        Self::from_iter(pair_prime.iter().copied())
     }
 
     fn canonicalize(&mut self) {
         /*
         each matched pair is given as the smaller number first
         */
-        for Pair(p, q) in self.pairs.iter_mut() {
+        for Pair(p, q) in &mut self.pairs {
             if *p > *q {
                 std::mem::swap(p, q);
             }
@@ -144,7 +145,7 @@ impl PerfectMatching {
         when interpreting this as a BrauerDiagram with specified domain/codomain (sum of both=2n)
         is it actually temperley lieb with no crossings
         */
-        let source_lines = self.pairs.iter().filter(|p| p.all(|x| x < source)).cloned();
+        let source_lines = self.pairs.iter().filter(|p| p.all(|x| x < source)).copied();
         // source_lines are the lines connecting two points both on source side
         let source_crossing_tests = source_lines.clone().combinations(2);
         for cur_item in source_crossing_tests {
@@ -168,7 +169,7 @@ impl PerfectMatching {
             .pairs
             .iter()
             .filter(|p| p.all(|x| x >= source))
-            .cloned();
+            .copied();
         let target_crossing_tests = target_lines.clone().combinations(2);
         for cur_item in target_crossing_tests {
             let first_block = cur_item[0];
@@ -187,6 +188,7 @@ impl PerfectMatching {
         no_through_lines_idx.extend(target_lines.flat_map(|Pair(x, y)| (1 + x.min(y))..x.max(y)));
 
         // now check that those crossing lines don't use those indices that were stated to be forbidden
+        #[allow(clippy::redundant_closure_for_method_calls)]
         let through_lines = self
             .pairs
             .iter()
@@ -239,8 +241,7 @@ impl Mul for ExtendedPerfectMatching {
         for (idx, cur_item) in node_idcs.iter().enumerate().take(self_dom + self_cod) {
             assert!(
                 cur_item.is_some(),
-                "index for {idx} unset. These were the ones in self_diagram {:?}",
-                self_pairs_copy
+                "index for {idx} unset. These were the ones in self_diagram {self_pairs_copy:?}"
             );
         }
         let rhs_pairs_copy = rhs_diagram.pairs.clone();
@@ -264,8 +265,7 @@ impl Mul for ExtendedPerfectMatching {
         for (idx, cur_item) in node_idcs.iter().enumerate() {
             assert!(
                 cur_item.is_some(),
-                "index for {idx} unset. These were the ones in rhs {:?}",
-                rhs_pairs_copy
+                "index for {idx} unset. These were the ones in rhs {rhs_pairs_copy:?}"
             );
         }
         let endpoints = self_dom + rhs_cod;
@@ -632,7 +632,7 @@ mod test {
             assert!(e_i[idx].is_def_tl);
             let e_i_dag = e_i[idx].dagger(|z| z.conj());
             assert!(
-                &e_i[idx] == &e_i_dag,
+                e_i[idx] == e_i_dag,
                 "{:?} vs {:?} when checking self adjointness of e_i",
                 e_i[idx],
                 e_i_dag
@@ -881,6 +881,7 @@ mod test {
                     "e_i s_(i-1) e_i = e_i",
                 );
             }
+            #[allow(clippy::needless_range_loop)]
             for jdx in idx + 2..s_i.len() {
                 let prod_ij = s_i[idx].compose(&e_i[jdx]);
                 let prod_ji = e_i[jdx].compose(&s_i[idx]);

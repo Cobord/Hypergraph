@@ -34,7 +34,7 @@ where
 
     fn add(self, rhs: Self) -> Self {
         let mut new_map = self.0;
-        for (k, v) in rhs.0.into_iter() {
+        for (k, v) in rhs.0 {
             new_map
                 .entry(k)
                 .and_modify(|self_val: &mut Coeffs| *self_val += v)
@@ -52,7 +52,7 @@ where
     add two formal sums
     */
     fn add_assign(&mut self, rhs: Self) {
-        for (k, v) in rhs.0.into_iter() {
+        for (k, v) in rhs.0 {
             self.0
                 .entry(k)
                 .and_modify(|self_val: &mut Coeffs| *self_val += v)
@@ -72,7 +72,7 @@ where
 
     fn sub(self, rhs: Self) -> Self {
         let mut new_map = self.0;
-        for (k, v) in rhs.0.into_iter() {
+        for (k, v) in rhs.0 {
             new_map
                 .entry(k)
                 .and_modify(|self_val: &mut Coeffs| *self_val -= v)
@@ -185,6 +185,7 @@ where
     }
 }
 
+#[allow(clippy::needless_pass_by_value)]
 impl<Coeffs, Target: Eq + Hash> LinearCombination<Coeffs, Target> {
     pub fn linear_combine<U, V, F>(
         &self,
@@ -275,7 +276,7 @@ impl<Coeffs, Target: Clone + Eq + Hash> LinearCombination<Coeffs, Target> {
         R[T1] -> R[T2]
         */
         let mut new_map = HashMap::with_capacity(self.0.len());
-        for (k, v) in self.0.iter() {
+        for (k, v) in &self.0 {
             let new_key = injection(k.clone());
             let old_val = new_map.insert(new_key, *v);
             assert_eq!(
@@ -297,7 +298,7 @@ impl<Coeffs, Target: Clone + Eq + Hash> LinearCombination<Coeffs, Target> {
         R[T1] -> R[T2]
         */
         let mut new_map = HashMap::with_capacity(self.0.len());
-        for (k, v) in self.0.iter() {
+        for (k, v) in &self.0 {
             let new_key = f(k.clone());
             new_map
                 .entry(new_key)

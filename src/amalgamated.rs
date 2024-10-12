@@ -44,7 +44,7 @@ where
             FewAssum::ResourceBasedCommuting(which_resources_used) => {
                 let x_used = which_resources_used(Right(x));
                 let mut y_used = which_resources_used(Left(y));
-                y_used.sort();
+                y_used.sort_unstable();
                 let disjoint = !x_used
                     .into_iter()
                     .any(|x_cur| y_used.binary_search(&x_cur).is_ok());
@@ -70,6 +70,7 @@ where
     G1: Clone + From<VecDeque<X1>> + Into<VecDeque<X1>>,
     G2: Clone + From<VecDeque<X2>> + Into<VecDeque<X2>>,
 {
+    #[allow(clippy::too_many_lines)]
     fn swapper(&self, x: &G2, y: &G1) -> Option<(G1, G2, G1, G2)> {
         /*
         TODO : fix repetition
@@ -136,7 +137,7 @@ where
                 let do_commute = |x1: &X1, x2: &X2| {
                     let x_used = which_resources_used(Left(x1));
                     let mut y_used = which_resources_used(Right(x2));
-                    y_used.sort();
+                    y_used.sort_unstable();
                     !x_used
                         .into_iter()
                         .any(|x_cur| y_used.binary_search(&x_cur).is_ok())
@@ -299,7 +300,7 @@ where
         the either is inside the vec so they can be heterogeneous
         */
         let mut ret_val = Self::make_one(am_to_use);
-        for cur_piece in some_pieces.into_iter() {
+        for cur_piece in some_pieces {
             match cur_piece {
                 Left(both_together) => {
                     ret_val *= Left(both_together.0);
@@ -499,6 +500,7 @@ where
     G2: One + MulAssign + Eq + Clone + DivAssign,
     SimpAmal: SimpleAmalgamater<G1, G2> + Eq + Clone,
 {
+    #[allow(clippy::similar_names)]
     fn div_assign(&mut self, rhs: Self) {
         assert!(self.my_am == rhs.my_am);
         if rhs.pieces.is_empty() {
@@ -818,7 +820,7 @@ mod test_setup {
             } else if new_self_num == 1 {
                 *self = Self::STOne;
             } else {
-                *self = Self::STTwo
+                *self = Self::STTwo;
             }
         }
     }
@@ -848,6 +850,7 @@ mod test_setup {
             Self::STZero
         }
     }
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     #[allow(dead_code)]
     pub fn st_action(me: &Z3Part, fraction: &mut (i128, i128)) {
         let s = Z2Part(true);
@@ -878,6 +881,7 @@ mod test_setup {
 
 mod test {
 
+    #[allow(clippy::similar_names)]
     #[test]
     fn psl2z() {
         use super::test_setup::{s_action, st_action, Z2Part, Z3Part};
@@ -945,6 +949,7 @@ mod test {
         }
     }
 
+    #[allow(clippy::match_same_arms)]
     #[test]
     fn z6() {
         use super::test_setup::{Z2Part, Z3Part};
@@ -1014,6 +1019,7 @@ mod test {
         for idx in 3..6 {
             y *= t.clone();
             assert_eq!(y.pieces.len(), 1);
+            #[allow(clippy::needless_bool)]
             let cur_z2_part = Z2Part(if idx % 2 == 0 { false } else { true });
             let idx_mod_3 = idx % 3;
             let cur_z3_part = if idx_mod_3 == 0 {

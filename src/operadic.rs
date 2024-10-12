@@ -1,3 +1,4 @@
+#[allow(clippy::module_name_repetitions)]
 #[derive(PartialEq, Eq, Debug)]
 pub enum OperadicError {
     OperadicError(String),
@@ -14,7 +15,7 @@ impl From<&str> for OperadicError {
         Self::OperadicError(value.to_string())
     }
 }
-
+#[allow(clippy::module_name_repetitions)]
 pub trait Operadic<InputLabel> {
     /*
     change the n-ary operation self to the one where

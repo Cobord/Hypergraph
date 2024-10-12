@@ -115,6 +115,7 @@ where
     BoxType: Eq + Clone,
 {
     fn contained_labels(&self) -> Vec<BoxType> {
+        #[allow(clippy::redundant_closure_for_method_calls)]
         self.layers
             .iter()
             .flat_map(|layer| layer.contained_labels())
@@ -180,6 +181,7 @@ where
     Lambda: Eq + Copy + Debug,
     BoxType: Eq + Clone + HasIdentity<Lambda>,
 {
+    #[allow(clippy::assigning_clones)]
     fn monoidal(&mut self, other: Self) {
         let self_len = self.layers.len();
         let others_len = other.layers.len();
@@ -235,8 +237,7 @@ where
             let w2 = other_interface[idx];
             if w1 != w2 {
                 return Err(format!(
-                    "Mismatch in labels of common interface. At some index there was {:?} vs {:?}",
-                    w1, w2
+                    "Mismatch in labels of common interface. At some index there was {w1:?} vs {w2:?}"
                 )
                 .into());
             }
@@ -278,8 +279,10 @@ where
     }
 }
 
+#[allow(clippy::module_name_repetitions)]
 #[allow(dead_code)]
 pub trait MonoidalMorphism<T: Eq>: Monoidal + Composable<T> {}
+#[allow(clippy::module_name_repetitions)]
 pub trait MonoidalMutatingMorphism<T: Eq>: Monoidal + ComposableMutating<T> {}
 
 impl<Lambda, BoxType> MonoidalMutatingMorphism<Vec<Lambda>>
@@ -400,7 +403,7 @@ where
             for block in &layer.blocks[1..] {
                 cur_layer.monoidal(black_box_interpreter(block, &[], &[]).map(|z| z.me)?);
             }
-            answer.compose(cur_layer).map_err(|e| format!("{:?}", e))?;
+            answer.compose(cur_layer).map_err(|e| format!("{e:?}"))?;
         }
         Ok(Self::from(answer))
     }
@@ -439,7 +442,7 @@ where
             for block in &layer.blocks[1..] {
                 cur_layer.monoidal(black_box_interpreter(block, &[], &[]).map(|z| z.me)?);
             }
-            answer = answer.compose(&cur_layer).map_err(|e| format!("{:?}", e))?;
+            answer = answer.compose(&cur_layer).map_err(|e| format!("{e:?}"))?;
         }
         Ok(Self::from(answer))
     }

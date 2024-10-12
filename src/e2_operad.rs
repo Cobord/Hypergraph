@@ -107,7 +107,7 @@ where
         if disk_contains((0.0, 0.0), 1.0, a, Some(b)) {
             return Err("The coalescing disk must be contained in the unit disk".to_string());
         }
-        for cur_pair in self.sub_circles.iter() {
+        for cur_pair in &self.sub_circles {
             let (_, c, d) = cur_pair;
             let contained_within = disk_contains(a, b, *c, Some(*d));
             let disjoint_from = !disk_overlaps(a, b, *c, *d);
@@ -228,7 +228,7 @@ where
             self.arity = self.sub_circles.len();
             Ok(())
         } else {
-            Err(format!("No such input {:?} found", which_input).into())
+            Err(format!("No such input {which_input:?} found").into())
         }
     }
 }

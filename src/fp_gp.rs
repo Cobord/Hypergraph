@@ -39,11 +39,9 @@ where
     }
 }
 
-/*
-iterate through the words in num_generators() letters
-giving their corresponding group elements
-the iterator does not care whether they were seen before or not
-*/
+/// iterate through the words in `num_generators()` letters
+/// giving their corresponding group elements
+/// the iterator does not care whether they were seen before or not
 impl<T> Iterator for FinitelyPresentedWords<T>
 where
     T: FinitelyPresentedGroup + Clone,
@@ -136,6 +134,7 @@ mod test {
         #[derive(Clone, Debug)]
         struct Z(u16);
         impl MulAssign for Z {
+            #[allow(clippy::suspicious_op_assign_impl)]
             fn mul_assign(&mut self, rhs: Self) {
                 self.0 += rhs.0;
             }
@@ -143,11 +142,13 @@ mod test {
         impl Mul for Z {
             type Output = Z;
 
+            #[allow(clippy::suspicious_arithmetic_impl)]
             fn mul(self, rhs: Self) -> Self::Output {
                 Z(self.0 + rhs.0)
             }
         }
         impl DivAssign for Z {
+            #[allow(clippy::suspicious_op_assign_impl)]
             fn div_assign(&mut self, rhs: Self) {
                 self.0 -= rhs.0;
             }
@@ -241,7 +242,7 @@ mod test {
         ];
         let num_expected = expected.len();
         for (idx, current) in gen.map(|z| z.0).unique().take(num_expected).enumerate() {
-            assert_eq!(current, expected[idx], "on idx {}", idx);
+            assert_eq!(current, expected[idx], "on idx {idx}");
         }
     }
 
@@ -286,7 +287,7 @@ mod test {
         ];
         let num_expected = expected.len();
         for (idx, current) in gen.take(num_expected).map(|z| z.0).enumerate() {
-            assert_eq!(current, expected[idx], "on idx {}", idx);
+            assert_eq!(current, expected[idx], "on idx {idx}");
         }
     }
 }

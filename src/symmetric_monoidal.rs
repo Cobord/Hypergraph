@@ -1,5 +1,6 @@
 use permutations::Permutation;
 
+#[allow(clippy::module_name_repetitions)]
 pub trait SymmetricMonoidalMorphism<T: Eq> {
     /*
     can pre/post compose a given morphism with a permutation (possibly panic if the permutation is not of the right cardinality)
@@ -11,6 +12,7 @@ pub trait SymmetricMonoidalMorphism<T: Eq> {
     fn from_permutation(p: Permutation, types: &[T], types_as_on_domain: bool) -> Self;
 }
 
+#[allow(clippy::module_name_repetitions)]
 pub trait SymmetricMonoidalDiscreteMorphism<T: Eq> {
     /*
     for finset they are morphisms on finite sets, but rather than specify the domain/codomain as Vec<Singleton>

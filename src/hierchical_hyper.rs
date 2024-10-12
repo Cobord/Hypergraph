@@ -72,6 +72,7 @@ where
 
     #[allow(dead_code)]
     fn vertices_check(&self) -> bool {
+        #[allow(clippy::redundant_closure_for_method_calls)]
         let check_1 = self
             .constituent_to_vertices
             .values()
@@ -94,6 +95,7 @@ where
 
     #[allow(dead_code)]
     fn hyperedge_check(&self) -> bool {
+        #[allow(clippy::if_not_else)]
         if self.hyperedge_to_constituent.len() != self.constituent_hypergraphs.node_count() {
             false
         } else {
@@ -130,13 +132,13 @@ where
                     }
                     if sources
                         .iter()
-                        .all(|z| self.vertex_to_constituent.get(z).cloned() != Some(real_my_parent))
+                        .all(|z| self.vertex_to_constituent.get(z).copied() != Some(real_my_parent))
                     {
                         return false;
                     }
                     if targets
                         .iter()
-                        .all(|z| self.vertex_to_constituent.get(z).cloned() != Some(real_my_parent))
+                        .all(|z| self.vertex_to_constituent.get(z).copied() != Some(real_my_parent))
                     {
                         return false;
                     }
@@ -324,6 +326,7 @@ where
         }
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     #[allow(dead_code)]
     fn drain_internals(
         &mut self,
@@ -346,6 +349,7 @@ where
         todo!("drain a hierarchical hypergraph")
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     #[allow(dead_code)]
     fn graft_internal(
         &mut self,
@@ -415,6 +419,7 @@ where
         Ok(())
     }
 
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     fn component_line_graph(
         &self,
         keep_nullaries: bool,
@@ -475,11 +480,13 @@ where
         petgraph::algo::connected_components(&self.outermost_line_graph(true)) == 1
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     fn in_out_isolated(&self, which_hyperedge: Option<EType>) -> Option<[Vec<VType>; 3]> {
         let which_constituent = self.hyperedge_to_constituent.get(&which_hyperedge)?;
         Some(self.in_out_isolated_helper(which_constituent))
     }
 
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     fn in_out_isolated_helper(&self, which_constituent: &NodeIndex) -> [Vec<VType>; 3] {
         let graph = self.component_line_graph(false, which_constituent);
         let mut in_idces = graph
@@ -566,6 +573,7 @@ where
         })
     }
 
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     fn has_no_internals(&self, which_constituent: &NodeIndex) -> bool {
         let has_no_vertices = self
             .constituent_to_vertices
@@ -690,7 +698,8 @@ where
         if !all_none_labelled_are_nonempty {
             return Err(HierarchicalHypernetError::<VLabel, ELabel>::ANoneLabelledEmpty);
         }
-        for (_a, _b) in underlying.hyperedge_to_constituent.iter() {
+        #[allow(clippy::for_kv_map)]
+        for (_a, _b) in &underlying.hyperedge_to_constituent {
             todo!("Check the interfaces making sure what said is on same level is and what is on parent's is actually on parents");
         }
         Ok(Self {
@@ -702,6 +711,7 @@ where
     }
 }
 
+#[allow(clippy::trivially_copy_pass_by_ref)]
 mod test_setup {
     #[derive(PartialEq, Eq, Hash, Clone)]
     pub enum NodeLabels {
@@ -843,6 +853,7 @@ mod test {
         check_paper_example(&example);
     }
 
+    #[allow(clippy::too_many_lines)]
     #[allow(dead_code)]
     fn check_paper_example(
         example: &HierarchicalHypergraph<NodeLabels, EdgeLabel, String, String, ()>,

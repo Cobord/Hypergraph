@@ -132,8 +132,7 @@ where
         let type_right = self.right[new_middle.1];
         if type_left != type_right {
             return Err(format!(
-                "Mismatched lambda values {:?} and {:?}",
-                type_left, type_right
+                "Mismatched lambda values {type_left:?} and {type_right:?}"
             ));
         }
         self.middle.push(new_middle);
@@ -212,14 +211,14 @@ where
             other.right.clone(),
             Vec::with_capacity(max_middle),
         );
-        for (sl, sr) in self.middle.iter() {
-            for (ol, or) in other.middle.iter() {
+        for (sl, sr) in &self.middle {
+            for (ol, or) in &other.middle {
                 if sr == ol {
                     let mid_added = answer.add_middle((*sl, *or));
                     match mid_added {
                         Ok(_) => {}
                         Err(z) => {
-                            return Err(format!("{}\nShould be unreachable if composability already said it was all okay.",z).into());
+                            return Err(format!("{z}\nShould be unreachable if composability already said it was all okay.").into());
                         }
                     }
                 }
@@ -378,9 +377,11 @@ impl<Lambda: Eq + Sized + Debug + Copy> Rel<Lambda> {
         assert_eq!(self.domain(), other.domain());
         assert_eq!(self.codomain(), other.codomain());
 
-        let self_pairs: HashSet<(usize, usize)> = HashSet::from_iter(self.0.middle.iter().cloned());
+        #[allow(clippy::from_iter_instead_of_collect)]
+        let self_pairs: HashSet<(usize, usize)> = HashSet::from_iter(self.0.middle.iter().copied());
+        #[allow(clippy::from_iter_instead_of_collect)]
         let other_pairs: HashSet<(usize, usize)> =
-            HashSet::from_iter(other.0.middle.iter().cloned());
+            HashSet::from_iter(other.0.middle.iter().copied());
 
         self_pairs.is_superset(&other_pairs)
     }
@@ -395,7 +396,8 @@ impl<Lambda: Eq + Sized + Debug + Copy> Rel<Lambda> {
         assert_eq!(self.domain(), other.domain());
         assert_eq!(self.codomain(), other.codomain());
 
-        let self_pairs: HashSet<(usize, usize)> = HashSet::from_iter(self.0.middle.iter().cloned());
+        #[allow(clippy::from_iter_instead_of_collect)]
+        let self_pairs: HashSet<(usize, usize)> = HashSet::from_iter(self.0.middle.iter().copied());
         let mut ret_val = self.0.clone();
         for (x, y) in &other.0.middle {
             if !self_pairs.contains(&(*x, *y)) {
@@ -424,9 +426,11 @@ impl<Lambda: Eq + Sized + Debug + Copy> Rel<Lambda> {
         let mut ret_val =
             Span::<Lambda>::new(self.domain(), self.codomain(), Vec::with_capacity(capacity));
 
-        let self_pairs: HashSet<(usize, usize)> = HashSet::from_iter(self.0.middle.iter().cloned());
+        #[allow(clippy::from_iter_instead_of_collect)]
+        let self_pairs: HashSet<(usize, usize)> = HashSet::from_iter(self.0.middle.iter().copied());
+        #[allow(clippy::from_iter_instead_of_collect)]
         let other_pairs: HashSet<(usize, usize)> =
-            HashSet::from_iter(other.0.middle.iter().cloned());
+            HashSet::from_iter(other.0.middle.iter().copied());
 
         let in_common = self_pairs.intersection(&other_pairs);
         for (x, y) in in_common {
@@ -448,7 +452,8 @@ impl<Lambda: Eq + Sized + Debug + Copy> Rel<Lambda> {
         let mut ret_val =
             Span::<Lambda>::new(self.domain(), self.codomain(), Vec::with_capacity(capacity));
 
-        let self_pairs: HashSet<(usize, usize)> = HashSet::from_iter(self.0.middle.iter().cloned());
+        #[allow(clippy::from_iter_instead_of_collect)]
+        let self_pairs: HashSet<(usize, usize)> = HashSet::from_iter(self.0.middle.iter().copied());
 
         for (x, y) in (0..source_size).zip(0..target_size) {
             if !self_pairs.contains(&(x, y)) {

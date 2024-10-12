@@ -456,6 +456,7 @@ impl MonoidalMorphism<usize> for Decomposition {}
 
 impl SymmetricMonoidalDiscreteMorphism<usize> for Decomposition {
     fn permute_side(&mut self, p: &Permutation, of_codomain: bool) {
+        #[allow(clippy::if_not_else)]
         if !of_codomain {
             assert_eq!(p.len(), self.domain());
             self.permutation_part = p * self.permutation_part.clone();
@@ -540,6 +541,7 @@ impl TryFrom<FinSetMorphism> for Decomposition {
 }
 impl error::Error for TryFromFinSetError {}
 
+#[allow(clippy::needless_pass_by_value)]
 fn monotone_epi_mono_fact(v: FinSetMap) -> (FinSetMap, FinSetMap) {
     if v.is_empty() {
         return (vec![], vec![]);
@@ -906,10 +908,12 @@ mod test {
                 },
             };
             let cur_res = Decomposition::try_from((cur_test.clone(), leftovers));
+            #[allow(clippy::assertions_on_constants)]
             if let Ok(cur_decomp) = cur_res {
                 assert_eq!(exp_perm, cur_decomp.permutation_part);
                 assert_eq!(exp_surj, cur_decomp.order_preserving_surjection);
                 assert_eq!(exp_inj, cur_decomp.order_preserving_injection);
+                #[allow(clippy::needless_range_loop)]
                 for test_pt in 0..cur_test.len() {
                     let actual_dest = cur_test[test_pt];
                     let apparent_dest = cur_decomp.apply(test_pt);
@@ -921,6 +925,7 @@ mod test {
         }
     }
 
+    #[allow(clippy::similar_names)]
     #[test]
     fn two_decompositions() {
         use crate::category::Composable;
@@ -957,6 +962,7 @@ mod test {
             let decomp_12 = decomp_1.compose(&decomp_2).unwrap();
             assert_eq!(decomp_12.domain(), fin_set_size);
             assert_eq!(decomp_12.codomain(), actual_codomain);
+            #[allow(clippy::needless_range_loop)]
             for idx in 0..fin_set_size {
                 let after_first = first_int_map[idx];
                 assert_eq!(decomp_1.apply(idx), after_first);
@@ -981,7 +987,7 @@ mod test {
             let cycle_len = rng.sample(u);
             let cycle = (0..cycle_len).map(|_| rng.sample(u)).collect_vec();
             let mut cycle_sorted = cycle.clone();
-            cycle_sorted.sort();
+            cycle_sorted.sort_unstable();
             cycle_sorted.dedup();
             if cycle_sorted.len() < cycle.len() {
                 continue;

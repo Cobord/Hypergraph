@@ -66,7 +66,7 @@ where
 
     fn has_obvious_reductions(&self, where_to_look: Option<Vec<usize>>) -> bool {
         if let Some(mut real_where_to_look) = where_to_look {
-            real_where_to_look.sort();
+            real_where_to_look.sort_unstable();
             real_where_to_look.dedup();
             while let Some(cur_look) = real_where_to_look.pop() {
                 if cur_look >= self.as_word.len() {
@@ -116,7 +116,7 @@ where
     fn condense_word(&mut self, where_to_look: Option<Vec<usize>>) -> Vec<usize> {
         if let Some(mut real_where_to_look) = where_to_look {
             let gen_orders = self.all_gens_orders().clone();
-            real_where_to_look.sort();
+            real_where_to_look.sort_unstable();
             real_where_to_look.dedup();
             let mut pop_count = 0;
             let max_pop_count = 2 * self.as_word.len();
@@ -208,6 +208,7 @@ impl<T> DivAssign for ExplicitlyGenerated<T>
 where
     T: Mul<Output = T> + DivAssign + Clone + Eq,
 {
+    #[allow(clippy::needless_for_each, clippy::redundant_closure_for_method_calls)]
     fn div_assign(&mut self, rhs: Self) {
         assert!(self.gens == rhs.gens);
         assert!(self.commuting_gens == rhs.commuting_gens);
@@ -288,6 +289,7 @@ where
                 self.as_word[word_len - 1] = (last_step.0 + 1, 1);
                 self.underlying *= self.gens[last_step.0].0.clone();
                 self.underlying *= self.gens[last_step.0 + 1].0.clone();
+                #[allow(clippy::if_not_else)]
                 if !self.has_obvious_reductions(None) {
                     Some((self.underlying.clone(), self.as_word.clone()))
                 } else {
@@ -349,13 +351,14 @@ mod test {
 
         impl MulAssign for S24 {
             fn mul_assign(&mut self, rhs: Self) {
-                self.0 = self.0.clone() * rhs.0
+                self.0 = self.0.clone() * rhs.0;
             }
         }
 
         impl DivAssign for S24 {
+            #[allow(clippy::suspicious_op_assign_impl)]
             fn div_assign(&mut self, rhs: Self) {
-                self.0 = self.0.clone() * rhs.0.inv()
+                self.0 = self.0.clone() * rhs.0.inv();
             }
         }
 

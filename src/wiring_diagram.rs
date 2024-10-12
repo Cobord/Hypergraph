@@ -123,7 +123,7 @@ where
         of A and B
         if A and B do not have the same label, give a warning and make no change
         */
-        self.0.connect_pair(node_1, node_2)
+        self.0.connect_pair(node_1, node_2);
     }
 
     #[allow(dead_code)]
@@ -136,7 +136,7 @@ where
         if it is not found, there is nothing to delet so give a warning and no change made
         if it is found, delete that node (see delete_boundary_node in NamedCospan and the CAUTION therein)
         */
-        self.0.delete_boundary_node_by_name(which_node)
+        self.0.delete_boundary_node_by_name(which_node);
     }
 
     #[allow(dead_code)]
@@ -224,7 +224,7 @@ where
         self.0 = internal_other
             .0
             .compose(&self.0)
-            .map_err(|z| format!("{:?}", z))?;
+            .map_err(|z| format!("{z:?}"))?;
         Ok(())
     }
 }
@@ -257,6 +257,7 @@ mod test {
         assert_eq!(changed_names[1..], unchanged_right_names[1..]);
     }
 
+    #[allow(clippy::items_after_statements, clippy::too_many_lines)]
     #[test]
     fn operadic() {
         use super::{Dir, WiringDiagram};
@@ -330,7 +331,7 @@ mod test {
         assert_eq!(*example_outer.0.right_names(), vec![(Dir::Out, 0)]);
         assert_eq!(
             example_outer.0.domain(),
-            p.permute(&vec![true, true, false, false, true, false])
+            p.permute(&[true, true, false, false, true, false])
         );
         assert_eq!(*example_outer.0.codomain(), vec![true]);
 
@@ -346,6 +347,7 @@ mod test {
         assert_eq!(*example_outer.0.codomain(), vec![true]);
     }
 
+    #[allow(clippy::items_after_statements, clippy::too_many_lines)]
     #[test]
     fn operadic_multiple() {
         use super::{Dir, WiringDiagram};

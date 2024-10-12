@@ -49,8 +49,7 @@ pub fn necessary_permutation<T: Eq>(side_1: &[T], side_2: &[T]) -> Result<Permut
     let n2 = side_2.len();
     if n1 != n2 {
         return Err(format!(
-            "No permutation can take side 1 to side 2 because the lengths {} and {} don't match",
-            n1, n2
+            "No permutation can take side 1 to side 2 because the lengths {n1} and {n2} don't match"
         ));
     }
     let mut trial_perm = Vec::<usize>::with_capacity(n1);
@@ -143,8 +142,7 @@ pub fn same_labels_check<
         return Ok(());
     };
     Err(format!(
-        "Mismatch in labels of common interface. At some index there was {:?} vs {:?}",
-        w1, w2
+        "Mismatch in labels of common interface. At some index there was {w1:?} vs {w2:?}"
     ))
 }
 
@@ -159,19 +157,13 @@ pub fn test_asserter<T, U, F>(
     T: Debug + PartialEq,
 {
     let Ok((real_observed, real_expected)) = observed.zip(expected) else {
-        panic!(
-            "Error on one of observed/expected sides when checking {:?}",
-            equation_str
-        )
+        panic!("Error on one of observed/expected sides when checking {equation_str:?}")
     };
 
     assert!(aux_test(&real_observed, &real_expected));
     assert!(
         real_observed == real_expected,
-        "{:?} vs {:?} when checking {:?}",
-        real_observed,
-        real_expected,
-        equation_str
+        "{real_observed:?} vs {real_expected:?} when checking {equation_str:?}"
     );
 }
 
@@ -210,7 +202,7 @@ mod test {
         let mut rng = rand::thread_rng();
         for _ in 0..10 {
             let n = between.sample(&mut rng);
-            let set = (0..n).map(|i| format!("{}", i)).collect::<Vec<String>>();
+            let set = (0..n).map(|i| format!("{i}")).collect::<Vec<String>>();
             let p1 = rand_perm(n, n * n / 4);
             let permuted_set = p1.permute(&set);
             let found_perm = necessary_permutation(&set, &permuted_set);
@@ -248,7 +240,7 @@ mod test {
         let mut rng = rand::thread_rng();
         for _ in 0..10 {
             let n = between.sample(&mut rng);
-            let mut set = (0..n).map(|i| format!("{}", i)).collect::<Vec<String>>();
+            let mut set = (0..n).map(|i| format!("{i}")).collect::<Vec<String>>();
             let p1 = rand_perm(n, n * n / 4);
             in_place_permute(&mut set, &p1);
             for (idx, cur) in set.iter().enumerate() {
@@ -256,7 +248,7 @@ mod test {
             }
             in_place_permute(&mut set, &p1.inv());
             for (idx, cur) in set.iter().enumerate() {
-                assert_eq!(*cur, format!("{}", idx));
+                assert_eq!(*cur, format!("{idx}"));
             }
         }
     }

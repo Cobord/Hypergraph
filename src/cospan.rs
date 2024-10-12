@@ -48,14 +48,14 @@ where
             "A target for one of the right arrows was out of bounds"
         );
         if check_id_strong || (check_id_weak && self.is_left_id) {
-            let is_left_really_id = represents_id(self.left.iter().cloned());
+            let is_left_really_id = represents_id(self.left.iter().copied());
             assert_eq!(
                 is_left_really_id, self.is_left_id,
                 "The identity nature of the left arrow was wrong"
             );
         }
         if check_id_strong || (check_id_weak && self.is_right_id) {
-            let is_right_really_id = represents_id(self.right.iter().cloned());
+            let is_right_really_id = represents_id(self.right.iter().copied());
             assert_eq!(
                 is_right_really_id, self.is_right_id,
                 "The identity nature of the right arrow was wrong"
@@ -64,8 +64,8 @@ where
     }
 
     pub fn new(left: Vec<MiddleIndex>, right: Vec<MiddleIndex>, middle: Vec<Lambda>) -> Self {
-        let is_left_id = represents_id(left.iter().cloned());
-        let is_right_id = represents_id(right.iter().cloned());
+        let is_left_id = represents_id(left.iter().copied());
+        let is_right_id = represents_id(right.iter().copied());
         let answer = Self {
             left,
             right,
@@ -325,6 +325,7 @@ impl<Lambda> HasIdentity<Vec<Lambda>> for Cospan<Lambda>
 where
     Lambda: Eq + Copy + Debug,
 {
+    #[allow(clippy::implicit_clone)]
     fn identity(types: &Vec<Lambda>) -> Self {
         let num_types = types.len();
         Self {
@@ -632,7 +633,7 @@ mod test {
                 assert_eq!(real_res.middle, exp_middle);
             }
             Err(e) => {
-                panic!("Could not compose simple example\n{:?}", e)
+                panic!("Could not compose simple example\n{e:?}")
             }
         }
     }
@@ -650,12 +651,12 @@ mod test {
         let type_names_on_source = true;
         let cospan = Cospan::<Color>::from_permutation(
             Permutation::rotation_left(3, 1),
-            &vec![Color::Red, Color::Green, Color::Blue],
+            &[Color::Red, Color::Green, Color::Blue],
             type_names_on_source,
         );
         let cospan_2 = Cospan::<Color>::from_permutation(
             Permutation::rotation_left(3, 2),
-            &vec![Color::Blue, Color::Red, Color::Green],
+            &[Color::Blue, Color::Red, Color::Green],
             type_names_on_source,
         );
         let mid_interface_1 = cospan.codomain();
@@ -670,20 +671,19 @@ mod test {
             }
             Err(e) => {
                 panic!(
-                    "Could not compose simple example because {:?} did not match {:?}\n{:?}",
-                    mid_interface_1, mid_interface_2, e
+                    "Could not compose simple example because {mid_interface_1:?} did not match {mid_interface_2:?}\n{e:?}"
                 );
             }
         }
         let type_names_on_source = false;
         let cospan = Cospan::<Color>::from_permutation(
             Permutation::rotation_left(3, 1),
-            &vec![Color::Red, Color::Green, Color::Blue],
+            &[Color::Red, Color::Green, Color::Blue],
             type_names_on_source,
         );
         let cospan_2 = Cospan::<Color>::from_permutation(
             Permutation::rotation_left(3, 2),
-            &vec![Color::Green, Color::Blue, Color::Red],
+            &[Color::Green, Color::Blue, Color::Red],
             type_names_on_source,
         );
         let mid_interface_1 = cospan.codomain();
@@ -698,8 +698,7 @@ mod test {
             }
             Err(e) => {
                 panic!(
-                    "Could not compose simple example because {:?} did not match {:?}\n{:?}",
-                    mid_interface_1, mid_interface_2, e
+                    "Could not compose simple example because {mid_interface_1:?} did not match {mid_interface_2:?}\n{e:?}"
                 );
             }
         }
@@ -737,7 +736,7 @@ mod test {
                 assert_eq!(real_res.codomain(), types_at_this_stage);
             }
             Err(e) => {
-                panic!("Could not compose simple example\n{:?}", e)
+                panic!("Could not compose simple example\n{e:?}")
             }
         }
         let types_as_on_source = false;
@@ -764,7 +763,7 @@ mod test {
                 assert_eq!(real_res.codomain(), types_at_this_stage);
             }
             Err(e) => {
-                panic!("Could not compose simple example\n{:?}", e)
+                panic!("Could not compose simple example\n{e:?}")
             }
         }
     }

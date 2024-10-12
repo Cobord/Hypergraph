@@ -101,7 +101,7 @@ impl E1 {
                 "The coalescing interval must be an interval contained in (0,1)".to_string(),
             );
         }
-        for cur_pair in self.sub_intervals.iter() {
+        for cur_pair in &self.sub_intervals {
             let (c, d) = cur_pair;
             let contained_within = *c >= a && *d <= b;
             let disjoint_from = *d <= a || *c >= b;
@@ -176,7 +176,7 @@ impl Operadic<usize> for E1 {
 }
 
 impl HasIdentity<()> for E1 {
-    fn identity(_: &()) -> Self {
+    fn identity((): &()) -> Self {
         Self {
             arity: 1,
             sub_intervals: vec![(0.0, 1.0)],
@@ -309,7 +309,7 @@ mod test {
             let res = as_e1_v2.coalesce_boxes(split_box);
             assert_ok!(res);
             assert_eq!(as_e1_v2.arity, used_arity_2 as usize);
-            for interval in sub_intervals.iter() {
+            for interval in &sub_intervals {
                 assert!(as_e1_v2.sub_intervals.contains(interval));
             }
         }

@@ -117,6 +117,7 @@ where
         }
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     #[allow(dead_code)]
     pub fn from_permutation_extra_data<T, F>(
         p: Permutation,
@@ -402,12 +403,12 @@ where
         */
         match f {
             Left(left_fun) => {
-                for cur_left_name in self.left_names.iter_mut() {
+                for cur_left_name in &mut self.left_names {
                     left_fun(cur_left_name);
                 }
             }
             Right(right_fun) => {
-                for cur_right_name in self.right_names.iter_mut() {
+                for cur_right_name in &mut self.right_names {
                     right_fun(cur_right_name);
                 }
             }
@@ -642,14 +643,15 @@ mod test {
         );
         let cospan_2 = NamedCospan::<Color, Color, Color>::from_permutation_extra_data(
             Permutation::rotation_left(3, 2),
-            &vec![Color::Blue, Color::Red, Color::Green],
+            &[Color::Blue, Color::Red, Color::Green],
             type_names_on_source,
-            &vec![Color::Green, Color::Blue, Color::Red],
+            &[Color::Green, Color::Blue, Color::Red],
             |z| (z, z),
         );
         let mid_interface_1 = cospan.codomain();
         let mid_interface_2 = cospan_2.domain();
         let comp = cospan.compose(&cospan_2);
+        #[allow(clippy::match_wild_err_arm)]
         match comp {
             Ok(real_res) => {
                 let expected_res = NamedCospan::identity(&full_types, &full_types, |z| (z, z));
@@ -658,8 +660,7 @@ mod test {
             }
             Err(_e) => {
                 panic!(
-                    "Could not compose simple example because {:?} did not match {:?}",
-                    mid_interface_1, mid_interface_2
+                    "Could not compose simple example because {mid_interface_1:?} did not match {mid_interface_2:?}"
                 );
             }
         }
@@ -674,19 +675,20 @@ mod test {
         );
         let cospan_2 = NamedCospan::<Color, Color, Color>::from_permutation_extra_data(
             Permutation::rotation_left(3, 2),
-            &vec![Color::Green, Color::Blue, Color::Red],
+            &[Color::Green, Color::Blue, Color::Red],
             type_names_on_source,
-            &vec![Color::Green, Color::Blue, Color::Red],
+            &[Color::Green, Color::Blue, Color::Red],
             |z| (z, z),
         );
         let mid_interface_1 = cospan.codomain();
         let mid_interface_2 = cospan_2.domain();
         let comp = cospan.compose(&cospan_2);
+        #[allow(clippy::match_wild_err_arm)]
         match comp {
             Ok(real_res) => {
                 let expected_res = NamedCospan::identity(
-                    &vec![Color::Green, Color::Blue, Color::Red],
-                    &vec![Color::Green, Color::Blue, Color::Red],
+                    &[Color::Green, Color::Blue, Color::Red],
+                    &[Color::Green, Color::Blue, Color::Red],
                     |z| (z, z),
                 );
                 assert_eq!(expected_res.domain(), real_res.domain());
@@ -694,8 +696,7 @@ mod test {
             }
             Err(_e) => {
                 panic!(
-                    "Could not compose simple example because {:?} did not match {:?}",
-                    mid_interface_1, mid_interface_2
+                    "Could not compose simple example because {mid_interface_1:?} did not match {mid_interface_2:?}"
                 );
             }
         }
@@ -721,14 +722,14 @@ mod test {
                 p1,
                 &(0..n).map(|_| ()).collect::<Vec<_>>(),
                 types_as_on_source,
-                &(0..n).map(|z| z).collect::<Vec<usize>>(),
+                &(0..n).collect::<Vec<usize>>(),
                 |_| ((), ()),
             );
             let cospan_p2 = NamedCospan::from_permutation_extra_data(
                 p2,
                 &(0..n).map(|_| ()).collect::<Vec<_>>(),
                 types_as_on_source,
-                &(0..n).map(|z| z).collect::<Vec<_>>(),
+                &(0..n).collect::<Vec<_>>(),
                 |_| ((), ()),
             );
             let cospan_prod = cospan_p1.compose(&cospan_p2);
@@ -738,7 +739,7 @@ mod test {
                         prod,
                         &(0..n).map(|_| ()).collect::<Vec<_>>(),
                         types_as_on_source,
-                        &(0..n).map(|z| z).collect::<Vec<usize>>(),
+                        &(0..n).collect::<Vec<usize>>(),
                         |_| ((), ()),
                     );
                     assert_eq!(real_res.domain(), expected_res.domain());
@@ -755,7 +756,7 @@ mod test {
                     );
                 }
                 Err(e) => {
-                    panic!("Could not compose simple example {:?}", e)
+                    panic!("Could not compose simple example {e:?}")
                 }
             }
         }

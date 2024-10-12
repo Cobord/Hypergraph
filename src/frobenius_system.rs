@@ -65,6 +65,7 @@ where
         }
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     #[allow(dead_code)]
     pub fn add_definition_composite(
         &mut self,
@@ -74,6 +75,7 @@ where
         todo!("add a definition for a black boxed morphism with black boxes to be filled with other definitions")
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     #[allow(dead_code)]
     pub fn add_definition_simple(&mut self, _new_name: BlackBoxLabel, _new_def: T) {
         todo!("add a definition for a black boxed morphism that is directly a T")
@@ -109,15 +111,11 @@ where
             };
             T::interpret(complicated_answer_2, black_box_interpreter).map_err(
                 |internal_explanation| {
-                    format!(
-                        "When doing {:?}\n{:?}",
-                        which_interpreting, internal_explanation
-                    )
-                    .into()
+                    format!("When doing {which_interpreting:?}\n{internal_explanation:?}").into()
                 },
             )
         } else {
-            Err(format!("No {:?} found", which_interpreting).into())
+            Err(format!("No {which_interpreting:?} found").into())
         }
     }
 
@@ -145,11 +143,11 @@ where
                     }
                 } else {
                     return Err(
-                        format!("Node {:?} not found after topological sort", cur_node).into(),
+                        format!("Node {cur_node:?} not found after topological sort").into(),
                     );
                 }
             }
-            Err(format!("Through all but never found {:?}", which_interpreting).into())
+            Err(format!("Through all but never found {which_interpreting:?}").into())
         } else {
             Err("Not acyclic dependencies".into())
         }
