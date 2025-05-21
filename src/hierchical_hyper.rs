@@ -251,11 +251,11 @@ where
                 let my_first_vertex_label = (self.v_label)(&cur_source, &self.label_aux);
                 common_component = Some((component_idx, my_first_vertex_label));
             } else if let Some((component_idx, ref my_first_vertex_label)) = common_component {
-                if !(self
+                if self
                     .vertex_to_constituent
                     .get(&cur_source)
                     .copied()
-                    .is_some_and(|z| z == component_idx))
+                    .is_none_or(|z| z != component_idx)
                 {
                     let edge_label = (self.e_label)(&new_hyperedge, &self.label_aux);
                     let cur_vertex_label = (self.v_label)(&cur_source, &self.label_aux);
@@ -288,11 +288,11 @@ where
                 let my_first_vertex_label = (self.v_label)(&cur_target, &self.label_aux);
                 common_component = Some((component_idx, my_first_vertex_label));
             } else if let Some((component_idx, ref my_first_vertex_label)) = common_component {
-                if !(self
+                if self
                     .vertex_to_constituent
                     .get(&cur_target)
                     .copied()
-                    .is_some_and(|z| z == component_idx))
+                    .is_none_or(|z| z != component_idx)
                 {
                     let edge_label = (self.e_label)(&new_hyperedge, &self.label_aux);
                     let cur_vertex_label = (self.v_label)(&cur_target, &self.label_aux);
@@ -360,8 +360,8 @@ where
     where
         LabelAux: Eq,
     {
-        if self.e_label != other.e_label
-            || self.v_label != other.v_label
+        if !std::ptr::fn_addr_eq(self.e_label, other.e_label)
+            || !std::ptr::fn_addr_eq(self.v_label, other.v_label)
             || self.label_aux != other.label_aux
         {
             return Err(HierarchicalHypergraphError::<_, _>::LabellersMismatch);

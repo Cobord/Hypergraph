@@ -433,7 +433,7 @@ where
                     return;
                 };
                 assert!(
-                    !self.left_names.iter().any(|r| *r == z2),
+                    !self.left_names.contains(&z2),
                     "There was already a node on the left with the specified new name"
                 );
                 self.left_names[idx_left] = z2;
@@ -444,7 +444,7 @@ where
                     return;
                 };
                 assert!(
-                    !self.right_names.iter().any(|r| *r == z2),
+                    !self.right_names.contains(&z2),
                     "There was already a node on the right with the specified new name"
                 );
                 self.right_names[idx_right] = z2;

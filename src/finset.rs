@@ -140,7 +140,7 @@ impl OrderPresSurj {
         let domain_size: usize = self.domain();
         let mut answer = Vec::with_capacity(domain_size);
         for (cur_target, v) in self.preimage_card_minus_1.iter().enumerate() {
-            answer.extend(std::iter::repeat(cur_target).take(v + 1));
+            answer.extend(std::iter::repeat_n(cur_target, v + 1));
         }
 
         (answer, 0)
