@@ -232,19 +232,18 @@ where
     T: Mul<Output = T> + Clone + Eq,
 {
     type Output = Self;
-    fn mul(self, rhs: Self) -> Self {
+    fn mul(mut self, rhs: Self) -> Self {
         assert!(self.gens == rhs.gens);
         assert!(self.commuting_gens == rhs.commuting_gens);
         assert!(self.ident_t == rhs.ident_t);
         let gen_orders = rhs.all_gens_orders().clone();
         let underlying = self.underlying * rhs.underlying;
-        let mut as_word = self.as_word.clone();
         let mut rhs_word = rhs.as_word;
-        let as_word_last = as_word.last().copied();
+        let as_word_last = self.as_word.last().copied();
         let rhs_word_first = rhs_word.first().copied();
         match (as_word_last, rhs_word_first) {
             (Some(x), Some(y)) if x.0 == y.0 => {
-                as_word.pop();
+                self.as_word.pop();
                 rhs_word[0].1 += x.1;
                 if let Some(x0_order) = gen_orders[x.0] {
                     rhs_word[0].1 %= x0_order;
@@ -252,10 +251,10 @@ where
             }
             _ => {}
         }
-        as_word.extend(rhs_word);
+        self.as_word.extend(rhs_word);
         Self {
             underlying,
-            as_word,
+            as_word: self.as_word,
             gens: self.gens,
             commuting_gens: self.commuting_gens,
             ident_t: self.ident_t,
